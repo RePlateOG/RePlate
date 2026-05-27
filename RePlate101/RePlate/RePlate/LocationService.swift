@@ -91,13 +91,14 @@ class LocationService: ObservableObject {
         locationManager.stopUpdatingLocation()
     }
 
-    // MARK: - Reverse Geocoding
+    // MARK: - Reverse Geocoding (iOS 26+: MKReverseGeocodingRequest)
     private func reverseGeocode(_ location: CLLocation) {
         isLoading = true
         Task { @MainActor [weak self] in
             defer { self?.isLoading = false }
             do {
-                let request = MKReverseGeocodingRequest(coordinate: location.coordinate)
+                var request = MKReverseGeocodingRequest()
+                request.coordinate = location.coordinate
                 let placemark = try await request.placemark
                 if let city = placemark.locality, let state = placemark.administrativeArea {
                     self?.locationString = "\(city), \(state)"
