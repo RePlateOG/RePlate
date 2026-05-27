@@ -99,7 +99,18 @@ struct FoodListing: Identifiable, Codable {
         guard originalPrice > 0 else { return 0 }
         return Int(((originalPrice - discountedPrice) / originalPrice) * 100)
     }
-    
+
+    /// Convenience alias used in UI — same calculation as discountPercentage but as Double.
+    var savingsPercentage: Double {
+        guard originalPrice > 0 else { return 0 }
+        return ((originalPrice - discountedPrice) / originalPrice) * 100
+    }
+
+    /// Display name for the restaurant; falls back gracefully when the join is absent.
+    var restaurantName: String {
+        restaurant?.name ?? "Unknown Restaurant"
+    }
+
     var isAlmostGone: Bool {
         availableQuantity <= 2
     }

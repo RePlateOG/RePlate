@@ -10,321 +10,504 @@ import PhotosUI
 
 // MARK: - Restaurant Dashboard
 struct RestaurantDashboardView: View {
+    @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = RestaurantDashboardViewModel()
     @State private var showPostListing = false
-    @State private var scrollOffset: CGFloat = 0
-    
+
+    private var restaurantDisplayName: String {
+        appState.currentUser?.name ?? "Verde Bistro"
+    }
+
     var body: some View {
-        NavigationView {
-            ZStack(alignment: .bottomTrailing) {
-                ScrollView {
-                    LazyVStack(spacing: Theme.Spacing.sectionSpacing) {
-                        // Hero Header with Greeting
-                        heroHeader
-                        
-                        // Stats Cards - Premium Design
-                        statsSection
-                        
-                        // Quick Actions - Redesigned
-                        quickActionsSection
-                        
-                        // Active Listings
-                        activeListingsSection
-                        
-                        // Pending Orders
-                        pendingOrdersSection
-                        
-                        // Environmental Impact Section
-                        impactSection
-                    }
-                    .padding(.bottom, 120)
-                }
-                .refreshable {
-                    await viewModel.refreshDashboard()
-                }
-                
-                // Premium FAB with Label
-                PremiumFAB(icon: "plus", label: "Post", style: .large) {
-                    showPostListing = true
-                }
-                .padding(Theme.Spacing.xl)
-                .padding(.bottom, Theme.Layout.fabOffset)
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 0) {
+                gradientHeader
+                mainContent
             }
-            .background(Theme.Colors.background)
-            .navigationBarTitleDisplayMode(.inline)
-            .task {
-                await viewModel.loadDashboard()
-            }
-            .sheet(isPresented: $showPostListing) {
-                PostListingView()
-            }
+            .padding(.bottom, 100)
+        }
+        .ignoresSafeArea(edges: .top)
+        .background(Color(.systemGray6).opacity(0.3))
+        .refreshable { await viewModel.refreshDashboard() }
+        .task { await viewModel.loadDashboard() }
+        .sheet(isPresented: $showPostListing) {
+            PostListingView()
         }
     }
-    
-    // MARK: - Hero Header
-    private var heroHeader: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                    Text(greetingText)
-                        .font(Theme.Typography.title3)
-                        .foregroundColor(Theme.Colors.secondaryLabel)
-                    
-                    Text("Dashboard")
-                        .font(Theme.Typography.largeTitleHeavy)
-                        .foregroundStyle(Theme.Colors.primaryGradient)
+
+    // MARK: - Gradient Header
+    private var gradientHeader: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Top bar: name + bell
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(restaurantDisplayName)
+                        .font(.system(size: 26, weight: .heavy, design: .rounded))
+                        .foregroundColor(.white)
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(Theme.Colors.accent)
+                            .frame(width: 8, height: 8)
+                        Text("Store Open • High Impact")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundColor(.white.opacity(0.85))
+                    }
                 }
-                
                 Spacer()
-                
-                // Notification Bell
-                Button {
-                    // Navigate to notifications
-                } label: {
-                    ZStack(alignment: .topTrailing) {
+                // Bell with badge
+                ZStack(alignment: .topTrailing) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(.white.opacity(0.2))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(.white.opacity(0.3), lineWidth: 1)
+                            )
+                            .frame(width: 48, height: 48)
                         Image(systemName: "bell.fill")
-                            .font(.system(size: 22))
-                            .foregroundColor(Theme.Colors.label)
-                            .frame(width: 44, height: 44)
-                            .background(Theme.Colors.secondaryBackground)
-                            .cornerRadius(Theme.CornerRadius.base)
-                        
-                        // Notification Badge
-                        if viewModel.hasUnreadNotifications {
-                            Circle()
-                                .fill(Theme.Colors.error)
-                                .frame(width: 10, height: 10)
-                                .offset(x: 2, y: -2)
-                        }
+                            .font(.system(size: 20))
+                            .foregroundColor(.white)
+                    }
+                    if viewModel.hasUnreadNotifications {
+                        Circle()
+                            .fill(Color.red.opacity(0.9))
+                            .frame(width: 12, height: 12)
+                            .overlay(Circle().stroke(Theme.Colors.primaryGradientStart, lineWidth: 2))
+                            .offset(x: 2, y: -2)
                     }
                 }
             }
-        }
-        .padding(.horizontal, Theme.Spacing.screenPadding)
-        .padding(.top, Theme.Spacing.base)
-    }
-    
-    private var greetingText: String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        switch hour {
-        case 0..<12: return "Good Morning"
-        case 12..<17: return "Good Afternoon"
-        default: return "Good Evening"
-        }
-    }
-    
-    // MARK: - Stats Section - Premium Redesign
-    private var statsSection: some View {
-        VStack(spacing: Theme.Spacing.itemSpacing) {
-            SectionHeader(title: "Today's Overview")
-            
+            .padding(.top, 60)
+            .padding(.bottom, 28)
+
+            // 2×2 impact stats grid
             LazyVGrid(
                 columns: [GridItem(.flexible()), GridItem(.flexible())],
-                spacing: Theme.Spacing.itemSpacing
+                spacing: 14
             ) {
-                PremiumStatCard(
-                    icon: "bag.fill",
-                    value: "\(viewModel.todayStats.activeListings)",
-                    label: "Active",
-                    color: Theme.Colors.info,
-                    showGlow: true
-                )
-                
-                PremiumStatCard(
-                    icon: "clock.arrow.circlepath",
-                    value: "\(viewModel.todayStats.pendingOrders)",
-                    label: "Pending",
-                    color: Theme.Colors.warning,
-                    showGlow: true
-                )
-                
-                PremiumStatCard(
-                    icon: "dollarsign.circle.fill",
-                    value: "$\(String(format: "%.0f", viewModel.todayStats.revenueToday))",
-                    label: "Revenue",
-                    color: Theme.Colors.success,
-                    showGlow: true
-                )
-                
-                PremiumStatCard(
-                    icon: "leaf.circle.fill",
+                FigmaStatCard(
+                    label: "Meals Saved",
                     value: "\(viewModel.todayStats.mealsSaved)",
-                    label: "Saved",
-                    color: Theme.Colors.primaryGradientStart,
-                    showGlow: true
+                    icon: "bag.fill",
+                    accent: false
+                )
+                FigmaStatCard(
+                    label: "CO₂ Reduced",
+                    value: "\(String(format: "%.0f", viewModel.todayStats.co2Reduced))kg",
+                    icon: "leaf.fill",
+                    accent: true
+                )
+                FigmaStatCard(
+                    label: "Revenue",
+                    value: "$\(String(format: "%.0f", viewModel.todayStats.revenueToday))",
+                    icon: "dollarsign.circle.fill",
+                    accent: false
+                )
+                FigmaStatCard(
+                    label: "Growth",
+                    value: "+12%",
+                    icon: "chart.line.uptrend.xyaxis",
+                    accent: true
                 )
             }
-            .padding(.horizontal, Theme.Spacing.screenPadding)
+            .padding(.bottom, 52)
+        }
+        .padding(.horizontal, 20)
+        .background(Theme.Colors.primaryGradient)
+        .clipShape(
+            UnevenRoundedRectangle(
+                bottomLeadingRadius: 40,
+                bottomTrailingRadius: 40
+            )
+        )
+    }
+
+    // MARK: - Main Content
+    private var mainContent: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Post button floats up over the header
+            postSurplusButton
+                .padding(.horizontal, 20)
+                .offset(y: -28)
+                .padding(.bottom, 8) // net padding = -28 + 8 = -20 consumed by offset
+
+            // Today's Pickups
+            todaysPickupsSection
+                .padding(.top, 12)
+
+            // Active Listings
+            activeListingsSection
+                .padding(.top, 8)
         }
     }
-    
-    // MARK: - Quick Actions - Premium Redesign
-    private var quickActionsSection: some View {
-        VStack(spacing: Theme.Spacing.itemSpacing) {
-            SectionHeader(title: "Quick Actions")
-            
-            LazyVGrid(
-                columns: [GridItem(.flexible()), GridItem(.flexible())],
-                spacing: Theme.Spacing.compactSpacing
-            ) {
-                PremiumQuickActionCard(
-                    icon: "plus.circle.fill",
-                    title: "Post Surplus",
-                    gradient: Theme.Colors.primaryGradient
-                ) {
-                    showPostListing = true
+
+    // MARK: - Post Surplus Food Button
+    private var postSurplusButton: some View {
+        Button {
+            hapticFeedback(.medium)
+            showPostListing = true
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Theme.Colors.primaryGradient)
+                        .frame(width: 40, height: 40)
+                    Image(systemName: "plus")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundColor(.white)
                 }
-                
-                PremiumQuickActionCard(
-                    icon: "arrow.clockwise.circle.fill",
-                    title: "Repost",
-                    gradient: LinearGradient(colors: [Theme.Colors.info, Theme.Colors.info.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                ) {
-                    // Repost action
-                }
-                
-                PremiumQuickActionCard(
-                    icon: "chart.bar.fill",
-                    title: "Analytics",
-                    gradient: LinearGradient(colors: [Color.purple, Color.purple.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                ) {
-                    // Analytics action
-                }
-                
-                PremiumQuickActionCard(
-                    icon: "gearshape.fill",
-                    title: "Settings",
-                    gradient: LinearGradient(colors: [Color.gray, Color.gray.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                ) {
-                    // Settings action
-                }
+                Text("Post Surplus Food")
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .foregroundColor(Theme.Colors.primaryGradientStart)
+                Spacer()
             }
-            .padding(.horizontal, Theme.Spacing.screenPadding)
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: 26)
+                    .fill(Color(.systemBackground))
+                    .shadow(color: Color.black.opacity(0.13), radius: 18, y: 7)
+            )
         }
+        .buttonStyle(PlainButtonStyle())
     }
-    
-    // MARK: - Active Listings - Premium Redesign
-    private var activeListingsSection: some View {
-        VStack(spacing: Theme.Spacing.itemSpacing) {
-            SectionHeader(
-                title: "Active Listings",
-                actionTitle: viewModel.activeListings.isEmpty ? nil : "View All"
-            ) {
-                // View all action
+
+    // MARK: - Today's Pickups
+    private var todaysPickupsSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("Today's Pickups")
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .foregroundColor(Theme.Colors.label)
+                Spacer()
+                if !viewModel.pendingOrders.isEmpty {
+                    Text("\(viewModel.pendingOrders.count) New")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Theme.Colors.primaryGradientStart.opacity(0.12))
+                        .clipShape(Capsule())
+                }
             }
-            
+            .padding(.horizontal, 20)
+            .padding(.bottom, 16)
+
             if viewModel.isLoading {
-                VStack(spacing: Theme.Spacing.compactSpacing) {
-                    ForEach(0..<2, id: \.self) { _ in
-                        ShimmerView(cornerRadius: Theme.CornerRadius.cardLarge)
-                            .frame(height: 140)
-                            .padding(.horizontal, Theme.Spacing.screenPadding)
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 20)
+            } else if viewModel.pendingOrders.isEmpty {
+                HStack(spacing: 14) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 30))
+                        .foregroundStyle(Theme.Colors.primaryGradient)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("All Caught Up!")
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundColor(Theme.Colors.label)
+                        Text("No pending orders at the moment")
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                    }
+                    Spacer()
+                }
+                .padding(20)
+                .background(
+                    RoundedRectangle(cornerRadius: 24)
+                        .fill(Color(.systemBackground))
+                        .shadow(color: Color.black.opacity(0.06), radius: 12, y: 4)
+                )
+                .padding(.horizontal, 20)
+            } else {
+                VStack(spacing: 16) {
+                    ForEach(viewModel.pendingOrders.prefix(3)) { order in
+                        FigmaOrderCard(order: order)
                     }
                 }
+                .padding(.horizontal, 20)
+            }
+        }
+        .padding(.bottom, 32)
+    }
+
+    // MARK: - Active Listings
+    private var activeListingsSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("Active Listings")
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .foregroundColor(Theme.Colors.label)
+                Spacer()
+                Button("See All") {}
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundColor(Theme.Colors.primaryGradientStart)
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 16)
+
+            if viewModel.isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 20)
             } else if viewModel.activeListings.isEmpty {
                 PremiumEmptyState(
                     icon: "fork.knife",
                     title: "No Active Listings",
                     message: "Start rescuing food by posting your first surplus listing",
                     actionTitle: "Post Listing",
-                    action: {
-                        showPostListing = true
-                    }
+                    action: { showPostListing = true }
                 )
-                .padding(.horizontal, Theme.Spacing.screenPadding)
-                .padding(.vertical, Theme.Spacing.xl)
+                .padding(.horizontal, 20)
             } else {
-                ForEach(viewModel.activeListings.prefix(3)) { listing in
-                    PremiumRestaurantListingCard(listing: listing)
-                        .padding(.horizontal, Theme.Spacing.screenPadding)
-                }
-            }
-        }
-    }
-    
-    // MARK: - Pending Orders - Premium Redesign
-    private var pendingOrdersSection: some View {
-        VStack(spacing: Theme.Spacing.itemSpacing) {
-            SectionHeader(
-                title: "Pending Orders",
-                actionTitle: viewModel.pendingOrders.isEmpty ? nil : "View All"
-            ) {
-                // View all action
-            }
-            
-            if viewModel.pendingOrders.isEmpty {
-                PremiumCard(style: .flat, padding: Theme.Spacing.xl) {
-                    HStack {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 28))
-                            .foregroundStyle(Theme.Colors.primaryGradient)
-                        
-                        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                            Text("All Caught Up!")
-                                .font(Theme.Typography.headline)
-                                .foregroundColor(Theme.Colors.label)
-                            
-                            Text("No pending orders at the moment")
-                                .font(Theme.Typography.subheadline)
-                                .foregroundColor(Theme.Colors.secondaryLabel)
-                        }
-                        
-                        Spacer()
+                VStack(spacing: 24) {
+                    ForEach(viewModel.activeListings.prefix(3)) { listing in
+                        FigmaActiveListingCard(listing: listing)
                     }
                 }
-                .padding(.horizontal, Theme.Spacing.screenPadding)
-            } else {
-                ForEach(viewModel.pendingOrders.prefix(3)) { order in
-                    PremiumRestaurantOrderCard(order: order)
-                        .padding(.horizontal, Theme.Spacing.screenPadding)
-                }
+                .padding(.horizontal, 20)
             }
         }
+        .padding(.bottom, 12)
     }
-    
-    // MARK: - Impact Section
-    private var impactSection: some View {
-        VStack(spacing: Theme.Spacing.itemSpacing) {
-            SectionHeader(title: "Environmental Impact")
-            
-            PremiumCard(style: .elevated) {
-                VStack(spacing: Theme.Spacing.lg) {
-                    HStack(spacing: Theme.Spacing.base) {
-                        ImpactMetric(
-                            icon: "leaf.fill",
-                            value: "\(viewModel.todayStats.mealsSaved)",
-                            label: "Meals Saved",
-                            color: Theme.Colors.impactGreen
-                        )
-                        
-                        Divider()
-                            .frame(height: 60)
-                        
-                        ImpactMetric(
-                            icon: "arrow.down.circle.fill",
-                            value: "\(String(format: "%.1f", Double(viewModel.todayStats.mealsSaved) * 2.5)) kg",
-                            label: "CO₂ Reduced",
-                            color: Theme.Colors.impactBlue
-                        )
-                    }
-                    
-                    Divider()
-                    
-                    HStack {
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 16))
-                            .foregroundStyle(Theme.Colors.primaryGradient)
-                        
-                        Text("Every meal saved prevents ~2.5kg of CO₂ emissions")
-                            .font(Theme.Typography.caption)
+}
+
+// MARK: - Figma Stat Card (header stats — white-on-gradient)
+private struct FigmaStatCard: View {
+    let label: String
+    let value: String
+    let icon: String
+    let accent: Bool // true → use accent (#caf8a5), false → white
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(accent ? Theme.Colors.accent : .white)
+                Spacer()
+                Text(label.uppercased())
+                    .font(.system(size: 8, weight: .bold, design: .rounded))
+                    .foregroundColor(.white.opacity(0.55))
+                    .tracking(0.5)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.trailing)
+            }
+            Text(value)
+                .font(.system(size: 22, weight: .heavy, design: .rounded))
+                .foregroundColor(.white)
+        }
+        .padding(16)
+        .background(.white.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 22))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22)
+                .stroke(.white.opacity(0.18), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Figma Order Card (Today's Pickups)
+private struct FigmaOrderCard: View {
+    let order: Order
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Top row: avatar + details + price
+            HStack(alignment: .top, spacing: 14) {
+                // Customer avatar (pickup code initial as proxy)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Theme.Colors.primaryGradientStart.opacity(0.12))
+                        .frame(width: 48, height: 48)
+                    Text(String(order.pickupCode.prefix(1)).uppercased())
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Order #\(order.pickupCode)")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundColor(Theme.Colors.label)
+                    if let listing = order.listing {
+                        Text(listing.title)
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
                             .foregroundColor(Theme.Colors.secondaryLabel)
-                        
-                        Spacer()
+                            .lineLimit(1)
                     }
                 }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("$\(String(format: "%.2f", order.totalAmount))")
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                    HStack(spacing: 3) {
+                        Image(systemName: "clock")
+                            .font(.system(size: 10))
+                        Text(order.status.rawValue)
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                    }
+                    .foregroundColor(.orange)
+                }
             }
-            .padding(.horizontal, Theme.Spacing.screenPadding)
+            .padding(.bottom, 18)
+
+            // Action buttons
+            HStack(spacing: 12) {
+                Button("Details") {}
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color(.systemGray6))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                Button {
+                    hapticFeedback(.success)
+                } label: {
+                    Text("Confirm Pickup")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Theme.Colors.primaryGradient)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                }
+            }
         }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 28)
+                .fill(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.07), radius: 12, y: 4)
+        )
+    }
+}
+
+// MARK: - Figma Active Listing Card
+private struct FigmaActiveListingCard: View {
+    let listing: FoodListing
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+
+            // Image / gradient hero
+            ZStack(alignment: .top) {
+                Theme.Colors.primaryGradient
+                    .overlay(
+                        Image(systemName: listing.category.icon)
+                            .font(.system(size: 52, weight: .medium))
+                            .foregroundColor(.white.opacity(0.55))
+                    )
+                    .frame(height: 220)
+                    .clipped()
+
+                // Active badge + views badge
+                HStack {
+                    Text("Active")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Theme.Colors.primaryGradientStart)
+                        .clipShape(Capsule())
+                        .shadow(color: Color.black.opacity(0.2), radius: 4, y: 2)
+
+                    Spacer()
+
+                    HStack(spacing: 5) {
+                        Image(systemName: "eye")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                        Text("124")
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundColor(Theme.Colors.label)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(.regularMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .padding(16)
+            }
+
+            // Details section
+            VStack(alignment: .leading, spacing: 0) {
+                // Name + price row
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(listing.title)
+                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                            .foregroundColor(Theme.Colors.label)
+                        HStack(spacing: 5) {
+                            Image(systemName: "bag")
+                                .font(.system(size: 12))
+                            Text("\(listing.availableQuantity) boxes left")
+                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                        }
+                        .foregroundColor(Theme.Colors.secondaryLabel)
+                    }
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("$\(String(format: "%.2f", listing.discountedPrice))")
+                            .font(.system(size: 22, weight: .heavy, design: .rounded))
+                            .foregroundColor(Theme.Colors.primaryGradientStart)
+                        Text("$\(String(format: "%.2f", listing.originalPrice))")
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                            .strikethrough()
+                    }
+                }
+                .padding(.bottom, 16)
+
+                // Pickup window
+                HStack(spacing: 8) {
+                    Image(systemName: "clock")
+                        .font(.system(size: 14))
+                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                    Text("Pickup: \(listing.pickupStartTime.formatted(date: .omitted, time: .shortened)) – \(listing.pickupEndTime.formatted(date: .omitted, time: .shortened))")
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundColor(.secondary)
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(.systemGray6))
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color(.systemGray5), lineWidth: 1)
+                )
+                .padding(.bottom, 16)
+
+                // Edit / Cancel buttons
+                HStack(spacing: 12) {
+                    Button("Edit") { hapticFeedback(.light) }
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundColor(Theme.Colors.label)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color(.systemGray5))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                    Button("Cancel") { hapticFeedback(.light) }
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color(.systemBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Color(.systemGray5), lineWidth: 1.5)
+                        )
+                }
+            }
+            .padding(20)
+        }
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 32))
+        .shadow(color: Color.black.opacity(0.07), radius: 16, y: 5)
     }
 }
 
