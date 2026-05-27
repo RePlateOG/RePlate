@@ -26,185 +26,206 @@ struct RePlateIconView: View {
     }
 }
 
-// MARK: - Onboarding
+// MARK: - Onboarding  (Figma 2.0 — single-screen welcome)
 struct OnboardingView: View {
     @EnvironmentObject var appState: AppState
-    @State private var currentPage = 0
-    @State private var showAuth = false
-
-    // Page 0 is the welcome/splash; pages 1-3 are feature pages
-    let featurePages: [OnboardingPage] = [
-        OnboardingPage(icon: "leaf.fill",             title: "Save Food, Save Planet",  description: "Connect with local restaurants to rescue surplus food at amazing prices"),
-        OnboardingPage(icon: "dollarsign.circle.fill", title: "Great Deals Daily",       description: "Get delicious meals at up to 70% off — or even free"),
-        OnboardingPage(icon: "heart.fill",             title: "Make an Impact",          description: "Every meal saved reduces food waste and helps the environment")
-    ]
-
-    // Total pages including the welcome splash
-    private var totalPages: Int { featurePages.count + 1 }
+    @State private var showAuth   = false
+    @State private var showSignIn = false
 
     var body: some View {
         ZStack {
-            Theme.Colors.primaryGradient.ignoresSafeArea()
+            Color(.systemBackground).ignoresSafeArea()
 
+            // ── Blob decorations ──────────────────────────────────
+            // Top-left blob
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Theme.Colors.primaryGradientStart.opacity(0.35),
+                            Theme.Colors.primaryGradientEnd.opacity(0.35)
+                        ],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 280, height: 280)
+                .blur(radius: 60)
+                .offset(x: -100, y: -100)
+
+            // Bottom-right blob
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Theme.Colors.accent.opacity(0.30),
+                            Theme.Colors.primaryGradientEnd.opacity(0.25)
+                        ],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 240, height: 240)
+                .blur(radius: 50)
+                .offset(x: 120, y: 400)
+
+            // ── Content ───────────────────────────────────────────
             VStack(spacing: 0) {
-                // Skip (hidden on welcome page)
-                HStack {
-                    Spacer()
-                    if currentPage > 0 {
-                        Button("Skip") { showAuth = true }
-                            .foregroundColor(.white.opacity(0.9))
-                            .padding()
-                    } else {
-                        Color.clear.frame(height: 44).padding()
+                Spacer()
+
+                // Hero circle + sparkles badge
+                ZStack(alignment: .topTrailing) {
+                    // Circle hero (gradient with fork icon)
+                    ZStack {
+                        Circle()
+                            .fill(Theme.Colors.primaryGradient)
+                            .frame(width: 192, height: 192)
+                            .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.35),
+                                    radius: 24, y: 8)
+                        Image(systemName: "fork.knife")
+                            .font(.system(size: 72, weight: .medium))
+                            .foregroundColor(.white.opacity(0.85))
                     }
-                }
+                    .overlay(
+                        Circle()
+                            .stroke(Theme.Colors.accent, lineWidth: 4)
+                    )
 
-                // Pages (welcome + features)
-                TabView(selection: $currentPage) {
-                    // Page 0 — Welcome / splash
-                    welcomePage
-                        .tag(0)
-
-                    ForEach(0..<featurePages.count, id: \.self) { i in
-                        OnboardingPageView(page: featurePages[i])
-                            .tag(i + 1)
+                    // Sparkles badge
+                    ZStack {
+                        Circle()
+                            .fill(Theme.Colors.accent)
+                            .frame(width: 52, height: 52)
+                            .shadow(color: Color.black.opacity(0.12), radius: 8, y: 4)
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundColor(Theme.Colors.primaryGradientStart)
                     }
+                    .offset(x: 8, y: -8)
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
+                .padding(.bottom, 32)
 
-                // Dot indicators
-                HStack(spacing: 8) {
-                    ForEach(0..<totalPages, id: \.self) { i in
-                        Capsule()
-                            .fill(i == currentPage ? Color.white : Color.white.opacity(0.35))
-                            .frame(width: i == currentPage ? 20 : 8, height: 8)
-                            .animation(.spring(response: 0.3), value: currentPage)
-                    }
-                }
-                .padding(.bottom, Theme.Spacing.md)
+                // Logo icon + wordmark + subtitle
+                VStack(spacing: 12) {
+                    RePlateIconView(size: 64)
 
-                // Action button
-                VStack(spacing: Theme.Spacing.md) {
-                    if currentPage == totalPages - 1 {
-                        Button { showAuth = true } label: { ctaLabel("Get Started") }
-                    } else if currentPage == 0 {
-                        VStack(spacing: Theme.Spacing.sm) {
-                            Button { showAuth = true } label: { ctaLabel("Get Started") }
-                            Button("Already have an account? Sign In") { showAuth = true }
-                                .font(Theme.Typography.subheadline)
-                                .foregroundColor(.white.opacity(0.85))
-                        }
-                    } else {
-                        Button { withAnimation { currentPage += 1 } } label: { ctaLabel("Continue") }
-                    }
-                }
-                .padding(Theme.Spacing.lg)
-            }
-        }
-        .fullScreenCover(isPresented: $showAuth) { AuthenticationView() }
-    }
-
-    private func ctaLabel(_ text: String) -> some View {
-        Text(text)
-            .font(Theme.Typography.headline)
-            .foregroundColor(Theme.Colors.primaryGradientStart)
-            .frame(maxWidth: .infinity)
-            .frame(height: 56)
-            .background(Color.white)
-            .cornerRadius(Theme.CornerRadius.xxl)
-    }
-
-    // MARK: Welcome page
-    private var welcomePage: some View {
-        VStack(spacing: Theme.Spacing.xl) {
-            Spacer()
-
-            // App icon + wordmark
-            VStack(spacing: Theme.Spacing.lg) {
-                RePlateIconView(size: 100)
-
-                VStack(spacing: Theme.Spacing.xs) {
                     Text("RePlate")
-                        .font(.system(size: 42, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
+                        .font(.system(size: 34, weight: .heavy, design: .rounded))
+                        .foregroundStyle(Theme.Colors.primaryGradient)
 
-                    Text("Reducing food waste,\none delicious meal at a time.")
-                        .font(Theme.Typography.body)
-                        .foregroundColor(.white.opacity(0.9))
+                    Text("Reducing food waste, one delicious meal at a time.")
+                        .font(.system(size: 15, weight: .medium, design: .rounded))
+                        .foregroundColor(Theme.Colors.secondaryLabel)
                         .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40)
                 }
+                .padding(.bottom, 40)
+
+                // Feature rows
+                VStack(spacing: 14) {
+                    WelcomeFeatureRow(
+                        icon: "leaf.fill",
+                        iconBackground: Theme.Colors.primaryGradientStart,
+                        title: "Eco-Friendly",
+                        subtitle: "Reduce your carbon footprint"
+                    )
+                    WelcomeFeatureRow(
+                        icon: "fork.knife",
+                        iconBackground: Theme.Colors.primaryGradientEnd,
+                        title: "Fresh Food",
+                        subtitle: "Quality surplus at low cost"
+                    )
+                    WelcomeFeatureRow(
+                        icon: "heart.fill",
+                        iconBackground: Theme.Colors.accent,
+                        title: "Community",
+                        subtitle: "Help local businesses thrive",
+                        iconForeground: Theme.Colors.primaryGradientStart
+                    )
+                }
+                .padding(.horizontal, 32)
+
+                Spacer()
+
+                // Action buttons
+                VStack(spacing: 12) {
+                    Button {
+                        hapticFeedback(.medium)
+                        showAuth = true
+                    } label: {
+                        Text("Get Started")
+                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(Theme.Colors.primaryGradient)
+                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                            .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.35),
+                                    radius: 12, y: 5)
+                    }
+
+                    Button {
+                        hapticFeedback(.light)
+                        showSignIn = true
+                    } label: {
+                        Text("Log In")
+                            .font(.system(size: 17, weight: .semibold, design: .rounded))
+                            .foregroundColor(Theme.Colors.primaryGradientStart)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(Color(.systemGray6))
+                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .stroke(Color(.systemGray5), lineWidth: 1)
+                            )
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 48)
             }
-
-            Spacer()
-
-            // Feature highlights
-            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                welcomeFeature(icon: "leaf.fill",             color: Theme.Colors.accent, title: "Eco-Friendly",  subtitle: "Reduce your carbon footprint")
-                welcomeFeature(icon: "fork.knife",            color: .white,              title: "Fresh Food",    subtitle: "Quality surplus at low cost")
-                welcomeFeature(icon: "person.2.fill",         color: Theme.Colors.accent, title: "Community",     subtitle: "Help local businesses thrive")
-            }
-            .padding(.horizontal, Theme.Spacing.xl)
-
-            Spacer()
         }
-        .padding(.horizontal, Theme.Spacing.lg)
-    }
-
-    private func welcomeFeature(icon: String, color: Color, title: String, subtitle: String) -> some View {
-        HStack(spacing: Theme.Spacing.md) {
-            Image(systemName: icon)
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(color)
-                .frame(width: 40, height: 40)
-                .background(Color.white.opacity(0.15))
-                .clipShape(Circle())
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(Theme.Typography.headline).foregroundColor(.white)
-                Text(subtitle).font(Theme.Typography.caption).foregroundColor(.white.opacity(0.8))
-            }
-            Spacer()
-        }
+        .fullScreenCover(isPresented: $showAuth)   { AuthenticationView() }
+        .sheet(isPresented: $showSignIn)            { SignInView() }
     }
 }
 
-struct OnboardingPage {
+// MARK: - Welcome Feature Row
+private struct WelcomeFeatureRow: View {
     let icon: String
+    let iconBackground: Color
     let title: String
-    let description: String
-}
-
-struct OnboardingPageView: View {
-    let page: OnboardingPage
+    let subtitle: String
+    var iconForeground: Color = .white
 
     var body: some View {
-        VStack(spacing: Theme.Spacing.xl) {
-            Spacer()
-
+        HStack(spacing: 16) {
             ZStack {
-                Circle()
-                    .fill(Color.white.opacity(0.15))
-                    .frame(width: 160, height: 160)
-                Image(systemName: page.icon)
-                    .font(.system(size: 72, weight: .medium))
-                    .foregroundColor(.white)
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(iconBackground)
+                    .frame(width: 44, height: 44)
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(iconForeground)
             }
 
-            VStack(spacing: Theme.Spacing.md) {
-                Text(page.title)
-                    .font(Theme.Typography.largeTitle)
-                    .foregroundColor(.white)
-                    .multilineTextAlignment(.center)
-
-                Text(page.description)
-                    .font(Theme.Typography.body)
-                    .foregroundColor(.white.opacity(0.9))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, Theme.Spacing.xl)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundColor(Theme.Colors.label)
+                Text(subtitle)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundColor(Theme.Colors.secondaryLabel)
             }
-
             Spacer()
         }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .fill(Color(.systemBackground).opacity(0.5))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18)
+                        .stroke(Color(.systemGray5), lineWidth: 1)
+                )
+        )
     }
 }
 
