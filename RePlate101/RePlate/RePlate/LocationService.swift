@@ -97,10 +97,11 @@ class LocationService: ObservableObject {
         Task { @MainActor [weak self] in
             defer { self?.isLoading = false }
             do {
-                var request = MKReverseGeocodingRequest()
-                request.coordinate = location.coordinate
-                let placemark = try await request.placemark
-                if let city = placemark.locality, let state = placemark.administrativeArea {
+                guard let request = MKReverseGeocodingRequest(location: location) else { return }
+                let mapItems = try await request.mapItems
+                if let placemark = mapItems.first?.placemark,
+                   let city = placemark.locality,
+                   let state = placemark.administrativeArea {
                     self?.locationString = "\(city), \(state)"
                 }
             } catch {
