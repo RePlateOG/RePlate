@@ -3,700 +3,411 @@
 //  RePlate
 //
 //  Created by Jyotika Sadani on 5/26/26.
+//  Redesigned to match RePlate 2.0 Figma — playful, bold, food-first.
 //
 
 import SwiftUI
 import MapKit
 
 struct HomeView: View {
+    @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = HomeViewModel()
     @State private var selectedListing: FoodListing?
-    @State private var showListingDetail = false
-    
+
     var body: some View {
-        NavigationView {
-            ZStack {
-                ScrollView {
-                    LazyVStack(spacing: Theme.Spacing.lg) {
-                        // Header
-                        headerSection
-                        
-                        // Impact Stats
-                        impactStatsSection
-                        
-                        // Featured Listings
-                        if !viewModel.featuredListings.isEmpty {
-                            featuredSection
-                        }
-                        
-                        // All Listings
-                        listingsSection
-                    }
-                    .padding(.bottom, 100) // Space for tab bar
-                }
-                .refreshable {
-                    await viewModel.refreshListings()
-                }
+        ScrollView(showsIndicators: false) {
+            LazyVStack(spacing: 0) {
+                homeHeader
+                categoriesSection
+                freshlyRescuedSection
             }
-            .background(Theme.Colors.background)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Text("RePlate")
-                        .font(Theme.Typography.title2)
-                        .foregroundStyle(Theme.Colors.primaryGradient)
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        viewModel.toggleMapView()
-                    } label: {
-                        Image(systemName: viewModel.showMap ? "list.bullet" : "map")
-                            .foregroundColor(Theme.Colors.primaryGradientStart)
-                    }
-                }
-            }
-            .task {
-                await viewModel.loadListings()
-            }
-            .sheet(item: $selectedListing) { listing in
-                ListingDetailView(listing: listing)
-            }
+            .padding(.bottom, 100)
+        }
+        .background(Color(.systemGray6).opacity(0.3))
+        .ignoresSafeArea(edges: .top)
+        .refreshable { await viewModel.refreshListings() }
+        .task { await viewModel.loadListings() }
+        .sheet(item: $selectedListing) { listing in
+            ListingDetailView(listing: listing)
         }
     }
-    
-    // MARK: - Header Section
-    private var headerSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text("Nearby Deals")
-                .font(Theme.Typography.largeTitle)
+
+    // MARK: - Hero Header
+    private var homeHeader: some View {
+        ZStack(alignment: .top) {
+            // Subtle blob decoration
+            Circle()
+                .fill(Theme.Colors.accent.opacity(0.25))
+                .frame(width: 220, height: 220)
+                .blur(radius: 60)
+                .offset(x: 120, y: -40)
+
+            VStack(alignment: .leading, spacing: 0) {
+                // Top bar: location + bell
+                HStack(alignment: .center) {
+                    HStack(spacing: 8) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Theme.Colors.primaryGradientStart.opacity(0.12))
+                                .frame(width: 36, height: 36)
+                            Image(systemName: "location.fill")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(Theme.Colors.primaryGradientStart)
+                        }
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("YOUR LOCATION")
+                                .font(.system(size: 9, weight: .bold, design: .rounded))
+                                .foregroundColor(Theme.Colors.secondaryLabel)
+                                .tracking(1)
+                            Text(appState.currentUser != nil ? "Downtown Manhattan" : "San Francisco, CA")
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .foregroundColor(Theme.Colors.label)
+                        }
+                    }
+                    Spacer()
+                    // Notification bell
+                    ZStack(alignment: .topTrailing) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color(.systemGray6))
+                                .frame(width: 44, height: 44)
+                            Image(systemName: "bell.fill")
+                                .font(.system(size: 18))
+                                .foregroundColor(Theme.Colors.secondaryLabel)
+                        }
+                        Circle()
+                            .fill(Theme.Colors.primaryGradientStart)
+                            .frame(width: 10, height: 10)
+                            .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
+                            .offset(x: 2, y: -2)
+                    }
+                }
+                .padding(.top, 60)
+                .padding(.bottom, 24)
+
+                // Bold headline
+                Group {
+                    Text("Feed your ") +
+                    Text("belly")
+                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                        .italic()
+                }
+                .font(.system(size: 36, weight: .heavy, design: .rounded))
                 .foregroundColor(Theme.Colors.label)
-            
-            HStack(spacing: Theme.Spacing.xs) {
-                Image(systemName: "location.fill")
-                    .font(.caption)
-                Text("San Francisco, CA")
-                    .font(Theme.Typography.subheadline)
-            }
-            .foregroundColor(Theme.Colors.secondaryLabel)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, Theme.Spacing.lg)
-        .padding(.top, Theme.Spacing.md)
-    }
-    
-    // MARK: - Impact Stats Section
-    private var impactStatsSection: some View {
-        VStack(spacing: Theme.Spacing.md) {
-            HStack {
-                Text("Community Impact")
-                    .font(Theme.Typography.title3)
-                    .foregroundColor(Theme.Colors.label)
-                
-                Spacer()
-            }
-            .padding(.horizontal, Theme.Spacing.lg)
-            
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: Theme.Spacing.md) {
-                    StatCard(
-                        icon: "fork.knife",
-                        value: "\(viewModel.impactStats.totalMealsSaved.formatted())",
-                        label: "Meals Saved",
-                        gradient: true
-                    )
-                    
-                    StatCard(
-                        icon: "leaf.fill",
-                        value: "\(String(format: "%.1f", viewModel.impactStats.totalCO2Reduced / 1000))t",
-                        label: "CO₂ Reduced",
-                        gradient: true
-                    )
-                    
-                    StatCard(
-                        icon: "scalemass.fill",
-                        value: "\(String(format: "%.1f", viewModel.impactStats.totalFoodRescued / 1000))k lbs",
-                        label: "Food Rescued",
-                        gradient: true
+
+                Group {
+                    Text("save the ") +
+                    Text("world.")
+                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                        .italic()
+                }
+                .font(.system(size: 36, weight: .heavy, design: .rounded))
+                .foregroundColor(Theme.Colors.label)
+                .padding(.bottom, 20)
+
+                // Search bar
+                NavigationLink(destination: SearchView()) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(Theme.Colors.primaryGradientStart)
+                        Text("Search for surplus near you...")
+                            .font(.system(size: 15, weight: .medium, design: .rounded))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                        Spacer()
+                    }
+                    .padding(16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 18)
+                            .fill(Color(.systemGray6))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 18)
+                                    .stroke(Color(.systemGray5), lineWidth: 1.5)
+                            )
                     )
                 }
-                .padding(.horizontal, Theme.Spacing.lg)
+                .padding(.bottom, 8)
             }
+            .padding(.horizontal, 20)
         }
+        .background(Color(.systemBackground))
     }
-    
-    // MARK: - Featured Section
-    private var featuredSection: some View {
-        VStack(spacing: Theme.Spacing.md) {
+
+    // MARK: - Categories
+    private var categoriesSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("Featured Today")
-                    .font(Theme.Typography.title3)
+                Text("Categories")
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundColor(Theme.Colors.label)
-                
                 Spacer()
-            }
-            .padding(.horizontal, Theme.Spacing.lg)
-            
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: Theme.Spacing.md) {
-                    ForEach(viewModel.featuredListings) { listing in
-                        FoodListingCard(
-                            listing: listing,
-                            distance: 0.8
-                        ) {
-                            selectedListing = listing
-                        }
-                        .frame(width: 300)
-                    }
-                }
-                .padding(.horizontal, Theme.Spacing.lg)
-            }
-        }
-    }
-    
-    // MARK: - Listings Section
-    private var listingsSection: some View {
-        VStack(spacing: Theme.Spacing.md) {
-            HStack {
-                Text("All Available")
-                    .font(Theme.Typography.title3)
-                    .foregroundColor(Theme.Colors.label)
-                
-                Spacer()
-                
-                Button {
-                    // Filter action
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "slider.horizontal.3")
-                        Text("Filter")
-                    }
-                    .font(Theme.Typography.subheadline)
+                Button("View All") {}
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
                     .foregroundColor(Theme.Colors.primaryGradientStart)
-                }
             }
-            .padding(.horizontal, Theme.Spacing.lg)
-            
-            if viewModel.isLoading {
-                VStack(spacing: Theme.Spacing.md) {
-                    ForEach(0..<3) { _ in
-                        SkeletonView()
-                            .frame(height: 300)
-                            .padding(.horizontal, Theme.Spacing.lg)
+            .padding(.horizontal, 20)
+            .padding(.top, 24)
+            .padding(.bottom, 16)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 14) {
+                    ForEach(foodCategories, id: \.label) { cat in
+                        CategoryPill(cat: cat)
                     }
                 }
-            } else if viewModel.listings.isEmpty {
-                EmptyStateView(
-                    icon: "fork.knife",
-                    title: "No Listings Available",
-                    message: "Check back later for new deals from nearby restaurants"
-                )
-                .padding(.top, Theme.Spacing.xl)
-            } else {
-                LazyVStack(spacing: Theme.Spacing.md) {
-                    ForEach(viewModel.listings) { listing in
-                        FoodListingCard(
-                            listing: listing,
-                            distance: Double.random(in: 0.3...2.5)
-                        ) {
-                            selectedListing = listing
-                        }
-                        .padding(.horizontal, Theme.Spacing.lg)
-                    }
-                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 8)
             }
         }
+        .background(Color(.systemBackground))
+    }
+
+    // MARK: - Freshly Rescued
+    private var freshlyRescuedSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("Freshly Rescued")
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .foregroundColor(Theme.Colors.label)
+                Spacer()
+                HStack(spacing: 4) {
+                    Image(systemName: "leaf.fill")
+                        .font(.system(size: 11))
+                    Text("New Today")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                }
+                .foregroundColor(Theme.Colors.primaryGradientStart)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Theme.Colors.primaryGradientStart.opacity(0.12))
+                .clipShape(Capsule())
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 28)
+            .padding(.bottom, 16)
+
+            if viewModel.isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 40)
+            } else {
+                VStack(spacing: 28) {
+                    ForEach(viewModel.listings) { listing in
+                        FigmaListingCard(listing: listing) {
+                            selectedListing = listing
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 12)
+            }
+        }
+    }
+
+    // MARK: - Data
+    private let foodCategories: [(emoji: String, label: String, color: Color)] = [
+        ("🥐", "Bakery",  Color.orange.opacity(0.12)),
+        ("🥗", "Healthy", Color.green.opacity(0.12)),
+        ("🍱", "Sushi",   Color.red.opacity(0.10)),
+        ("🍕", "Pizza",   Color.yellow.opacity(0.12)),
+        ("🍝", "Pasta",   Color.blue.opacity(0.10)),
+        ("🧃", "Drinks",  Color.purple.opacity(0.10)),
+    ]
+}
+
+// MARK: - Category Pill
+private struct CategoryPill: View {
+    let cat: (emoji: String, label: String, color: Color)
+
+    var body: some View {
+        VStack(spacing: 6) {
+            Text(cat.emoji)
+                .font(.system(size: 28))
+            Text(cat.label)
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundColor(.secondary)
+        }
+        .frame(width: 76, height: 96)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(cat.color)
+                .shadow(color: Color.black.opacity(0.04), radius: 6, y: 3)
+        )
     }
 }
 
-// MARK: - Listing Detail View
-struct ListingDetailView: View {
-    @Environment(\.dismiss) var dismiss
+// MARK: - Figma-style Listing Card
+struct FigmaListingCard: View {
     let listing: FoodListing
-    @State private var selectedQuantity = 1
-    @State private var showCheckout = false
-    
+    let onTap: () -> Void
+
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 0) {
-                    // Image Header
-                    imageHeader
-                    
-                    // Content
-                    VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-                        // Title and Price
-                        titleSection
-                        
-                        Divider()
-                        
-                        // Restaurant Info
-                        if let restaurant = listing.restaurant {
-                            restaurantSection(restaurant)
-                        }
-                        
-                        Divider()
-                        
-                        // Description
-                        descriptionSection
-                        
-                        // Pickup Info
-                        pickupSection
-                        
-                        // Dietary Info
-                        if !listing.dietaryInfo.isEmpty {
-                            dietarySection
+        Button(action: { onTap(); hapticFeedback(.light) }) {
+            VStack(alignment: .leading, spacing: 0) {
+                // Image
+                ZStack(alignment: .bottom) {
+                    AsyncImage(url: nil) { _ in
+                        Rectangle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Theme.Colors.primaryGradientStart.opacity(0.3),
+                                        Theme.Colors.primaryGradientEnd.opacity(0.5)
+                                    ],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing
+                                )
+                            )
+                    } placeholder: {
+                        ZStack {
+                            Theme.Colors.primaryGradient
+                            Image(systemName: listing.category.icon)
+                                .font(.system(size: 48, weight: .medium))
+                                .foregroundColor(.white.opacity(0.8))
                         }
                     }
-                    .padding(Theme.Spacing.lg)
-                }
-            }
-            .background(Theme.Colors.background)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .foregroundColor(Theme.Colors.secondaryLabel)
+                    .frame(height: 200)
+                    .clipped()
+
+                    // Tags overlay
+                    HStack {
+                        ForEach(listing.dietaryInfo.prefix(2), id: \.self) { tag in
+                            Text(tag.rawValue)
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(.black.opacity(0.35).blendMode(.normal))
+                                .background(.ultraThinMaterial)
+                                .clipShape(Capsule())
+                        }
+                        Spacer()
                     }
+                    .padding(14)
+
+                    // Rating badge
+                    VStack {
+                        HStack {
+                            Spacer()
+                            HStack(spacing: 3) {
+                                Image(systemName: "star.fill")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.yellow)
+                                Text("4.8")
+                                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                                    .foregroundColor(Theme.Colors.label)
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(.regularMaterial)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        Spacer()
+                    }
+                    .padding(14)
                 }
-            }
-            .safeAreaInset(edge: .bottom) {
-                claimButton
-            }
-            .sheet(isPresented: $showCheckout) {
-                CheckoutView(listing: listing, quantity: selectedQuantity)
-            }
-        }
-    }
-    
-    // MARK: - Image Header
-    private var imageHeader: some View {
-        ZStack(alignment: .topTrailing) {
-            if let imageURL = listing.imageURLs.first {
-                AsyncImage(url: URL(string: imageURL)) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Rectangle()
-                        .fill(Theme.Colors.secondaryBackground)
-                }
-                .frame(height: 300)
-                .clipped()
-            }
-            
-            // Badges
-            VStack(alignment: .trailing, spacing: Theme.Spacing.xs) {
-                if listing.isFree {
-                    Badge("FREE", color: .green)
-                } else if listing.discountPercentage > 0 {
-                    Badge("\(listing.discountPercentage)% OFF", color: Theme.Colors.primaryGradientStart)
-                }
-            }
-            .padding(Theme.Spacing.md)
-        }
-    }
-    
-    // MARK: - Title Section
-    private var titleSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text(listing.title)
-                .font(Theme.Typography.title1)
-                .foregroundColor(Theme.Colors.label)
-            
-            HStack(alignment: .bottom, spacing: Theme.Spacing.sm) {
-                if listing.isFree {
-                    Text("FREE")
-                        .font(Theme.Typography.largeTitle)
-                        .foregroundColor(.green)
-                } else {
-                    Text("$\(String(format: "%.2f", listing.discountedPrice))")
-                        .font(Theme.Typography.largeTitle)
-                        .foregroundColor(Theme.Colors.primaryGradientStart)
-                    
-                    if listing.originalPrice > listing.discountedPrice {
+                .clipShape(RoundedRectangle(cornerRadius: 28))
+
+                // Info row
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(listing.restaurantName)
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .foregroundColor(Theme.Colors.label)
+                        HStack(spacing: 14) {
+                            Label("Pickup: 6–8 PM", systemImage: "clock")
+                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                .foregroundColor(Theme.Colors.secondaryLabel)
+                            Label("0.5 mi", systemImage: "location")
+                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                .foregroundColor(Theme.Colors.secondaryLabel)
+                        }
+                    }
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("$\(String(format: "%.2f", listing.discountedPrice))")
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .foregroundColor(Theme.Colors.primaryGradientStart)
                         Text("$\(String(format: "%.2f", listing.originalPrice))")
-                            .font(Theme.Typography.title3)
-                            .foregroundColor(Theme.Colors.tertiaryLabel)
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
                             .strikethrough()
                     }
                 }
-                
-                Spacer()
-                
-                if listing.isAlmostGone {
-                    HStack(spacing: 4) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                        Text("Only \(listing.availableQuantity) left")
-                    }
-                    .font(Theme.Typography.caption)
-                    .foregroundColor(.orange)
-                }
+                .padding(.top, 14)
+                .padding(.horizontal, 4)
             }
         }
-    }
-    
-    // MARK: - Restaurant Section
-    private func restaurantSection(_ restaurant: Restaurant) -> some View {
-        HStack(spacing: Theme.Spacing.md) {
-            Image(systemName: "fork.knife.circle.fill")
-                .font(.system(size: 40))
-                .foregroundStyle(Theme.Colors.primaryGradient)
-            
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: Theme.Spacing.xs) {
-                    Text(restaurant.name)
-                        .font(Theme.Typography.headline)
-                        .foregroundColor(Theme.Colors.label)
-                    
-                    if restaurant.verified {
-                        Image(systemName: "checkmark.seal.fill")
-                            .font(.caption)
-                            .foregroundColor(.blue)
-                    }
-                }
-                
-                Text(restaurant.address)
-                    .font(Theme.Typography.subheadline)
-                    .foregroundColor(Theme.Colors.secondaryLabel)
-                
-                HStack(spacing: Theme.Spacing.sm) {
-                    HStack(spacing: 2) {
-                        Image(systemName: "star.fill")
-                            .font(.caption)
-                        Text(String(format: "%.1f", restaurant.rating))
-                            .font(Theme.Typography.caption)
-                    }
-                    .foregroundColor(.orange)
-                    
-                    Text("•")
-                        .foregroundColor(Theme.Colors.tertiaryLabel)
-                    
-                    Text("\(restaurant.totalReviews) reviews")
-                        .font(Theme.Typography.caption)
-                        .foregroundColor(Theme.Colors.secondaryLabel)
-                }
-            }
-            
-            Spacer()
-        }
-    }
-    
-    // MARK: - Description Section
-    private var descriptionSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text("Description")
-                .font(Theme.Typography.headline)
-                .foregroundColor(Theme.Colors.label)
-            
-            Text(listing.description)
-                .font(Theme.Typography.body)
-                .foregroundColor(Theme.Colors.secondaryLabel)
-        }
-    }
-    
-    // MARK: - Pickup Section
-    private var pickupSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            Text("Pickup Information")
-                .font(Theme.Typography.headline)
-                .foregroundColor(Theme.Colors.label)
-            
-            VStack(spacing: Theme.Spacing.sm) {
-                infoRow(
-                    icon: "clock.fill",
-                    title: "Pickup Window",
-                    value: "\(listing.pickupStartTime.formatted(date: .omitted, time: .shortened)) - \(listing.pickupEndTime.formatted(date: .omitted, time: .shortened))"
-                )
-                
-                if listing.isExpiringSoon {
-                    HStack(spacing: Theme.Spacing.xs) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.caption)
-                        Text("Expiring soon - claim now!")
-                            .font(Theme.Typography.caption)
-                    }
-                    .foregroundColor(.red)
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, Theme.Spacing.sm)
-                    .background(Color.red.opacity(0.1))
-                    .cornerRadius(Theme.CornerRadius.sm)
-                }
-            }
-        }
-    }
-    
-    // MARK: - Dietary Section
-    private var dietarySection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text("Dietary Information")
-                .font(Theme.Typography.headline)
-                .foregroundColor(Theme.Colors.label)
-            
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: Theme.Spacing.sm) {
-                    ForEach(listing.dietaryInfo, id: \.self) { info in
-                        HStack(spacing: 4) {
-                            Image(systemName: info.icon)
-                                .font(.caption)
-                            Text(info.rawValue)
-                                .font(Theme.Typography.caption)
-                        }
-                        .padding(.horizontal, Theme.Spacing.sm)
-                        .padding(.vertical, 6)
-                        .background(Theme.Colors.accent.opacity(0.3))
-                        .foregroundColor(Theme.Colors.primaryGradientStart)
-                        .cornerRadius(Theme.CornerRadius.sm)
-                    }
-                }
-            }
-        }
-    }
-    
-    // MARK: - Info Row
-    private func infoRow(icon: String, title: String, value: String) -> some View {
-        HStack(spacing: Theme.Spacing.md) {
-            Image(systemName: icon)
-                .foregroundColor(Theme.Colors.primaryGradientStart)
-                .frame(width: 24)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(Theme.Typography.caption)
-                    .foregroundColor(Theme.Colors.secondaryLabel)
-                Text(value)
-                    .font(Theme.Typography.subheadline)
-                    .foregroundColor(Theme.Colors.label)
-            }
-        }
-    }
-    
-    // MARK: - Claim Button
-    private var claimButton: some View {
-        VStack(spacing: 0) {
-            Divider()
-            
-            HStack(spacing: Theme.Spacing.md) {
-                // Quantity selector
-                HStack(spacing: 0) {
-                    Button {
-                        if selectedQuantity > 1 {
-                            selectedQuantity -= 1
-                            hapticFeedback(.light)
-                        }
-                    } label: {
-                        Image(systemName: "minus")
-                            .font(Theme.Typography.headline)
-                            .foregroundColor(selectedQuantity > 1 ? Theme.Colors.primaryGradientStart : Theme.Colors.tertiaryLabel)
-                            .frame(width: 44, height: 44)
-                    }
-                    
-                    Text("\(selectedQuantity)")
-                        .font(Theme.Typography.headline)
-                        .foregroundColor(Theme.Colors.label)
-                        .frame(width: 44)
-                    
-                    Button {
-                        if selectedQuantity < listing.availableQuantity {
-                            selectedQuantity += 1
-                            hapticFeedback(.light)
-                        }
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(Theme.Typography.headline)
-                            .foregroundColor(selectedQuantity < listing.availableQuantity ? Theme.Colors.primaryGradientStart : Theme.Colors.tertiaryLabel)
-                            .frame(width: 44, height: 44)
-                    }
-                }
-                .background(Theme.Colors.secondaryBackground)
-                .cornerRadius(Theme.CornerRadius.xl)
-                
-                // Claim button
-                Button {
-                    hapticFeedback(.medium)
-                    showCheckout = true
-                } label: {
-                    HStack {
-                        Text("Claim Now")
-                            .font(Theme.Typography.headline)
-                        
-                        Spacer()
-                        
-                        if listing.isFree {
-                            Text("FREE")
-                                .font(Theme.Typography.headline)
-                        } else {
-                            Text("$\(String(format: "%.2f", listing.discountedPrice * Double(selectedQuantity)))")
-                                .font(Theme.Typography.headline)
-                        }
-                    }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, Theme.Spacing.lg)
-                    .frame(height: 56)
-                    .background(Theme.Colors.primaryGradient)
-                    .cornerRadius(Theme.CornerRadius.xxl)
-                }
-            }
-            .padding(Theme.Spacing.lg)
-            .background(Theme.Colors.background)
-        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
-// MARK: - Checkout View
-struct CheckoutView: View {
-    @Environment(\.dismiss) var dismiss
+// MARK: - Listing Detail View (sheet)
+struct ListingDetailView: View {
     let listing: FoodListing
-    let quantity: Int
-    @State private var isProcessing = false
-    @State private var showSuccess = false
-    
-    var totalAmount: Double {
-        listing.discountedPrice * Double(quantity)
-    }
-    
+    @Environment(\.dismiss) var dismiss
+
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: Theme.Spacing.lg) {
-                    // Order Summary
-                    orderSummary
-                    
-                    // Payment Method
-                    paymentSection
-                    
-                    // Checkout Button
-                    PrimaryButton("Complete Order", isLoading: isProcessing) {
-                        Task {
-                            await processCheckout()
-                        }
+                VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                    // Hero image placeholder
+                    ZStack {
+                        Theme.Colors.primaryGradient
+                        Image(systemName: listing.category.icon)
+                            .font(.system(size: 64))
+                            .foregroundColor(.white.opacity(0.8))
                     }
+                    .frame(height: 260)
+                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                    .padding(.horizontal, Theme.Spacing.lg)
+
+                    VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                        Text(listing.title)
+                            .font(Theme.Typography.title2)
+                            .foregroundColor(Theme.Colors.label)
+                        Text(listing.restaurantName)
+                            .font(Theme.Typography.subheadline)
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                        Text(listing.description)
+                            .font(Theme.Typography.body)
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+
+                        // Price row
+                        HStack {
+                            Text("$\(String(format: "%.2f", listing.discountedPrice))")
+                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                                .foregroundStyle(Theme.Colors.primaryGradient)
+                            Text("$\(String(format: "%.2f", listing.originalPrice))")
+                                .font(Theme.Typography.title3)
+                                .foregroundColor(Theme.Colors.secondaryLabel)
+                                .strikethrough()
+                            Spacer()
+                            Text("\(Int(listing.savingsPercentage))% off")
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundColor(Theme.Colors.primaryGradientStart)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(Theme.Colors.primaryGradientStart.opacity(0.12))
+                                .clipShape(Capsule())
+                        }
+
+                        PrimaryButton("Reserve Now") {
+                            hapticFeedback(.success)
+                            dismiss()
+                        }
+                        .padding(.top, Theme.Spacing.sm)
+                    }
+                    .padding(.horizontal, Theme.Spacing.lg)
                 }
-                .padding(Theme.Spacing.lg)
+                .padding(.bottom, 40)
             }
-            .background(Theme.Colors.background)
-            .navigationTitle("Checkout")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-            }
-            .alert("Order Confirmed!", isPresented: $showSuccess) {
-                Button("View Order") {
-                    dismiss()
-                }
-            } message: {
-                Text("Your order has been confirmed. Show your pickup code at the restaurant.")
-            }
-        }
-    }
-    
-    private var orderSummary: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            Text("Order Summary")
-                .font(Theme.Typography.title3)
-                .foregroundColor(Theme.Colors.label)
-            
-            VStack(spacing: Theme.Spacing.sm) {
-                HStack {
-                    Text(listing.title)
-                        .font(Theme.Typography.body)
-                    Spacer()
-                    Text("×\(quantity)")
-                        .font(Theme.Typography.body)
-                        .foregroundColor(Theme.Colors.secondaryLabel)
-                }
-                
-                if let restaurant = listing.restaurant {
-                    HStack {
-                        Text(restaurant.name)
-                            .font(Theme.Typography.subheadline)
-                            .foregroundColor(Theme.Colors.secondaryLabel)
-                        Spacer()
-                    }
-                }
-                
-                Divider()
-                
-                HStack {
-                    Text("Total")
-                        .font(Theme.Typography.headline)
-                    Spacer()
-                    if listing.isFree {
-                        Text("FREE")
-                            .font(Theme.Typography.headline)
-                            .foregroundColor(.green)
-                    } else {
-                        Text("$\(String(format: "%.2f", totalAmount))")
-                            .font(Theme.Typography.headline)
-                            .foregroundColor(Theme.Colors.primaryGradientStart)
-                    }
-                }
-            }
-            .padding(Theme.Spacing.md)
-            .background(Theme.Colors.secondaryBackground)
-            .cornerRadius(Theme.CornerRadius.xl)
-        }
-    }
-    
-    private var paymentSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            Text("Payment Method")
-                .font(Theme.Typography.title3)
-                .foregroundColor(Theme.Colors.label)
-            
-            if listing.isFree {
-                Text("No payment required for free items")
-                    .font(Theme.Typography.body)
-                    .foregroundColor(Theme.Colors.secondaryLabel)
-                    .padding(Theme.Spacing.md)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Theme.Colors.secondaryBackground)
-                    .cornerRadius(Theme.CornerRadius.xl)
-            } else {
-                Button {
-                    // Select payment method
-                } label: {
-                    HStack {
-                        Image(systemName: "creditcard.fill")
-                            .foregroundColor(Theme.Colors.primaryGradientStart)
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Apple Pay")
-                                .font(Theme.Typography.body)
-                                .foregroundColor(Theme.Colors.label)
-                            Text("Pay securely with Apple Pay")
-                                .font(Theme.Typography.caption)
-                                .foregroundColor(Theme.Colors.secondaryLabel)
-                        }
-                        
-                        Spacer()
-                        
-                        Image(systemName: "chevron.right")
-                            .foregroundColor(Theme.Colors.tertiaryLabel)
-                    }
-                    .padding(Theme.Spacing.md)
-                    .background(Theme.Colors.secondaryBackground)
-                    .cornerRadius(Theme.CornerRadius.xl)
+                    Button("Close") { dismiss() }
+                        .foregroundColor(Theme.Colors.primaryGradientStart)
                 }
             }
         }
-    }
-    
-    func processCheckout() async {
-        isProcessing = true
-        
-        // Simulate payment processing
-        try? await Task.sleep(nanoseconds: 2_000_000_000)
-        
-        isProcessing = false
-        showSuccess = true
-        hapticFeedback(.success)
     }
 }

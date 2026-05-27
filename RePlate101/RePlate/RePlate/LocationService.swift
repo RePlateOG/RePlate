@@ -33,7 +33,11 @@ private final class LocationManagerDelegate: NSObject, CLLocationManagerDelegate
 }
 
 // MARK: - Location Service
-class LocationService: ObservableObject {
+// Explicit @MainActor + final: prevents Swift 6 from generating a second
+// implicit @MainActor init() alongside our private init(), which would make
+// `LocationService()` ambiguous and cascade into a false "redeclaration" error.
+@MainActor
+final class LocationService: ObservableObject {
     static let shared = LocationService()
 
     @Published var currentLocation: CLLocation?
