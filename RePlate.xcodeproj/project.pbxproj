@@ -3,11 +3,73 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 90;
 	objects = {
+
+/* Begin PBXBuildFile section */
+		D9FD55BB2FC6A528002421C3 /* RePlateCoreDesignColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9FD55BA2FC6A528002421C3 /* RePlateCoreDesignColors.swift */; };
+		D9FD55BD2FC6A53F002421C3 /* RePlateCoreDesignTypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9FD55BC2FC6A53F002421C3 /* RePlateCoreDesignTypography.swift */; };
+		D9FD55BF2FC6A546002421C3 /* RePlateCoreDesignSpacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9FD55BE2FC6A546002421C3 /* RePlateCoreDesignSpacing.swift */; };
+		D9FD55C12FC6A54D002421C3 /* RePlateCoreUtilitiesHapticManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9FD55C02FC6A54D002421C3 /* RePlateCoreUtilitiesHapticManager.swift */; };
+		D9FD55C32FC6A568002421C3 /* RePlateModelsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9FD55C22FC6A568002421C3 /* RePlateModelsModels.swift */; };
+		D9FD55C52FC6A57A002421C3 /* RePlateCoreDesignComponentsRPButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9FD55C42FC6A57A002421C3 /* RePlateCoreDesignComponentsRPButton.swift */; };
+		D9FD55C72FC6A585002421C3 /* RePlateCoreDesignComponentsRPCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9FD55C62FC6A585002421C3 /* RePlateCoreDesignComponentsRPCard.swift */; };
+		D9FD55C92FC6A593002421C3 /* RePlateCoreDesignComponentsRPTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9FD55C82FC6A593002421C3 /* RePlateCoreDesignComponentsRPTextField.swift */; };
+		D9FD55CB2FC6A5AE002421C3 /* RePlateCoreDesignComponentsListingCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9FD55CA2FC6A5AE002421C3 /* RePlateCoreDesignComponentsListingCard.swift */; };
+		D9FD55CD2FC6A5BE002421C3 /* RePlateViewModelsAuthenticationViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9FD55CC2FC6A5BE002421C3 /* RePlateViewModelsAuthenticationViewModel.swift */; };
+		D9FD55CF2FC6A5CF002421C3 /* RePlateViewsOnboardingWelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9FD55CE2FC6A5CF002421C3 /* RePlateViewsOnboardingWelcomeView.swift */; };
+		D9FD55D12FC6A5E7002421C3 /* RePlateViewsOnboardingUserTypeSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9FD55D02FC6A5E7002421C3 /* RePlateViewsOnboardingUserTypeSelectionView.swift */; };
+		D9FD55D32FC6A5FD002421C3 /* RePlateViewsOnboardingSignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9FD55D22FC6A5FD002421C3 /* RePlateViewsOnboardingSignInView.swift */; };
+		D9FD55D52FC6A60A002421C3 /* RePlateViewsOnboardingSignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9FD55D42FC6A60A002421C3 /* RePlateViewsOnboardingSignUpView.swift */; };
+		D9FD55D72FC6A62B002421C3 /* RePlateViewsCustomerCustomerHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9FD55D62FC6A62B002421C3 /* RePlateViewsCustomerCustomerHomeView.swift */; };
+		D9FD55D92FC6A649002421C3 /* RePlateViewModelsCustomerHomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9FD55D82FC6A649002421C3 /* RePlateViewModelsCustomerHomeViewModel.swift */; };
+		D9FD55DB2FC6A64F002421C3 /* RePlateAppRePlateApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9FD55DA2FC6A64F002421C3 /* RePlateAppRePlateApp.swift */; };
+		D9FD55DD2FC6A680002421C3 /* RePlateAppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9FD55DC2FC6A680002421C3 /* RePlateAppRootView.swift */; };
+		D9FD55DF2FC6A6AE002421C3 /* RePlateViewsCustomerListingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9FD55DE2FC6A6AE002421C3 /* RePlateViewsCustomerListingDetailView.swift */; };
+		D9FD55E12FC6A6CA002421C3 /* RePlateViewsCustomerListingsMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9FD55E02FC6A6CA002421C3 /* RePlateViewsCustomerListingsMapView.swift */; };
+		D9FD55E32FC6A6D7002421C3 /* RePlateResourcesInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = D9FD55E22FC6A6D7002421C3 /* RePlateResourcesInfo.plist */; };
+		D9FD55E52FC6A70F002421C3 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = D9FD55E42FC6A70F002421C3 /* README.md */; };
+		D9FD55E72FC6A74A002421C3 /* SETUP_GUIDE.md in Resources */ = {isa = PBXBuildFile; fileRef = D9FD55E62FC6A74A002421C3 /* SETUP_GUIDE.md */; };
+		D9FD55E92FC6A793002421C3 /* FILE_REFERENCE.md in Resources */ = {isa = PBXBuildFile; fileRef = D9FD55E82FC6A793002421C3 /* FILE_REFERENCE.md */; };
+		D9FD55EB2FC6A7E6002421C3 /* IMPLEMENTATION_SUMMARY.md in Resources */ = {isa = PBXBuildFile; fileRef = D9FD55EA2FC6A7E6002421C3 /* IMPLEMENTATION_SUMMARY.md */; };
+		D9FD55ED2FC6A81E002421C3 /* DIRECTORY_TREE.md in Resources */ = {isa = PBXBuildFile; fileRef = D9FD55EC2FC6A81E002421C3 /* DIRECTORY_TREE.md */; };
+		D9FD55EF2FC6A84D002421C3 /* QUICK_REFERENCE.md in Resources */ = {isa = PBXBuildFile; fileRef = D9FD55EE2FC6A84D002421C3 /* QUICK_REFERENCE.md */; };
+		D9FD55F12FC6A89C002421C3 /* TODO.md in Resources */ = {isa = PBXBuildFile; fileRef = D9FD55F02FC6A89C002421C3 /* TODO.md */; };
+/* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		D959AD072F25A6BE00639BCE /* RePlate.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RePlate.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D9FD55982FC69F8F002421C3 /* RePlate.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = RePlate.xcodeproj; sourceTree = "<group>"; };
+		D9FD55B02FC6A3D0002421C3 /* RePlate.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = RePlate.xctestplan; sourceTree = "<group>"; };
+		D9FD55BA2FC6A528002421C3 /* RePlateCoreDesignColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RePlateCoreDesignColors.swift; sourceTree = "<group>"; };
+		D9FD55BC2FC6A53F002421C3 /* RePlateCoreDesignTypography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RePlateCoreDesignTypography.swift; sourceTree = "<group>"; };
+		D9FD55BE2FC6A546002421C3 /* RePlateCoreDesignSpacing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RePlateCoreDesignSpacing.swift; sourceTree = "<group>"; };
+		D9FD55C02FC6A54D002421C3 /* RePlateCoreUtilitiesHapticManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RePlateCoreUtilitiesHapticManager.swift; sourceTree = "<group>"; };
+		D9FD55C22FC6A568002421C3 /* RePlateModelsModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RePlateModelsModels.swift; sourceTree = "<group>"; };
+		D9FD55C42FC6A57A002421C3 /* RePlateCoreDesignComponentsRPButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RePlateCoreDesignComponentsRPButton.swift; sourceTree = "<group>"; };
+		D9FD55C62FC6A585002421C3 /* RePlateCoreDesignComponentsRPCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RePlateCoreDesignComponentsRPCard.swift; sourceTree = "<group>"; };
+		D9FD55C82FC6A593002421C3 /* RePlateCoreDesignComponentsRPTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RePlateCoreDesignComponentsRPTextField.swift; sourceTree = "<group>"; };
+		D9FD55CA2FC6A5AE002421C3 /* RePlateCoreDesignComponentsListingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RePlateCoreDesignComponentsListingCard.swift; sourceTree = "<group>"; };
+		D9FD55CC2FC6A5BE002421C3 /* RePlateViewModelsAuthenticationViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RePlateViewModelsAuthenticationViewModel.swift; sourceTree = "<group>"; };
+		D9FD55CE2FC6A5CF002421C3 /* RePlateViewsOnboardingWelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RePlateViewsOnboardingWelcomeView.swift; sourceTree = "<group>"; };
+		D9FD55D02FC6A5E7002421C3 /* RePlateViewsOnboardingUserTypeSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RePlateViewsOnboardingUserTypeSelectionView.swift; sourceTree = "<group>"; };
+		D9FD55D22FC6A5FD002421C3 /* RePlateViewsOnboardingSignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RePlateViewsOnboardingSignInView.swift; sourceTree = "<group>"; };
+		D9FD55D42FC6A60A002421C3 /* RePlateViewsOnboardingSignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RePlateViewsOnboardingSignUpView.swift; sourceTree = "<group>"; };
+		D9FD55D62FC6A62B002421C3 /* RePlateViewsCustomerCustomerHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RePlateViewsCustomerCustomerHomeView.swift; sourceTree = "<group>"; };
+		D9FD55D82FC6A649002421C3 /* RePlateViewModelsCustomerHomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RePlateViewModelsCustomerHomeViewModel.swift; sourceTree = "<group>"; };
+		D9FD55DA2FC6A64F002421C3 /* RePlateAppRePlateApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RePlateAppRePlateApp.swift; sourceTree = "<group>"; };
+		D9FD55DC2FC6A680002421C3 /* RePlateAppRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RePlateAppRootView.swift; sourceTree = "<group>"; };
+		D9FD55DE2FC6A6AE002421C3 /* RePlateViewsCustomerListingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RePlateViewsCustomerListingDetailView.swift; sourceTree = "<group>"; };
+		D9FD55E02FC6A6CA002421C3 /* RePlateViewsCustomerListingsMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RePlateViewsCustomerListingsMapView.swift; sourceTree = "<group>"; };
+		D9FD55E22FC6A6D7002421C3 /* RePlateResourcesInfo.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = RePlateResourcesInfo.plist; sourceTree = "<group>"; };
+		D9FD55E42FC6A70F002421C3 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		D9FD55E62FC6A74A002421C3 /* SETUP_GUIDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SETUP_GUIDE.md; sourceTree = "<group>"; };
+		D9FD55E82FC6A793002421C3 /* FILE_REFERENCE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = FILE_REFERENCE.md; sourceTree = "<group>"; };
+		D9FD55EA2FC6A7E6002421C3 /* IMPLEMENTATION_SUMMARY.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = IMPLEMENTATION_SUMMARY.md; sourceTree = "<group>"; };
+		D9FD55EC2FC6A81E002421C3 /* DIRECTORY_TREE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = DIRECTORY_TREE.md; sourceTree = "<group>"; };
+		D9FD55EE2FC6A84D002421C3 /* QUICK_REFERENCE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = QUICK_REFERENCE.md; sourceTree = "<group>"; };
+		D9FD55F02FC6A89C002421C3 /* TODO.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = TODO.md; sourceTree = "<group>"; };
+		D9FD55FD2FC6AE82002421C3 /* RePlate.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = RePlate.xcodeproj; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -21,10 +83,8 @@
 /* Begin PBXFrameworksBuildPhase section */
 		D959AD042F25A6BE00639BCE /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
@@ -32,15 +92,59 @@
 		D959ACFE2F25A6BE00639BCE = {
 			isa = PBXGroup;
 			children = (
+				D9FD55B02FC6A3D0002421C3 /* RePlate.xctestplan */,
 				D959AD092F25A6BE00639BCE /* RePlate */,
 				D959AD082F25A6BE00639BCE /* Products */,
+				D9FD55BA2FC6A528002421C3 /* RePlateCoreDesignColors.swift */,
+				D9FD55BC2FC6A53F002421C3 /* RePlateCoreDesignTypography.swift */,
+				D9FD55BE2FC6A546002421C3 /* RePlateCoreDesignSpacing.swift */,
+				D9FD55C02FC6A54D002421C3 /* RePlateCoreUtilitiesHapticManager.swift */,
+				D9FD55C22FC6A568002421C3 /* RePlateModelsModels.swift */,
+				D9FD55C42FC6A57A002421C3 /* RePlateCoreDesignComponentsRPButton.swift */,
+				D9FD55C62FC6A585002421C3 /* RePlateCoreDesignComponentsRPCard.swift */,
+				D9FD55C82FC6A593002421C3 /* RePlateCoreDesignComponentsRPTextField.swift */,
+				D9FD55CA2FC6A5AE002421C3 /* RePlateCoreDesignComponentsListingCard.swift */,
+				D9FD55CC2FC6A5BE002421C3 /* RePlateViewModelsAuthenticationViewModel.swift */,
+				D9FD55CE2FC6A5CF002421C3 /* RePlateViewsOnboardingWelcomeView.swift */,
+				D9FD55D02FC6A5E7002421C3 /* RePlateViewsOnboardingUserTypeSelectionView.swift */,
+				D9FD55D22FC6A5FD002421C3 /* RePlateViewsOnboardingSignInView.swift */,
+				D9FD55D42FC6A60A002421C3 /* RePlateViewsOnboardingSignUpView.swift */,
+				D9FD55D62FC6A62B002421C3 /* RePlateViewsCustomerCustomerHomeView.swift */,
+				D9FD55D82FC6A649002421C3 /* RePlateViewModelsCustomerHomeViewModel.swift */,
+				D9FD55DA2FC6A64F002421C3 /* RePlateAppRePlateApp.swift */,
+				D9FD55DC2FC6A680002421C3 /* RePlateAppRootView.swift */,
+				D9FD55DE2FC6A6AE002421C3 /* RePlateViewsCustomerListingDetailView.swift */,
+				D9FD55E02FC6A6CA002421C3 /* RePlateViewsCustomerListingsMapView.swift */,
+				D9FD55E22FC6A6D7002421C3 /* RePlateResourcesInfo.plist */,
+				D9FD55E42FC6A70F002421C3 /* README.md */,
+				D9FD55E62FC6A74A002421C3 /* SETUP_GUIDE.md */,
+				D9FD55E82FC6A793002421C3 /* FILE_REFERENCE.md */,
+				D9FD55EA2FC6A7E6002421C3 /* IMPLEMENTATION_SUMMARY.md */,
+				D9FD55EC2FC6A81E002421C3 /* DIRECTORY_TREE.md */,
+				D9FD55EE2FC6A84D002421C3 /* QUICK_REFERENCE.md */,
+				D9FD55F02FC6A89C002421C3 /* TODO.md */,
 			);
 			sourceTree = "<group>";
+			usesTabs = 0;
 		};
 		D959AD082F25A6BE00639BCE /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				D959AD072F25A6BE00639BCE /* RePlate.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D9FD55992FC69F8F002421C3 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D9FD55FE2FC6AE82002421C3 /* Products */ = {
+			isa = PBXGroup;
+			children = (
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -58,14 +162,10 @@
 			);
 			buildRules = (
 			);
-			dependencies = (
-			);
 			fileSystemSynchronizedGroups = (
 				D959AD092F25A6BE00639BCE /* RePlate */,
 			);
 			name = RePlate;
-			packageProductDependencies = (
-			);
 			productName = RePlate;
 			productReference = D959AD072F25A6BE00639BCE /* RePlate.app */;
 			productType = "com.apple.product-type.application";
@@ -79,6 +179,7 @@
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2620;
 				LastUpgradeCheck = 2620;
+				ORGANIZATIONNAME = RePlate;
 				TargetAttributes = {
 					D959AD062F25A6BE00639BCE = {
 						CreatedOnToolsVersion = 26.2;
@@ -94,9 +195,19 @@
 			);
 			mainGroup = D959ACFE2F25A6BE00639BCE;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
+			preferredProjectObjectVersion = 90;
 			productRefGroup = D959AD082F25A6BE00639BCE /* Products */;
 			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = D9FD55FE2FC6AE82002421C3 /* Products */;
+					ProjectRef = D9FD55FD2FC6AE82002421C3 /* RePlate.xcodeproj */;
+				},
+				{
+					ProductGroup = D9FD55992FC69F8F002421C3 /* Products */;
+					ProjectRef = D9FD55982FC69F8F002421C3 /* RePlate.xcodeproj */;
+				},
+			);
 			projectRoot = "";
 			targets = (
 				D959AD062F25A6BE00639BCE /* RePlate */,
@@ -107,25 +218,49 @@
 /* Begin PBXResourcesBuildPhase section */
 		D959AD052F25A6BE00639BCE /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
+				D9FD55ED2FC6A81E002421C3 /* DIRECTORY_TREE.md in Resources */,
+				D9FD55E52FC6A70F002421C3 /* README.md in Resources */,
+				D9FD55EB2FC6A7E6002421C3 /* IMPLEMENTATION_SUMMARY.md in Resources */,
+				D9FD55F12FC6A89C002421C3 /* TODO.md in Resources */,
+				D9FD55E32FC6A6D7002421C3 /* RePlateResourcesInfo.plist in Resources */,
+				D9FD55EF2FC6A84D002421C3 /* QUICK_REFERENCE.md in Resources */,
+				D9FD55E92FC6A793002421C3 /* FILE_REFERENCE.md in Resources */,
+				D9FD55E72FC6A74A002421C3 /* SETUP_GUIDE.md in Resources */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		D959AD032F25A6BE00639BCE /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
+				D9FD55D92FC6A649002421C3 /* RePlateViewModelsCustomerHomeViewModel.swift in Sources */,
+				D9FD55DB2FC6A64F002421C3 /* RePlateAppRePlateApp.swift in Sources */,
+				D9FD55CD2FC6A5BE002421C3 /* RePlateViewModelsAuthenticationViewModel.swift in Sources */,
+				D9FD55CB2FC6A5AE002421C3 /* RePlateCoreDesignComponentsListingCard.swift in Sources */,
+				D9FD55D32FC6A5FD002421C3 /* RePlateViewsOnboardingSignInView.swift in Sources */,
+				D9FD55C32FC6A568002421C3 /* RePlateModelsModels.swift in Sources */,
+				D9FD55D72FC6A62B002421C3 /* RePlateViewsCustomerCustomerHomeView.swift in Sources */,
+				D9FD55CF2FC6A5CF002421C3 /* RePlateViewsOnboardingWelcomeView.swift in Sources */,
+				D9FD55C92FC6A593002421C3 /* RePlateCoreDesignComponentsRPTextField.swift in Sources */,
+				D9FD55BF2FC6A546002421C3 /* RePlateCoreDesignSpacing.swift in Sources */,
+				D9FD55C12FC6A54D002421C3 /* RePlateCoreUtilitiesHapticManager.swift in Sources */,
+				D9FD55BD2FC6A53F002421C3 /* RePlateCoreDesignTypography.swift in Sources */,
+				D9FD55E12FC6A6CA002421C3 /* RePlateViewsCustomerListingsMapView.swift in Sources */,
+				D9FD55D52FC6A60A002421C3 /* RePlateViewsOnboardingSignUpView.swift in Sources */,
+				D9FD55DD2FC6A680002421C3 /* RePlateAppRootView.swift in Sources */,
+				D9FD55BB2FC6A528002421C3 /* RePlateCoreDesignColors.swift in Sources */,
+				D9FD55DF2FC6A6AE002421C3 /* RePlateViewsCustomerListingDetailView.swift in Sources */,
+				D9FD55C52FC6A57A002421C3 /* RePlateCoreDesignComponentsRPButton.swift in Sources */,
+				D9FD55C72FC6A585002421C3 /* RePlateCoreDesignComponentsRPCard.swift in Sources */,
+				D9FD55D12FC6A5E7002421C3 /* RePlateViewsOnboardingUserTypeSelectionView.swift in Sources */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		D959AD102F25A6C100639BCE /* Debug */ = {
+		D959AD102F25A6C100639BCE /* Debug configuration for PBXProject "RePlate" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -186,7 +321,7 @@
 			};
 			name = Debug;
 		};
-		D959AD112F25A6C100639BCE /* Release */ = {
+		D959AD112F25A6C100639BCE /* Release configuration for PBXProject "RePlate" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -239,7 +374,7 @@
 			};
 			name = Release;
 		};
-		D959AD132F25A6C100639BCE /* Debug */ = {
+		D959AD132F25A6C100639BCE /* Debug configuration for PBXNativeTarget "RePlate" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -281,7 +416,7 @@
 			};
 			name = Debug;
 		};
-		D959AD142F25A6C100639BCE /* Release */ = {
+		D959AD142F25A6C100639BCE /* Release configuration for PBXNativeTarget "RePlate" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -329,19 +464,17 @@
 		D959AD022F25A6BE00639BCE /* Build configuration list for PBXProject "RePlate" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D959AD102F25A6C100639BCE /* Debug */,
-				D959AD112F25A6C100639BCE /* Release */,
+				D959AD102F25A6C100639BCE /* Debug configuration for PBXProject "RePlate" */,
+				D959AD112F25A6C100639BCE /* Release configuration for PBXProject "RePlate" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		D959AD122F25A6C100639BCE /* Build configuration list for PBXNativeTarget "RePlate" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D959AD132F25A6C100639BCE /* Debug */,
-				D959AD142F25A6C100639BCE /* Release */,
+				D959AD132F25A6C100639BCE /* Debug configuration for PBXNativeTarget "RePlate" */,
+				D959AD142F25A6C100639BCE /* Release configuration for PBXNativeTarget "RePlate" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */

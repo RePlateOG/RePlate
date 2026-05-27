@@ -1,0 +1,261 @@
+//
+//  MessagesView.swift
+//  RePlate
+//
+//  Created by Jyotika Sadani on 5/26/26.
+//
+
+import SwiftUI
+
+struct MessagesView: View {
+    @StateObject private var viewModel = MessagesViewModel()
+    @State private var selectedConversation: Conversation?
+    
+    var body: some View {
+        NavigationView {
+            Group {
+                if viewModel.isLoading {
+                    loadingView
+                } else if viewModel.conversations.isEmpty {
+                    emptyView
+                } else {
+                    conversationsList
+                }
+            }
+            .background(Theme.Colors.background)
+            .navigationTitle("Messages")
+            .task {
+                await viewModel.loadConversations()
+            }
+            .refreshable {
+                await viewModel.loadConversations()
+            }
+            .sheet(item: $selectedConversation) { conversation in
+                ConversationView(conversation: conversation)
+            }
+        }
+    }
+    
+    private var loadingView: some View {
+        ScrollView {
+            VStack(spacing: Theme.Spacing.md) {
+                ForEach(0..<5, id: \.self) { _ in
+                    SkeletonView()
+                        .frame(height: 80)
+                        .padding(.horizontal, Theme.Spacing.lg)
+                }
+            }
+            .padding(.vertical, Theme.Spacing.md)
+        }
+    }
+    
+    private var emptyView: some View {
+        EmptyStateView(
+            icon: "message",
+            title: "No Messages",
+            message: "Your conversations with restaurants will appear here"
+        )
+    }
+    
+    private var conversationsList: some View {
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                ForEach(viewModel.conversations) { conversation in
+                    Button {
+                        selectedConversation = conversation
+                        hapticFeedback(.light)
+                    } label: {
+                        ConversationRow(conversation: conversation)
+                    }
+                    
+                    if conversation.id != viewModel.conversations.last?.id {
+                        Divider()
+                            .padding(.leading, 80)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Conversation Row
+struct ConversationRow: View {
+    let conversation: Conversation
+    
+    var body: some View {
+        HStack(spacing: Theme.Spacing.md) {
+            // Avatar
+            Circle()
+                .fill(Theme.Colors.primaryGradient)
+                .frame(width: 50, height: 50)
+                .overlay(
+                    Image(systemName: "fork.knife")
+                        .font(.title3)
+                        .foregroundColor(.white)
+                )
+            
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    if let restaurant = conversation.order?.restaurant {
+                        Text(restaurant.name)
+                            .font(Theme.Typography.headline)
+                            .foregroundColor(Theme.Colors.label)
+                    }
+                    
+                    Spacer()
+                    
+                    if let lastMessage = conversation.lastMessage {
+                        Text(lastMessage.timestamp.formatted(date: .omitted, time: .shortened))
+                            .font(Theme.Typography.caption)
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                    }
+                }
+                
+                HStack {
+                    if let lastMessage = conversation.lastMessage {
+                        Text(lastMessage.content)
+                            .font(Theme.Typography.subheadline)
+                            .foregroundColor(conversation.unreadCount > 0 ? Theme.Colors.label : Theme.Colors.secondaryLabel)
+                            .lineLimit(2)
+                    }
+                    
+                    Spacer()
+                    
+                    if conversation.unreadCount > 0 {
+                        Text("\(conversation.unreadCount)")
+                            .font(Theme.Typography.caption2)
+                            .foregroundColor(.white)
+                            .frame(minWidth: 20, minHeight: 20)
+                            .background(Theme.Colors.primaryGradientStart)
+                            .clipShape(Circle())
+                    }
+                }
+            }
+        }
+        .padding(Theme.Spacing.md)
+        .padding(.horizontal, Theme.Spacing.sm)
+    }
+}
+
+// MARK: - Conversation View
+struct ConversationView: View {
+    @Environment(\.dismiss) var dismiss
+    let conversation: Conversation
+    @State private var messageText = ""
+    @State private var messages: [Message] = []
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 0) {
+                // Messages List
+                ScrollView {
+                    LazyVStack(spacing: Theme.Spacing.md) {
+                        if messages.isEmpty {
+                            Text("No messages yet")
+                                .font(Theme.Typography.body)
+                                .foregroundColor(Theme.Colors.secondaryLabel)
+                                .frame(maxWidth: .infinity)
+                                .padding(.top, Theme.Spacing.xxl)
+                        } else {
+                            ForEach(messages) { message in
+                                MessageBubble(message: message)
+                            }
+                        }
+                    }
+                    .padding(Theme.Spacing.md)
+                }
+                
+                // Input Bar
+                messageInputBar
+            }
+            .background(Theme.Colors.background)
+            .navigationTitle(conversation.order?.restaurant?.name ?? "Chat")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .foregroundColor(Theme.Colors.primaryGradientStart)
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        // Order details
+                    } label: {
+                        Image(systemName: "info.circle")
+                            .foregroundColor(Theme.Colors.primaryGradientStart)
+                    }
+                }
+            }
+        }
+    }
+    
+    private var messageInputBar: some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            TextField("Type a message...", text: $messageText)
+                .font(Theme.Typography.body)
+                .padding(Theme.Spacing.md)
+                .background(Theme.Colors.secondaryBackground)
+                .cornerRadius(Theme.CornerRadius.xl)
+            
+            Button {
+                sendMessage()
+            } label: {
+                Image(systemName: "arrow.up.circle.fill")
+                    .font(.system(size: 32))
+                    .foregroundStyle(Theme.Colors.primaryGradient)
+            }
+            .disabled(messageText.isEmpty)
+            .opacity(messageText.isEmpty ? 0.5 : 1)
+        }
+        .padding(Theme.Spacing.md)
+        .background(Theme.Colors.background)
+    }
+    
+    func sendMessage() {
+        guard !messageText.isEmpty else { return }
+        
+        // Send message logic
+        hapticFeedback(.light)
+        messageText = ""
+    }
+}
+
+// MARK: - Message Bubble
+struct MessageBubble: View {
+    let message: Message
+    let isFromCurrentUser = Bool.random() // Simulate
+    
+    var body: some View {
+        HStack {
+            if isFromCurrentUser {
+                Spacer()
+            }
+            
+            VStack(alignment: isFromCurrentUser ? .trailing : .leading, spacing: 4) {
+                Text(message.content)
+                    .font(Theme.Typography.body)
+                    .foregroundColor(isFromCurrentUser ? .white : Theme.Colors.label)
+                    .padding(Theme.Spacing.md)
+                    .background(
+                        isFromCurrentUser ?
+                        AnyShapeStyle(Theme.Colors.primaryGradient) :
+                        AnyShapeStyle(Theme.Colors.secondaryBackground)
+                    )
+                    .cornerRadius(Theme.CornerRadius.xl)
+                
+                Text(message.timestamp.formatted(date: .omitted, time: .shortened))
+                    .font(Theme.Typography.caption2)
+                    .foregroundColor(Theme.Colors.tertiaryLabel)
+            }
+            .frame(maxWidth: 280, alignment: isFromCurrentUser ? .trailing : .leading)
+            
+            if !isFromCurrentUser {
+                Spacer()
+            }
+        }
+    }
+}
