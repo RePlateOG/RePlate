@@ -12,7 +12,7 @@ import Combine
 
 // MARK: - Private NSObject Delegate Shim
 // Keeps CLLocationManagerDelegate (NSObject-based, non-isolated) separate
-// from the @MainActor LocationService so Swift 6 actor isolation is satisfied.
+// from the @MainActor-isolated LocationService so Swift 6 actor isolation is satisfied.
 private final class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
     var onLocationUpdate: ((CLLocation) -> Void)?
     var onAuthorizationChange: ((CLAuthorizationStatus) -> Void)?
@@ -33,10 +33,18 @@ private final class LocationManagerDelegate: NSObject, CLLocationManagerDelegate
 }
 
 // MARK: - Location Service
-// Explicit @MainActor + final: prevents Swift 6 from generating a second
-// implicit @MainActor init() alongside our private init(), which would make
-// `LocationService()` ambiguous and cascade into a false "redeclaration" error.
-@MainActor
+//
+// ⚠️  NO explicit @MainActor annotation on this class — intentional.
+//
+// The project build setting SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor already
+// applies @MainActor implicitly to every type in the module, including this one.
+// Adding an explicit @MainActor on top of that implicit annotation causes the
+// Swift 6 compiler to synthesise a *second* actor-isolated variant of the type
+// and its initialiser, which then surfaces as:
+//   • "Invalid redeclaration of 'LocationService'"
+//   • "Ambiguous use of 'init()'"
+// Relying solely on the build-setting-level annotation avoids that synthesis
+// conflict while keeping full @MainActor isolation.
 final class LocationService: ObservableObject {
     static let shared = LocationService()
 
@@ -96,6 +104,8 @@ final class LocationService: ObservableObject {
     }
 
     // MARK: - Reverse Geocoding (iOS 26+: MKReverseGeocodingRequest)
+    // Uses MKAddressRepresentations.cityWithContext (e.g. "San Francisco, CA") —
+    // MKMapItem.placemark is deprecated in iOS 26; use addressRepresentations instead.
     private func reverseGeocode(_ location: CLLocation) {
         isLoading = true
         Task { @MainActor [weak self] in
@@ -103,10 +113,8 @@ final class LocationService: ObservableObject {
             do {
                 guard let request = MKReverseGeocodingRequest(location: location) else { return }
                 let mapItems = try await request.mapItems
-                if let placemark = mapItems.first?.placemark,
-                   let city = placemark.locality,
-                   let state = placemark.administrativeArea {
-                    self?.locationString = "\(city), \(state)"
+                if let cityWithContext = mapItems.first?.addressRepresentations?.cityWithContext {
+                    self?.locationString = cityWithContext   // e.g. "San Francisco, CA"
                 }
             } catch {
                 print("Reverse geocoding error: \(error.localizedDescription)")
