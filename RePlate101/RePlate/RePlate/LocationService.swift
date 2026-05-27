@@ -7,6 +7,7 @@
 
 import SwiftUI
 import CoreLocation
+import MapKit
 import Combine
 
 // MARK: - Private NSObject Delegate Shim
@@ -41,7 +42,6 @@ class LocationService: ObservableObject {
     @Published var isLoading = false
 
     private let locationManager = CLLocationManager()
-    private let geocoder = CLGeocoder()
     private let locationDelegate = LocationManagerDelegate()
 
     private init() {
@@ -94,13 +94,16 @@ class LocationService: ObservableObject {
     // MARK: - Reverse Geocoding
     private func reverseGeocode(_ location: CLLocation) {
         isLoading = true
-        geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, error in
-            Task { @MainActor [weak self] in
-                self?.isLoading = false
-                guard let placemark = placemarks?.first, error == nil else { return }
+        Task { @MainActor [weak self] in
+            defer { self?.isLoading = false }
+            do {
+                let request = MKReverseGeocodingRequest(coordinate: location.coordinate)
+                let placemark = try await request.placemark
                 if let city = placemark.locality, let state = placemark.administrativeArea {
                     self?.locationString = "\(city), \(state)"
                 }
+            } catch {
+                print("Reverse geocoding error: \(error.localizedDescription)")
             }
         }
     }
