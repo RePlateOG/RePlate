@@ -3,6 +3,7 @@
 //  RePlate
 //
 //  Created by Jyotika Sadani on 5/26/26.
+//  Redesigned to match RePlate 2.0 Figma — gradient header, impact stats, clean menu cards.
 //
 
 import SwiftUI
@@ -12,293 +13,353 @@ struct ProfileView: View {
     @StateObject private var viewModel = ProfileViewModel()
     @State private var showSettings = false
     @State private var showEditProfile = false
-    
+
+    private var displayName: String {
+        viewModel.user?.name ?? appState.currentUser?.name ?? "User"
+    }
+    private var displayEmail: String {
+        viewModel.user?.email ?? appState.currentUser?.email ?? ""
+    }
+    private var accountType: User.AccountType? {
+        viewModel.user?.accountType ?? appState.currentUser?.accountType
+    }
+
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: Theme.Spacing.lg) {
-                    // Profile Header
-                    profileHeader
-                    
-                    // Impact Stats
-                    if let user = viewModel.user {
-                        impactStatsSection(user: user)
-                    }
-                    
-                    // Menu Items
-                    menuSection
-                    
-                    // About
-                    aboutSection
-                    
-                    // Sign Out
-                    signOutButton
-                }
-                .padding(.bottom, 100)
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 0) {
+                profileHeader
+                mainContent
             }
-            .background(Theme.Colors.background)
-            .navigationTitle("Profile")
-            .task {
-                await viewModel.loadProfile()
-            }
-            .sheet(isPresented: $showEditProfile) {
-                EditProfileView()
-            }
-            .sheet(isPresented: $showSettings) {
-                SettingsView()
-            }
+            .padding(.bottom, 100)
         }
+        .ignoresSafeArea(edges: .top)
+        .background(Color(.systemGray6).opacity(0.3))
+        .task { await viewModel.loadProfile() }
+        .sheet(isPresented: $showEditProfile) { EditProfileView() }
+        .sheet(isPresented: $showSettings) { SettingsView() }
     }
-    
-    // MARK: - Profile Header
+
+    // MARK: - Gradient Header
     private var profileHeader: some View {
-        VStack(spacing: Theme.Spacing.md) {
-            // Avatar
-            ZStack(alignment: .bottomTrailing) {
-                Circle()
-                    .fill(Theme.Colors.primaryGradient)
-                    .frame(width: 100, height: 100)
-                    .overlay(
-                        Text(viewModel.user?.name.prefix(1).uppercased() ?? "U")
-                            .font(.system(size: 40, weight: .bold))
-                            .foregroundColor(.white)
-                    )
-                
-                Button {
-                    showEditProfile = true
-                } label: {
-                    Image(systemName: "pencil.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(Theme.Colors.primaryGradientStart)
-                        .background(Circle().fill(Theme.Colors.background))
-                }
-            }
-            
-            VStack(spacing: 4) {
-                Text(viewModel.user?.name ?? "User")
-                    .font(Theme.Typography.title2)
-                    .foregroundColor(Theme.Colors.label)
-                
-                Text(viewModel.user?.email ?? "")
-                    .font(Theme.Typography.subheadline)
-                    .foregroundColor(Theme.Colors.secondaryLabel)
-                
-                if let type = viewModel.user?.accountType {
-                    HStack(spacing: 4) {
-                        Image(systemName: type.icon)
-                        Text(type.displayName)
-                    }
-                    .font(Theme.Typography.caption)
+        VStack(spacing: 0) {
+            // Top bar: title + settings
+            HStack(alignment: .center) {
+                Text("My Profile")
+                    .font(.system(size: 26, weight: .heavy, design: .rounded))
                     .foregroundColor(.white)
-                    .padding(.horizontal, Theme.Spacing.sm)
-                    .padding(.vertical, 4)
-                    .background(Theme.Colors.primaryGradient)
-                    .cornerRadius(Theme.CornerRadius.sm)
+                Spacer()
+                Button {
+                    hapticFeedback(.light)
+                    showSettings = true
+                } label: {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(.white.opacity(0.2))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(.white.opacity(0.3), lineWidth: 1)
+                            )
+                            .frame(width: 48, height: 48)
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(.white)
+                    }
                 }
             }
+            .padding(.top, 60)
+            .padding(.bottom, 28)
+
+            // Avatar
+            ZStack {
+                Circle()
+                    .fill(.white.opacity(0.2))
+                    .frame(width: 96, height: 96)
+                    .overlay(Circle().stroke(.white.opacity(0.4), lineWidth: 3))
+                Text(displayName.prefix(1).uppercased())
+                    .font(.system(size: 42, weight: .black, design: .rounded))
+                    .foregroundColor(.white)
+            }
+
+            Spacer().frame(height: 14)
+
+            Text(displayName)
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
+
+            Text(displayEmail)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.white.opacity(0.8))
+                .padding(.top, 2)
+
+            if let type = accountType {
+                HStack(spacing: 6) {
+                    Image(systemName: type.icon)
+                        .font(.system(size: 11, weight: .bold))
+                    Text(type.displayName)
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                }
+                .foregroundColor(Theme.Colors.primaryGradientStart)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(Theme.Colors.accent)
+                .clipShape(Capsule())
+                .padding(.top, 10)
+            }
+
+            Spacer().frame(height: 52)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, Theme.Spacing.lg)
+        .padding(.horizontal, 20)
+        .background(Theme.Colors.primaryGradient)
+        .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 40, bottomTrailingRadius: 40))
     }
-    
-    // MARK: - Impact Stats
-    private func impactStatsSection(user: User) -> some View {
-        VStack(spacing: Theme.Spacing.md) {
+
+    // MARK: - Main Content
+    private var mainContent: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Edit Profile button floats up over header
+            editProfileButton
+                .padding(.horizontal, 20)
+                .offset(y: -28)
+                .padding(.bottom, 8) // net: -20 visual
+
+            if let user = viewModel.user {
+                impactSection(user: user)
+                    .padding(.top, 4)
+            }
+
+            accountMenuSection
+                .padding(.top, 28)
+
+            aboutMenuSection
+                .padding(.top, 12)
+
+            signOutButton
+                .padding(.top, 24)
+                .padding(.horizontal, 20)
+        }
+    }
+
+    // MARK: - Edit Profile Floating Button
+    private var editProfileButton: some View {
+        Button {
+            hapticFeedback(.medium)
+            showEditProfile = true
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Theme.Colors.primaryGradient)
+                        .frame(width: 40, height: 40)
+                    Image(systemName: "pencil")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundColor(.white)
+                }
+                Text("Edit Profile")
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .foregroundColor(Theme.Colors.primaryGradientStart)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Theme.Colors.secondaryLabel)
+            }
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: 26)
+                    .fill(Color(.systemBackground))
+                    .shadow(color: Color.black.opacity(0.13), radius: 18, y: 7)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    // MARK: - Impact Section
+    private func impactSection(user: User) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("Your Impact")
-                    .font(Theme.Typography.title3)
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundColor(Theme.Colors.label)
-                
                 Spacer()
+                HStack(spacing: 4) {
+                    Image(systemName: "leaf.fill")
+                        .font(.system(size: 11))
+                    Text("Eco Hero")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                }
+                .foregroundColor(Theme.Colors.primaryGradientStart)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Theme.Colors.primaryGradientStart.opacity(0.12))
+                .clipShape(Capsule())
             }
-            .padding(.horizontal, Theme.Spacing.lg)
-            
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Theme.Spacing.md) {
-                StatCard(
-                    icon: "fork.knife",
-                    value: "\(user.mealsSaved)",
+            .padding(.horizontal, 20)
+
+            LazyVGrid(
+                columns: [GridItem(.flexible()), GridItem(.flexible())],
+                spacing: 14
+            ) {
+                ProfileStatCard(
                     label: "Meals Saved",
-                    gradient: true
-                )
-                
-                StatCard(
-                    icon: "leaf.fill",
-                    value: String(format: "%.1f kg", user.co2Reduced),
-                    label: "CO₂ Reduced",
-                    gradient: true
-                )
-                
-                StatCard(
-                    icon: "scalemass.fill",
-                    value: String(format: "%.1f lbs", user.foodRescued),
-                    label: "Food Rescued",
-                    gradient: true
-                )
-                
-                StatCard(
-                    icon: "heart.fill",
                     value: "\(user.mealsSaved)",
+                    icon: "fork.knife",
+                    accent: false
+                )
+                ProfileStatCard(
+                    label: "CO₂ Reduced",
+                    value: "\(String(format: "%.1f", user.co2Reduced))kg",
+                    icon: "leaf.fill",
+                    accent: true
+                )
+                ProfileStatCard(
+                    label: "Food Rescued",
+                    value: "\(String(format: "%.1f", user.foodRescued))lbs",
+                    icon: "scalemass.fill",
+                    accent: false
+                )
+                ProfileStatCard(
                     label: "Good Deeds",
-                    gradient: true
+                    value: "\(user.mealsSaved)",
+                    icon: "heart.fill",
+                    accent: true
                 )
             }
-            .padding(.horizontal, Theme.Spacing.lg)
-            
+            .padding(.horizontal, 20)
+
             Button {
-                // Share impact
                 hapticFeedback()
             } label: {
-                HStack {
+                HStack(spacing: 10) {
                     Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 16, weight: .bold))
                     Text("Share Your Impact")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
                 }
-                .font(Theme.Typography.headline)
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, Theme.Spacing.md)
+                .padding(.vertical, 16)
                 .background(Theme.Colors.primaryGradient)
-                .cornerRadius(Theme.CornerRadius.xl)
+                .clipShape(RoundedRectangle(cornerRadius: 20))
             }
-            .padding(.horizontal, Theme.Spacing.lg)
+            .padding(.horizontal, 20)
         }
     }
-    
-    // MARK: - Menu Section
-    private var menuSection: some View {
-        VStack(spacing: Theme.Spacing.md) {
-            HStack {
-                Text("Account")
-                    .font(Theme.Typography.title3)
-                    .foregroundColor(Theme.Colors.label)
-                
-                Spacer()
-            }
-            .padding(.horizontal, Theme.Spacing.lg)
-            
+
+    // MARK: - Account Menu
+    private var accountMenuSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Account")
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundColor(Theme.Colors.label)
+                .padding(.horizontal, 20)
+
             VStack(spacing: 0) {
-                MenuButton(
-                    icon: "person",
-                    title: "Edit Profile",
-                    action: {
-                        showEditProfile = true
-                    }
-                )
-                
-                Divider()
-                    .padding(.leading, 60)
-                
-                MenuButton(
-                    icon: "bell",
-                    title: "Notifications",
-                    action: {
-                        showSettings = true
-                    }
-                )
-                
-                Divider()
-                    .padding(.leading, 60)
-                
-                MenuButton(
-                    icon: "creditcard",
-                    title: "Payment Methods",
-                    action: {
-                        // Payment methods action
-                    }
-                )
-                
-                Divider()
-                    .padding(.leading, 60)
-                
-                MenuButton(
-                    icon: "gearshape",
-                    title: "Settings",
-                    action: {
-                        showSettings = true
-                    }
-                )
+                MenuButton(icon: "person", title: "Edit Profile") {
+                    showEditProfile = true
+                }
+                Divider().padding(.leading, 60)
+                MenuButton(icon: "bell", title: "Notifications") {
+                    showSettings = true
+                }
+                Divider().padding(.leading, 60)
+                MenuButton(icon: "creditcard", title: "Payment Methods") {}
+                Divider().padding(.leading, 60)
+                MenuButton(icon: "gearshape", title: "Settings") {
+                    showSettings = true
+                }
             }
-            .background(Theme.Colors.secondaryBackground)
-            .cornerRadius(Theme.CornerRadius.xl)
-            .padding(.horizontal, Theme.Spacing.lg)
+            .background(Color(.systemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 24))
+            .shadow(color: Color.black.opacity(0.06), radius: 12, y: 4)
+            .padding(.horizontal, 20)
         }
     }
-    
-    // MARK: - About Section
-    private var aboutSection: some View {
-        VStack(spacing: Theme.Spacing.md) {
-            HStack {
-                Text("About")
-                    .font(Theme.Typography.title3)
-                    .foregroundColor(Theme.Colors.label)
-                
-                Spacer()
-            }
-            .padding(.horizontal, Theme.Spacing.lg)
-            
+
+    // MARK: - About Menu
+    private var aboutMenuSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("About")
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundColor(Theme.Colors.label)
+                .padding(.horizontal, 20)
+
             VStack(spacing: 0) {
-                MenuButton(
-                    icon: "info.circle",
-                    title: "About RePlate",
-                    action: {
-                        // About action
-                    }
-                )
-                
-                Divider()
-                    .padding(.leading, 60)
-                
-                MenuButton(
-                    icon: "doc.text",
-                    title: "Terms of Service",
-                    action: {
-                        // Terms action
-                    }
-                )
-                
-                Divider()
-                    .padding(.leading, 60)
-                
-                MenuButton(
-                    icon: "lock.shield",
-                    title: "Privacy Policy",
-                    action: {
-                        // Privacy action
-                    }
-                )
-                
-                Divider()
-                    .padding(.leading, 60)
-                
-                MenuButton(
-                    icon: "arrow.down.doc",
-                    title: "Export Data",
-                    action: {
-                        Task {
-                            await viewModel.exportData()
-                        }
-                    }
-                )
+                MenuButton(icon: "info.circle", title: "About RePlate") {}
+                Divider().padding(.leading, 60)
+                MenuButton(icon: "doc.text", title: "Terms of Service") {}
+                Divider().padding(.leading, 60)
+                MenuButton(icon: "lock.shield", title: "Privacy Policy") {}
+                Divider().padding(.leading, 60)
+                MenuButton(icon: "arrow.down.doc", title: "Export Data") {
+                    Task { await viewModel.exportData() }
+                }
             }
-            .background(Theme.Colors.secondaryBackground)
-            .cornerRadius(Theme.CornerRadius.xl)
-            .padding(.horizontal, Theme.Spacing.lg)
+            .background(Color(.systemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 24))
+            .shadow(color: Color.black.opacity(0.06), radius: 12, y: 4)
+            .padding(.horizontal, 20)
         }
     }
-    
-    // MARK: - Sign Out Button
+
+    // MARK: - Sign Out
     private var signOutButton: some View {
         Button {
+            hapticFeedback(.medium)
             appState.signOut()
         } label: {
-            Text("Sign Out")
-                .font(Theme.Typography.headline)
-                .foregroundColor(.red)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, Theme.Spacing.md)
-                .background(Theme.Colors.secondaryBackground)
-                .cornerRadius(Theme.CornerRadius.xl)
+            HStack(spacing: 10) {
+                Image(systemName: "rectangle.portrait.and.arrow.right")
+                    .font(.system(size: 16, weight: .semibold))
+                Text("Sign Out")
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+            }
+            .foregroundColor(.red)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(Color.red.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Color.red.opacity(0.25), lineWidth: 1.5)
+            )
         }
-        .padding(.horizontal, Theme.Spacing.lg)
+    }
+}
+
+// MARK: - Profile Stat Card (private)
+private struct ProfileStatCard: View {
+    let label: String
+    let value: String
+    let icon: String
+    let accent: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(
+                        accent
+                            ? Theme.Colors.accent.opacity(0.5)
+                            : Theme.Colors.primaryGradientStart.opacity(0.12)
+                    )
+                    .frame(width: 40, height: 40)
+                Image(systemName: icon)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(Theme.Colors.primaryGradientStart)
+            }
+            Text(value)
+                .font(.system(size: 22, weight: .black, design: .rounded))
+                .foregroundColor(Theme.Colors.label)
+            Text(label)
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundColor(Theme.Colors.secondaryLabel)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.06), radius: 10, y: 4)
+        )
     }
 }
 
@@ -307,24 +368,24 @@ struct MenuButton: View {
     let icon: String
     let title: String
     let action: () -> Void
-    
+
     var body: some View {
-        Button(action: {
+        Button {
             hapticFeedback(.light)
             action()
-        }) {
+        } label: {
             HStack(spacing: Theme.Spacing.md) {
                 Image(systemName: icon)
                     .font(.title3)
                     .foregroundColor(Theme.Colors.primaryGradientStart)
                     .frame(width: 28)
-                
+
                 Text(title)
                     .font(Theme.Typography.body)
                     .foregroundColor(Theme.Colors.label)
-                
+
                 Spacer()
-                
+
                 Image(systemName: "chevron.right")
                     .font(.caption)
                     .foregroundColor(Theme.Colors.tertiaryLabel)
@@ -342,7 +403,7 @@ struct EditProfileView: View {
     @State private var email = ""
     @State private var phoneNumber = ""
     @State private var isLoading = false
-    
+
     var body: some View {
         NavigationView {
             ScrollView {
@@ -360,30 +421,22 @@ struct EditProfileView: View {
                                         .font(.system(size: 40, weight: .bold))
                                         .foregroundColor(.white)
                                 )
-                            
+
                             Text("Change Photo")
                                 .font(Theme.Typography.subheadline)
                                 .foregroundColor(Theme.Colors.primaryGradientStart)
                         }
                     }
                     .padding(.vertical, Theme.Spacing.lg)
-                    
+
                     // Form
                     VStack(spacing: Theme.Spacing.md) {
-                        CustomTextField(
-                            placeholder: "Name",
-                            text: $name,
-                            icon: "person"
-                        )
-                        
-                        CustomTextField(
-                            placeholder: "Email",
-                            text: $email,
-                            icon: "envelope"
-                        )
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.emailAddress)
-                        
+                        CustomTextField(placeholder: "Name", text: $name, icon: "person")
+
+                        CustomTextField(placeholder: "Email", text: $email, icon: "envelope")
+                            .textInputAutocapitalization(.never)
+                            .keyboardType(.emailAddress)
+
                         CustomTextField(
                             placeholder: "Phone Number (Optional)",
                             text: $phoneNumber,
@@ -391,11 +444,9 @@ struct EditProfileView: View {
                         )
                         .keyboardType(.phonePad)
                     }
-                    
+
                     PrimaryButton("Save Changes", isLoading: isLoading) {
-                        Task {
-                            await save()
-                        }
+                        Task { await save() }
                     }
                     .padding(.top, Theme.Spacing.md)
                 }
@@ -406,9 +457,7 @@ struct EditProfileView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
+                    Button("Cancel") { dismiss() }
                 }
             }
             .task {
@@ -419,10 +468,14 @@ struct EditProfileView: View {
             }
         }
     }
-    
+
     func save() async {
         isLoading = true
-        await viewModel.updateProfile(name: name, email: email, phoneNumber: phoneNumber.isEmpty ? nil : phoneNumber)
+        await viewModel.updateProfile(
+            name: name,
+            email: email,
+            phoneNumber: phoneNumber.isEmpty ? nil : phoneNumber
+        )
         isLoading = false
         dismiss()
     }
@@ -439,27 +492,17 @@ struct SettingsView: View {
     @State private var orderUpdatesNotifications = true
     @State private var impactMilestonesNotifications = true
     @State private var showDeleteAccountConfirmation = false
-    
+
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: Theme.Spacing.xl) {
-                    // Appearance
                     appearanceSection
-                    
                     Divider()
-                    
-                    // Notifications
                     notificationsSection
-                    
                     Divider()
-                    
-                    // Privacy
                     privacySection
-                    
                     Divider()
-                    
-                    // Danger Zone
                     dangerZoneSection
                 }
                 .padding(Theme.Spacing.lg)
@@ -469,30 +512,26 @@ struct SettingsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
+                    Button("Done") { dismiss() }
                 }
             }
             .alert("Delete Account", isPresented: $showDeleteAccountConfirmation) {
                 Button("Cancel", role: .cancel) {}
                 Button("Delete", role: .destructive) {
-                    Task {
-                        await deleteAccount()
-                    }
+                    Task { await deleteAccount() }
                 }
             } message: {
                 Text("Are you sure you want to delete your account? This action cannot be undone.")
             }
         }
     }
-    
+
     private var appearanceSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             Text("Appearance")
                 .font(Theme.Typography.headline)
                 .foregroundColor(Theme.Colors.label)
-            
+
             VStack(spacing: Theme.Spacing.sm) {
                 ForEach(AppState.ColorSchemePreference.allCases, id: \.self) { preference in
                     Button {
@@ -503,9 +542,7 @@ struct SettingsView: View {
                             Text(preference.rawValue)
                                 .font(Theme.Typography.body)
                                 .foregroundColor(Theme.Colors.label)
-                            
                             Spacer()
-                            
                             if appState.colorScheme == preference {
                                 Image(systemName: "checkmark")
                                     .foregroundColor(Theme.Colors.primaryGradientStart)
@@ -519,40 +556,31 @@ struct SettingsView: View {
             }
         }
     }
-    
+
     private var notificationsSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             Text("Notifications")
                 .font(Theme.Typography.headline)
                 .foregroundColor(Theme.Colors.label)
-            
+
             VStack(spacing: 0) {
                 Toggle("Enable Notifications", isOn: $notificationsEnabled)
                     .padding(Theme.Spacing.md)
-                
+
                 if notificationsEnabled {
                     Divider()
-                    
                     Toggle("Push Notifications", isOn: $pushNotificationsEnabled)
                         .padding(Theme.Spacing.md)
-                    
                     Divider()
-                    
                     Toggle("Email Notifications", isOn: $emailNotificationsEnabled)
                         .padding(Theme.Spacing.md)
-                    
                     Divider()
-                    
                     Toggle("New Listings", isOn: $newListingsNotifications)
                         .padding(Theme.Spacing.md)
-                    
                     Divider()
-                    
                     Toggle("Order Updates", isOn: $orderUpdatesNotifications)
                         .padding(Theme.Spacing.md)
-                    
                     Divider()
-                    
                     Toggle("Impact Milestones", isOn: $impactMilestonesNotifications)
                         .padding(Theme.Spacing.md)
                 }
@@ -561,42 +589,36 @@ struct SettingsView: View {
             .cornerRadius(Theme.CornerRadius.xl)
         }
     }
-    
+
     private var privacySection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             Text("Privacy & Data")
                 .font(Theme.Typography.headline)
                 .foregroundColor(Theme.Colors.label)
-            
+
             VStack(spacing: 0) {
                 Button {
-                    // View privacy policy
                 } label: {
                     HStack {
                         Text("Privacy Policy")
                             .font(Theme.Typography.body)
                             .foregroundColor(Theme.Colors.label)
-                        
                         Spacer()
-                        
                         Image(systemName: "arrow.up.right.square")
                             .foregroundColor(Theme.Colors.tertiaryLabel)
                     }
                     .padding(Theme.Spacing.md)
                 }
-                
+
                 Divider()
-                
+
                 Button {
-                    // Export data
                 } label: {
                     HStack {
                         Text("Export My Data")
                             .font(Theme.Typography.body)
                             .foregroundColor(Theme.Colors.label)
-                        
                         Spacer()
-                        
                         Image(systemName: "arrow.down.doc")
                             .foregroundColor(Theme.Colors.tertiaryLabel)
                     }
@@ -607,13 +629,13 @@ struct SettingsView: View {
             .cornerRadius(Theme.CornerRadius.xl)
         }
     }
-    
+
     private var dangerZoneSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             Text("Danger Zone")
                 .font(Theme.Typography.headline)
                 .foregroundColor(.red)
-            
+
             Button {
                 showDeleteAccountConfirmation = true
             } label: {
@@ -630,7 +652,7 @@ struct SettingsView: View {
             }
         }
     }
-    
+
     func deleteAccount() async {
         await ProfileViewModel().deleteAccount()
         dismiss()
