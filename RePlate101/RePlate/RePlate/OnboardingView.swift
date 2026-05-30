@@ -3,12 +3,16 @@
 //  RePlate
 //
 //  Created by Jyotika Sadani on 5/26/26.
+//  Auth flow redesigned to match RePlate 2.0 Figma:
+//    • AuthenticationView  → "Join the Movement" card-picker
+//    • SignInView          → clean labeled form, no social buttons
+//    • SignUpView          → account-type-aware (customer vs restaurant)
 //
 
 import SwiftUI
 
 // MARK: - Reusable App Logo Mark
-/// The green gradient square icon used as the app's logo mark throughout the UI.
+/// Green gradient square icon used as the app's logo mark throughout the UI.
 struct RePlateIconView: View {
     var size: CGFloat = 80
 
@@ -17,8 +21,11 @@ struct RePlateIconView: View {
             RoundedRectangle(cornerRadius: size * 0.22)
                 .fill(Theme.Colors.primaryGradient)
                 .frame(width: size, height: size)
-                .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.35), radius: size * 0.15, y: size * 0.07)
-
+                .shadow(
+                    color: Theme.Colors.primaryGradientStart.opacity(0.35),
+                    radius: size * 0.15,
+                    y: size * 0.07
+                )
             Image(systemName: "fork.knife")
                 .font(.system(size: size * 0.42, weight: .medium))
                 .foregroundColor(.white)
@@ -26,7 +33,7 @@ struct RePlateIconView: View {
     }
 }
 
-// MARK: - Onboarding  (Figma 2.0 — single-screen welcome)
+// MARK: - Onboarding (Figma 2.0 — single-screen welcome)
 struct OnboardingView: View {
     @EnvironmentObject var appState: AppState
     @State private var showAuth   = false
@@ -36,60 +43,50 @@ struct OnboardingView: View {
         ZStack {
             Color(.systemBackground).ignoresSafeArea()
 
-            // ── Blob decorations ──────────────────────────────────
-            // Top-left blob
+            // Blob decorations
             Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Theme.Colors.primaryGradientStart.opacity(0.35),
-                            Theme.Colors.primaryGradientEnd.opacity(0.35)
-                        ],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    )
-                )
+                .fill(LinearGradient(
+                    colors: [
+                        Theme.Colors.primaryGradientStart.opacity(0.35),
+                        Theme.Colors.primaryGradientEnd.opacity(0.35)
+                    ],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                ))
                 .frame(width: 280, height: 280)
                 .blur(radius: 60)
                 .offset(x: -100, y: -100)
 
-            // Bottom-right blob
             Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Theme.Colors.accent.opacity(0.30),
-                            Theme.Colors.primaryGradientEnd.opacity(0.25)
-                        ],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    )
-                )
+                .fill(LinearGradient(
+                    colors: [
+                        Theme.Colors.accent.opacity(0.30),
+                        Theme.Colors.primaryGradientEnd.opacity(0.25)
+                    ],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                ))
                 .frame(width: 240, height: 240)
                 .blur(radius: 50)
                 .offset(x: 120, y: 400)
 
-            // ── Content ───────────────────────────────────────────
             VStack(spacing: 0) {
                 Spacer()
 
                 // Hero circle + sparkles badge
                 ZStack(alignment: .topTrailing) {
-                    // Circle hero (gradient with fork icon)
                     ZStack {
                         Circle()
                             .fill(Theme.Colors.primaryGradient)
                             .frame(width: 192, height: 192)
-                            .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.35),
-                                    radius: 24, y: 8)
+                            .shadow(
+                                color: Theme.Colors.primaryGradientStart.opacity(0.35),
+                                radius: 24, y: 8
+                            )
                         Image(systemName: "fork.knife")
                             .font(.system(size: 72, weight: .medium))
                             .foregroundColor(.white.opacity(0.85))
                     }
-                    .overlay(
-                        Circle()
-                            .stroke(Theme.Colors.accent, lineWidth: 4)
-                    )
+                    .overlay(Circle().stroke(Theme.Colors.accent, lineWidth: 4))
 
-                    // Sparkles badge
                     ZStack {
                         Circle()
                             .fill(Theme.Colors.accent)
@@ -103,7 +100,7 @@ struct OnboardingView: View {
                 }
                 .padding(.bottom, 32)
 
-                // Logo icon + wordmark + subtitle
+                // Logo + wordmark + subtitle
                 VStack(spacing: 12) {
                     RePlateIconView(size: 64)
 
@@ -158,8 +155,10 @@ struct OnboardingView: View {
                             .frame(height: 56)
                             .background(Theme.Colors.primaryGradient)
                             .clipShape(RoundedRectangle(cornerRadius: 20))
-                            .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.35),
-                                    radius: 12, y: 5)
+                            .shadow(
+                                color: Theme.Colors.primaryGradientStart.opacity(0.35),
+                                radius: 12, y: 5
+                            )
                     }
 
                     Button {
@@ -183,8 +182,8 @@ struct OnboardingView: View {
                 .padding(.bottom, 48)
             }
         }
-        .fullScreenCover(isPresented: $showAuth)   { AuthenticationView() }
-        .sheet(isPresented: $showSignIn)            { SignInView() }
+        .fullScreenCover(isPresented: $showAuth) { AuthenticationView() }
+        .sheet(isPresented: $showSignIn)           { SignInView() }
     }
 }
 
@@ -206,7 +205,6 @@ private struct WelcomeFeatureRow: View {
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(iconForeground)
             }
-
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.system(size: 14, weight: .bold, design: .rounded))
@@ -229,220 +227,301 @@ private struct WelcomeFeatureRow: View {
     }
 }
 
-// MARK: - Authentication View
+// MARK: - Authentication View  (Figma 2.0 — "Join the Movement")
 struct AuthenticationView: View {
     @EnvironmentObject var appState: AppState
-    @State private var showSignIn = false
-    @State private var showSignUp = false
-    @State private var selectedAccountType: User.AccountType?
-    
+    @Environment(\.dismiss) var dismiss
+
+    @State private var showSignIn          = false
+    @State private var showRestaurantSignUp = false
+    @State private var showCustomerSignUp  = false
+
     var body: some View {
         ZStack {
-            Theme.Colors.background
-                .ignoresSafeArea()
-            
-            VStack(spacing: Theme.Spacing.xl) {
-                Spacer()
-                
-                // Logo
-                VStack(spacing: Theme.Spacing.md) {
-                    RePlateIconView(size: 80)
+            Color(.systemBackground).ignoresSafeArea()
 
-                    Text("RePlate")
-                        .font(.system(size: 36, weight: .bold, design: .rounded))
-                        .foregroundColor(Theme.Colors.label)
-                }
-                .padding(.bottom, Theme.Spacing.xl)
-                
-                // Account type selection
-                VStack(spacing: Theme.Spacing.md) {
-                    Text("I am a...")
-                        .font(Theme.Typography.title3)
-                        .foregroundColor(Theme.Colors.label)
-                    
-                    HStack(spacing: Theme.Spacing.md) {
-                        ForEach(User.AccountType.allCases, id: \.self) { type in
-                            AccountTypeButton(
-                                type: type,
-                                isSelected: selectedAccountType == type
-                            ) {
-                                selectedAccountType = type
-                                hapticFeedback()
-                            }
+            // Blob decoration
+            Circle()
+                .fill(Theme.Colors.primaryGradientStart.opacity(0.12))
+                .frame(width: 300, height: 300)
+                .blur(radius: 70)
+                .offset(x: -80, y: -140)
+                .ignoresSafeArea()
+
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 0) {
+                    // Back button
+                    Button { dismiss() } label: {
+                        ZStack {
+                            Circle()
+                                .fill(Color(.systemGray6))
+                                .frame(width: 42, height: 42)
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(Theme.Colors.secondaryLabel)
                         }
                     }
-                }
-                .padding(.horizontal, Theme.Spacing.lg)
-                
-                Spacer()
-                
-                // Auth buttons
-                VStack(spacing: Theme.Spacing.md) {
-                    PrimaryButton("Sign Up") {
-                        showSignUp = true
+                    .padding(.top, 16)
+                    .padding(.bottom, 28)
+
+                    // Heading
+                    Text("Join the Movement")
+                        .font(.system(size: 30, weight: .heavy, design: .rounded))
+                        .foregroundColor(Theme.Colors.label)
+
+                    Text("Choose your role in reducing food waste.")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(Theme.Colors.secondaryLabel)
+                        .padding(.top, 6)
+                        .padding(.bottom, 36)
+
+                    // Restaurant card
+                    AccountTypePickerCard(
+                        icon: "fork.knife",
+                        title: "Restaurant",
+                        description: "Post surplus food and track your impact.",
+                        accentColor: Theme.Colors.primaryGradientStart
+                    ) {
+                        hapticFeedback(.medium)
+                        showRestaurantSignUp = true
                     }
-                    .disabled(selectedAccountType == nil)
-                    .opacity(selectedAccountType == nil ? 0.5 : 1)
-                    
-                    Button("Already have an account? Sign In") {
+                    .padding(.bottom, 20)
+
+                    // Customer card
+                    AccountTypePickerCard(
+                        icon: "person.fill",
+                        title: "Customer",
+                        description: "Discover and claim fresh surplus meals.",
+                        accentColor: Theme.Colors.primaryGradientEnd
+                    ) {
+                        hapticFeedback(.medium)
+                        showCustomerSignUp = true
+                    }
+
+                    // Footer
+                    Text("You can always change this later in settings")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(Theme.Colors.tertiaryLabel)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 36)
+                        .padding(.bottom, 16)
+
+                    // Log in link
+                    Button {
+                        hapticFeedback(.light)
                         showSignIn = true
+                    } label: {
+                        (
+                            Text("Already have an account?  ")
+                                .foregroundColor(Theme.Colors.secondaryLabel)
+                            + Text("Log In")
+                                .foregroundColor(Theme.Colors.primaryGradientStart)
+                        )
+                        .font(.system(size: 15, weight: .semibold))
                     }
-                    .font(Theme.Typography.subheadline)
-                    .foregroundColor(Theme.Colors.primaryGradientStart)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.bottom, 40)
                 }
-                .padding(Theme.Spacing.lg)
+                .padding(.horizontal, 24)
             }
         }
-        .sheet(isPresented: $showSignIn) {
-            SignInView()
-        }
-        .sheet(isPresented: $showSignUp) {
-            if let accountType = selectedAccountType {
-                SignUpView(accountType: accountType)
-            }
-        }
+        .sheet(isPresented: $showSignIn)            { SignInView() }
+        .sheet(isPresented: $showRestaurantSignUp)  { SignUpView(accountType: .restaurant) }
+        .sheet(isPresented: $showCustomerSignUp)    { SignUpView(accountType: .customer) }
     }
 }
 
-struct AccountTypeButton: View {
-    let type: User.AccountType
-    let isSelected: Bool
+// MARK: - Account Type Picker Card  (Figma 2.0 image-style card)
+private struct AccountTypePickerCard: View {
+    let icon: String
+    let title: String
+    let description: String
+    let accentColor: Color
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
-            VStack(spacing: Theme.Spacing.md) {
-                Image(systemName: type.icon)
-                    .font(.system(size: 40))
-                    .foregroundColor(isSelected ? .white : Theme.Colors.primaryGradientStart)
-                
-                Text(type.displayName)
-                    .font(Theme.Typography.headline)
-                    .foregroundColor(isSelected ? .white : Theme.Colors.label)
+            HStack(spacing: 0) {
+                // Gradient icon block (replaces photo in Figma)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(LinearGradient(
+                            colors: [accentColor, accentColor.opacity(0.65)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ))
+                    Image(systemName: icon)
+                        .font(.system(size: 36, weight: .medium))
+                        .foregroundColor(.white)
+                }
+                .frame(width: 90, height: 90)
+                .padding(.leading, 8)
+
+                // Text block
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(accentColor.opacity(0.12))
+                                .frame(width: 28, height: 28)
+                            Image(systemName: icon)
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(accentColor)
+                        }
+                        Text(title)
+                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                            .foregroundColor(Theme.Colors.label)
+                    }
+                    Text(description)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(Theme.Colors.secondaryLabel)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.leading, 16)
+
+                Spacer(minLength: 8)
+
+                // Chevron in accent circle
+                ZStack {
+                    Circle()
+                        .fill(accentColor)
+                        .frame(width: 34, height: 34)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.white)
+                }
+                .padding(.trailing, 16)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 140)
+            .padding(.vertical, 12)
             .background(
-                isSelected ?
-                Theme.Colors.primaryGradient :
-                LinearGradient(colors: [Theme.Colors.secondaryBackground], startPoint: .top, endPoint: .bottom)
-            )
-            .cornerRadius(Theme.CornerRadius.xxl)
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.CornerRadius.xxl)
-                    .stroke(isSelected ? Color.clear : Theme.Colors.primaryGradientStart.opacity(0.3), lineWidth: 2)
+                RoundedRectangle(cornerRadius: 28)
+                    .fill(Color(.systemBackground))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 28)
+                            .stroke(accentColor.opacity(0.25), lineWidth: 2)
+                    )
+                    .shadow(color: Color.black.opacity(0.07), radius: 14, y: 5)
             )
         }
+        .buttonStyle(SpringyButtonStyle())
     }
 }
 
-// MARK: - Sign In View
+// MARK: - Springy Button Style  (scale-on-press, shared by auth cards)
+private struct SpringyButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .animation(
+                .spring(response: 0.3, dampingFraction: 0.7),
+                value: configuration.isPressed
+            )
+    }
+}
+
+// MARK: - Sign In View  (Figma 2.0 — clean labeled form)
 struct SignInView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) var dismiss
-    @State private var email = ""
+
+    @State private var email    = ""
     @State private var password = ""
-    @State private var isLoading = false
-    @State private var showError = false
+    @State private var isLoading  = false
+    @State private var showError  = false
     @State private var errorMessage = ""
-    
+
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: Theme.Spacing.lg) {
-                    // Header
-                    VStack(spacing: Theme.Spacing.sm) {
-                        RePlateIconView(size: 64)
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 0) {
+                    // Heading
+                    Text("Welcome Back")
+                        .font(.system(size: 30, weight: .heavy, design: .rounded))
+                        .foregroundColor(Theme.Colors.label)
+                        .padding(.top, 32)
 
-                        Text("Welcome Back")
-                            .font(Theme.Typography.largeTitle)
-                            .foregroundColor(Theme.Colors.label)
+                    Text("Sign in to your RePlate account")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(Theme.Colors.secondaryLabel)
+                        .padding(.top, 6)
+                        .padding(.bottom, 40)
 
-                        Text("Sign in to continue")
-                            .font(Theme.Typography.body)
-                            .foregroundColor(Theme.Colors.secondaryLabel)
-                    }
-                    .padding(.top, Theme.Spacing.xl)
-                    .padding(.bottom, Theme.Spacing.lg)
-                    
                     // Form
-                    VStack(spacing: Theme.Spacing.md) {
-                        CustomTextField(
-                            placeholder: "Email",
+                    VStack(spacing: 20) {
+                        AuthLabeledField(
+                            label: "Email",
+                            placeholder: "you@example.com",
                             text: $email,
-                            icon: "envelope"
+                            keyboardType: .emailAddress
                         )
                         .textInputAutocapitalization(.never)
-                        .keyboardType(.emailAddress)
-                        
-                        CustomTextField(
-                            placeholder: "Password",
+
+                        AuthLabeledField(
+                            label: "Password",
+                            placeholder: "Your password",
                             text: $password,
-                            icon: "lock",
                             isSecure: true
                         )
-                        
-                        Button("Forgot Password?") {
-                            // Handle password reset
-                        }
-                        .font(Theme.Typography.subheadline)
+                    }
+                    .padding(.bottom, 12)
+
+                    // Forgot password
+                    Button("Forgot Password?") {}
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(Theme.Colors.primaryGradientStart)
                         .frame(maxWidth: .infinity, alignment: .trailing)
-                    }
-                    
+                        .padding(.bottom, 32)
+
                     // Sign in button
-                    PrimaryButton("Sign In", isLoading: isLoading) {
-                        Task {
-                            await signIn()
+                    Button {
+                        Task { await signIn() }
+                    } label: {
+                        ZStack {
+                            if isLoading {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            } else {
+                                Text("Sign In")
+                                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                                    .foregroundColor(.white)
+                            }
                         }
-                    }
-                    .padding(.top, Theme.Spacing.md)
-                    
-                    // Divider
-                    HStack {
-                        Rectangle()
-                            .fill(Theme.Colors.tertiaryLabel)
-                            .frame(height: 1)
-                        Text("or")
-                            .font(Theme.Typography.caption)
-                            .foregroundColor(Theme.Colors.secondaryLabel)
-                        Rectangle()
-                            .fill(Theme.Colors.tertiaryLabel)
-                            .frame(height: 1)
-                    }
-                    .padding(.vertical, Theme.Spacing.md)
-                    
-                    // Social sign in
-                    VStack(spacing: Theme.Spacing.md) {
-                        SocialSignInButton(
-                            title: "Continue with Apple",
-                            icon: "apple.logo",
-                            action: {
-                                Task {
-                                    await signInWithApple()
-                                }
-                            }
-                        )
-                        
-                        SocialSignInButton(
-                            title: "Continue with Google",
-                            icon: "g.circle.fill",
-                            action: {
-                                Task {
-                                    await signInWithGoogle()
-                                }
-                            }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 56)
+                        .background(Theme.Colors.primaryGradient)
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                        .shadow(
+                            color: Theme.Colors.primaryGradientStart.opacity(0.30),
+                            radius: 12, y: 5
                         )
                     }
+                    .disabled(isLoading)
+
+                    // Demo hint
+                    Text("Demo: use any email/password\n(use "restaurant@…" for a restaurant account)")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(Theme.Colors.tertiaryLabel)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 20)
                 }
-                .padding(Theme.Spacing.lg)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 40)
             }
-            .background(Theme.Colors.background)
+            .background(Color(.systemBackground))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Close") {
-                        dismiss()
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button { dismiss() } label: {
+                        ZStack {
+                            Circle()
+                                .fill(Color(.systemGray6))
+                                .frame(width: 36, height: 36)
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(Theme.Colors.secondaryLabel)
+                        }
                     }
                 }
             }
@@ -453,14 +532,13 @@ struct SignInView: View {
             }
         }
     }
-    
+
     func signIn() async {
         guard !email.isEmpty && !password.isEmpty else {
             errorMessage = "Please fill in all fields"
             showError = true
             return
         }
-
         isLoading = true
         defer { isLoading = false }
 
@@ -475,121 +553,154 @@ struct SignInView: View {
             showError = true
         }
     }
-    
-    func signInWithApple() async {
-        // Implement Sign in with Apple
-    }
-    
-    func signInWithGoogle() async {
-        // Implement Google Sign-In
-    }
 }
 
-// MARK: - Sign Up View
+// MARK: - Sign Up View  (Figma 2.0 — account-type-aware)
 struct SignUpView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) var dismiss
     let accountType: User.AccountType
-    
-    @State private var name = ""
-    @State private var email = ""
-    @State private var password = ""
-    @State private var confirmPassword = ""
-    @State private var isLoading = false
-    @State private var showError = false
-    @State private var errorMessage = ""
-    @State private var agreedToTerms = false
-    
+
+    // Shared fields
+    @State private var name            = ""
+    @State private var email           = ""
+    @State private var password        = ""
+    // Restaurant-only extras (collected in UI; stored for future profile update)
+    @State private var address         = ""
+    @State private var businessHours   = ""
+    @State private var phoneNumber     = ""
+    // Customer only
+    @State private var agreedToTerms   = false
+    // UI
+    @State private var isLoading       = false
+    @State private var showError       = false
+    @State private var errorMessage    = ""
+
+    private var isCustomer: Bool { accountType == .customer }
+
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: Theme.Spacing.lg) {
-                    // Header
-                    VStack(spacing: Theme.Spacing.sm) {
-                        RePlateIconView(size: 64)
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 0) {
+                    // Subheading
+                    Text(isCustomer
+                         ? "Join RePlate and start saving food"
+                         : "Register your restaurant with RePlate")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(Theme.Colors.secondaryLabel)
+                        .padding(.top, 8)
+                        .padding(.bottom, 28)
 
-                        Text("Create Account")
-                            .font(Theme.Typography.largeTitle)
-                            .foregroundColor(Theme.Colors.label)
-
-                        Text("Join as a \(accountType.displayName)")
-                            .font(Theme.Typography.body)
-                            .foregroundColor(Theme.Colors.secondaryLabel)
+                    // ── Customer: photo upload circle ─────────────────
+                    if isCustomer {
+                        customerPhotoUpload
+                            .padding(.bottom, 28)
+                    } else {
+                        restaurantLogoUpload
+                            .padding(.bottom, 24)
                     }
-                    .padding(.top, Theme.Spacing.xl)
-                    .padding(.bottom, Theme.Spacing.lg)
-                    
-                    // Form
-                    VStack(spacing: Theme.Spacing.md) {
-                        CustomTextField(
-                            placeholder: accountType == .restaurant ? "Restaurant Name" : "Full Name",
-                            text: $name,
-                            icon: "person"
+
+                    // ── Form fields ───────────────────────────────────
+                    VStack(spacing: 18) {
+                        AuthLabeledField(
+                            label: isCustomer ? "Full Name" : "Restaurant Name",
+                            placeholder: isCustomer ? "Your name" : "e.g., Bella's Italian Kitchen",
+                            text: $name
                         )
-                        
-                        CustomTextField(
-                            placeholder: "Email",
+
+                        if !isCustomer {
+                            AuthLabeledField(
+                                label: "Address",
+                                placeholder: "123 Main St, City, State",
+                                text: $address
+                            )
+                            AuthLabeledField(
+                                label: "Business Hours",
+                                placeholder: "e.g., Mon–Fri 9AM–9PM",
+                                text: $businessHours
+                            )
+                            AuthLabeledField(
+                                label: "Phone Number",
+                                placeholder: "(555) 123-4567",
+                                text: $phoneNumber,
+                                keyboardType: .phonePad
+                            )
+                        }
+
+                        AuthLabeledField(
+                            label: "Email",
+                            placeholder: "you@example.com",
                             text: $email,
-                            icon: "envelope"
+                            keyboardType: .emailAddress
                         )
                         .textInputAutocapitalization(.never)
-                        .keyboardType(.emailAddress)
-                        
-                        CustomTextField(
-                            placeholder: "Password",
+
+                        AuthLabeledField(
+                            label: "Password",
+                            placeholder: "Create a secure password",
                             text: $password,
-                            icon: "lock",
                             isSecure: true
                         )
-                        
-                        CustomTextField(
-                            placeholder: "Confirm Password",
-                            text: $confirmPassword,
-                            icon: "lock",
-                            isSecure: true
-                        )
-                        
-                        // Terms acceptance
-                        Toggle(isOn: $agreedToTerms) {
-                            HStack(spacing: 4) {
-                                Text("I agree to the")
-                                    .font(Theme.Typography.caption)
-                                Button("Terms of Service") {
-                                    // Show terms
-                                }
-                                .font(Theme.Typography.caption)
-                                .foregroundColor(Theme.Colors.primaryGradientStart)
-                                Text("and")
-                                    .font(Theme.Typography.caption)
-                                Button("Privacy Policy") {
-                                    // Show privacy policy
-                                }
-                                .font(Theme.Typography.caption)
-                                .foregroundColor(Theme.Colors.primaryGradientStart)
+                    }
+                    .padding(.bottom, 24)
+
+                    // ── Special action button ─────────────────────────
+                    if isCustomer {
+                        locationPermissionButton
+                            .padding(.bottom, 8)
+                        Text("We need your location to show surplus food near you")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(Theme.Colors.tertiaryLabel)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
+                            .padding(.bottom, 24)
+                    } else {
+                        verifyBusinessButton
+                            .padding(.bottom, 24)
+                    }
+
+                    // ── Create account button ─────────────────────────
+                    Button {
+                        Task { await signUp() }
+                    } label: {
+                        ZStack {
+                            if isLoading {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            } else {
+                                Text(isCustomer ? "Create Customer Account" : "Create Business Account")
+                                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                                    .foregroundColor(.white)
                             }
-                            .foregroundColor(Theme.Colors.secondaryLabel)
                         }
-                        .toggleStyle(CheckboxToggleStyle())
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 56)
+                        .background(Theme.Colors.primaryGradient)
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                        .shadow(
+                            color: Theme.Colors.primaryGradientStart.opacity(0.30),
+                            radius: 12, y: 5
+                        )
                     }
-                    
-                    // Sign up button
-                    PrimaryButton("Create Account", isLoading: isLoading) {
-                        Task {
-                            await signUp()
-                        }
-                    }
-                    .disabled(!agreedToTerms)
-                    .opacity(agreedToTerms ? 1 : 0.5)
-                    .padding(.top, Theme.Spacing.md)
+                    .disabled(isLoading)
+                    .padding(.bottom, 40)
                 }
-                .padding(Theme.Spacing.lg)
+                .padding(.horizontal, 24)
             }
-            .background(Theme.Colors.background)
+            .background(Color(.systemBackground))
+            .navigationTitle(isCustomer ? "Create Account" : "Create Business Account")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Close") {
-                        dismiss()
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button { dismiss() } label: {
+                        ZStack {
+                            Circle()
+                                .fill(Color(.systemGray6))
+                                .frame(width: 36, height: 36)
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(Theme.Colors.secondaryLabel)
+                        }
                     }
                 }
             }
@@ -600,10 +711,105 @@ struct SignUpView: View {
             }
         }
     }
-    
-    func signUp() async {
-        guard validateForm() else { return }
 
+    // MARK: - Customer Photo Upload
+    private var customerPhotoUpload: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                Circle()
+                    .fill(Color(.systemGray6))
+                    .frame(width: 96, height: 96)
+                Circle()
+                    .strokeBorder(
+                        Color(.systemGray4),
+                        style: StrokeStyle(lineWidth: 2, dash: [6, 4])
+                    )
+                    .frame(width: 96, height: 96)
+                Image(systemName: "camera.fill")
+                    .font(.system(size: 28, weight: .medium))
+                    .foregroundColor(Theme.Colors.tertiaryLabel)
+            }
+            Text("Add Photo")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(Theme.Colors.secondaryLabel)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Restaurant Logo Upload
+    private var restaurantLogoUpload: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Restaurant Logo")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(Theme.Colors.secondaryLabel)
+
+            ZStack {
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color(.systemGray6))
+                RoundedRectangle(cornerRadius: 20)
+                    .strokeBorder(
+                        Color(.systemGray4),
+                        style: StrokeStyle(lineWidth: 2, dash: [8, 5])
+                    )
+                VStack(spacing: 10) {
+                    Image(systemName: "arrow.up.to.line")
+                        .font(.system(size: 28, weight: .medium))
+                        .foregroundColor(Theme.Colors.tertiaryLabel)
+                    Text("Tap to upload logo")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(Theme.Colors.secondaryLabel)
+                }
+            }
+            .frame(height: 130)
+        }
+    }
+
+    // MARK: - Location Permission Button (customer)
+    private var locationPermissionButton: some View {
+        Button {} label: {
+            HStack(spacing: 10) {
+                Image(systemName: "location.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                Text("Allow Location Access")
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+            }
+            .foregroundColor(Theme.Colors.label)
+            .frame(maxWidth: .infinity)
+            .frame(height: 52)
+            .background(Color(.systemGray6))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+        }
+    }
+
+    // MARK: - Verify Business Button (restaurant)
+    private var verifyBusinessButton: some View {
+        Button {} label: {
+            HStack(spacing: 10) {
+                Image(systemName: "shield.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                Text("Verify Business (Optional)")
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+            }
+            .foregroundColor(Theme.Colors.label)
+            .frame(maxWidth: .infinity)
+            .frame(height: 52)
+            .background(Color(.systemGray6))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+        }
+    }
+
+    // MARK: - Sign Up Logic
+    func signUp() async {
+        guard !name.isEmpty, !email.isEmpty, !password.isEmpty else {
+            errorMessage = "Please fill in all fields"
+            showError = true
+            return
+        }
+        guard password.count >= 8 else {
+            errorMessage = "Password must be at least 8 characters"
+            showError = true
+            return
+        }
         isLoading = true
         defer { isLoading = false }
 
@@ -623,36 +829,95 @@ struct SignUpView: View {
             showError = true
         }
     }
-    
-    func validateForm() -> Bool {
-        if name.isEmpty || email.isEmpty || password.isEmpty {
-            errorMessage = "Please fill in all fields"
-            showError = true
-            return false
+}
+
+// MARK: - Auth Labeled Field  (label above + bordered input — Figma pattern)
+struct AuthLabeledField: View {
+    let label: String
+    let placeholder: String
+    @Binding var text: String
+    var isSecure: Bool = false
+    var keyboardType: UIKeyboardType = .default
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(Theme.Colors.secondaryLabel)
+
+            Group {
+                if isSecure {
+                    SecureField(placeholder, text: $text)
+                } else {
+                    TextField(placeholder, text: $text)
+                        .keyboardType(keyboardType)
+                }
+            }
+            .font(.system(size: 16, weight: .regular))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(Color(.systemGray6))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(
+                        text.isEmpty
+                            ? Color.clear
+                            : Theme.Colors.primaryGradientStart.opacity(0.4),
+                        lineWidth: 1.5
+                    )
+            )
         }
-        
-        if password != confirmPassword {
-            errorMessage = "Passwords do not match"
-            showError = true
-            return false
-        }
-        
-        if password.count < 8 {
-            errorMessage = "Password must be at least 8 characters"
-            showError = true
-            return false
-        }
-        
-        return true
     }
 }
 
-// MARK: - Social Sign In Button
+// MARK: - Legacy / Preserved Structs
+// AccountTypeButton, SocialSignInButton, CheckboxToggleStyle kept for
+// backward compatibility with any code that may reference them.
+
+struct AccountTypeButton: View {
+    let type: User.AccountType
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: Theme.Spacing.md) {
+                Image(systemName: type.icon)
+                    .font(.system(size: 40))
+                    .foregroundColor(isSelected ? .white : Theme.Colors.primaryGradientStart)
+                Text(type.displayName)
+                    .font(Theme.Typography.headline)
+                    .foregroundColor(isSelected ? .white : Theme.Colors.label)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 140)
+            .background(
+                isSelected
+                    ? Theme.Colors.primaryGradient
+                    : LinearGradient(
+                        colors: [Theme.Colors.secondaryBackground],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+            )
+            .cornerRadius(Theme.CornerRadius.xxl)
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.xxl)
+                    .stroke(
+                        isSelected ? Color.clear : Theme.Colors.primaryGradientStart.opacity(0.3),
+                        lineWidth: 2
+                    )
+            )
+        }
+    }
+}
+
 struct SocialSignInButton: View {
     let title: String
     let icon: String
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: Theme.Spacing.sm) {
@@ -673,17 +938,21 @@ struct SocialSignInButton: View {
     }
 }
 
-// MARK: - Checkbox Toggle Style
 struct CheckboxToggleStyle: ToggleStyle {
     func makeBody(configuration: Configuration) -> some View {
         HStack(alignment: .top, spacing: Theme.Spacing.sm) {
-            Image(systemName: configuration.isOn ? "checkmark.square.fill" : "square")
-                .foregroundColor(configuration.isOn ? Theme.Colors.primaryGradientStart : Theme.Colors.secondaryLabel)
-                .onTapGesture {
-                    configuration.isOn.toggle()
-                    hapticFeedback(.light)
-                }
-            
+            Image(
+                systemName: configuration.isOn ? "checkmark.square.fill" : "square"
+            )
+            .foregroundColor(
+                configuration.isOn
+                    ? Theme.Colors.primaryGradientStart
+                    : Theme.Colors.secondaryLabel
+            )
+            .onTapGesture {
+                configuration.isOn.toggle()
+                hapticFeedback(.light)
+            }
             configuration.label
         }
     }
