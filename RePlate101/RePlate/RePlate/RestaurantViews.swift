@@ -13,6 +13,9 @@ struct RestaurantDashboardView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = RestaurantDashboardViewModel()
     @State private var showPostListing = false
+    @State private var showSettings = false
+    @State private var selectedOrder: Order? = nil
+    @State private var selectedListing: FoodListing? = nil
 
     private var restaurantDisplayName: String {
         appState.currentUser?.name ?? "Verde Bistro"
@@ -32,6 +35,15 @@ struct RestaurantDashboardView: View {
         .task { await viewModel.loadDashboard() }
         .sheet(isPresented: $showPostListing) {
             PostListingView()
+        }
+        .sheet(isPresented: $showSettings) {
+            RestaurantSettingsView()
+        }
+        .sheet(item: $selectedOrder) { order in
+            RestaurantOrderDetailView(order: order)
+        }
+        .sheet(item: $selectedListing) { listing in
+            EditListingView(listing: listing)
         }
     }
 
@@ -54,6 +66,25 @@ struct RestaurantDashboardView: View {
                     }
                 }
                 Spacer()
+                HStack(spacing: 10) {
+                // Settings gear
+                Button {
+                    hapticFeedback(.light)
+                    showSettings = true
+                } label: {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(.white.opacity(0.2))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .stroke(.white.opacity(0.3), lineWidth: 1)
+                            )
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundColor(.white)
+                    }
+                }
                 // Bell with badge
                 ZStack(alignment: .topTrailing) {
                     ZStack {
@@ -76,6 +107,7 @@ struct RestaurantDashboardView: View {
                             .offset(x: 2, y: -2)
                     }
                 }
+                } // end HStack (gear + bell)
             }
             .padding(.top, 60)
             .padding(.bottom, 28)
@@ -221,7 +253,9 @@ struct RestaurantDashboardView: View {
             } else {
                 VStack(spacing: 16) {
                     ForEach(viewModel.pendingOrders.prefix(3)) { order in
-                        FigmaOrderCard(order: order)
+                        FigmaOrderCard(order: order) {
+                            selectedOrder = order
+                        }
                     }
                 }
                 .padding(.horizontal, 20)
@@ -261,7 +295,9 @@ struct RestaurantDashboardView: View {
             } else {
                 VStack(spacing: 24) {
                     ForEach(viewModel.activeListings.prefix(3)) { listing in
-                        FigmaActiveListingCard(listing: listing)
+                        FigmaActiveListingCard(listing: listing) {
+                            selectedListing = listing
+                        }
                     }
                 }
                 .padding(.horizontal, 20)
@@ -309,6 +345,7 @@ private struct FigmaStatCard: View {
 // MARK: - Figma Order Card (Today's Pickups)
 private struct FigmaOrderCard: View {
     let order: Order
+    var onDetails: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 0) {
@@ -355,7 +392,7 @@ private struct FigmaOrderCard: View {
 
             // Action buttons
             HStack(spacing: 12) {
-                Button("Details") {}
+                Button("Details") { hapticFeedback(.light); onDetails() }
                     .font(.system(size: 14, weight: .bold, design: .rounded))
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity)
@@ -388,6 +425,7 @@ private struct FigmaOrderCard: View {
 // MARK: - Figma Active Listing Card
 private struct FigmaActiveListingCard: View {
     let listing: FoodListing
+    var onEdit: () -> Void = {}
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -482,13 +520,15 @@ private struct FigmaActiveListingCard: View {
 
                 // Edit / Cancel buttons
                 HStack(spacing: 12) {
-                    Button("Edit") { hapticFeedback(.light) }
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundColor(Theme.Colors.label)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color(.systemGray5))
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                    Button { hapticFeedback(.light); onEdit() } label: {
+                        Text("Edit")
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .foregroundColor(Theme.Colors.label)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color(.systemGray5))
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                    }
 
                     Button("Cancel") { hapticFeedback(.light) }
                         .font(.system(size: 14, weight: .bold, design: .rounded))
