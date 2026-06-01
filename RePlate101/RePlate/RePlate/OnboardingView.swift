@@ -311,13 +311,9 @@ struct AuthenticationView: View {
                         hapticFeedback(.light)
                         showSignIn = true
                     } label: {
-                        (
-                            Text("Already have an account?  ")
-                                .foregroundColor(Theme.Colors.secondaryLabel)
-                            + Text("Log In")
-                                .foregroundColor(Theme.Colors.primaryGradientStart)
-                        )
-                        .font(.system(size: 15, weight: .semibold))
+                        Text("Already have an account?  \(Text("Log In").foregroundColor(Theme.Colors.primaryGradientStart))")
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                            .font(.system(size: 15, weight: .semibold))
                     }
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.bottom, 40)
