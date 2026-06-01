@@ -143,6 +143,7 @@ struct ConversationView: View {
     let conversation: Conversation
     @State private var messageText = ""
     @State private var messages: [Message] = []
+    @State private var showOrderInfo = false
     
     var body: some View {
         NavigationView {
@@ -171,6 +172,7 @@ struct ConversationView: View {
             .background(Theme.Colors.background)
             .navigationTitle(conversation.order?.restaurant?.name ?? "Chat")
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showOrderInfo) { OrderInfoSheet(order: conversation.order) }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button {
@@ -183,7 +185,8 @@ struct ConversationView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        // Order details
+                        hapticFeedback(.light)
+                        showOrderInfo = true
                     } label: {
                         Image(systemName: "info.circle")
                             .foregroundColor(Theme.Colors.primaryGradientStart)
@@ -266,5 +269,62 @@ struct MessageBubble: View {
                 Spacer()
             }
         }
+    }
+}
+
+// MARK: - Order Info Sheet
+private struct OrderInfoSheet: View {
+    @Environment(\.dismiss) var dismiss
+    let order: Order?
+
+    var body: some View {
+        NavigationView {
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 20) {
+                    if let order {
+                        infoRow(icon: "number.circle.fill", label: "Pickup Code", value: order.pickupCode)
+                        infoRow(icon: "bag.fill", label: "Item", value: order.listing?.title ?? "Surplus Order")
+                        infoRow(icon: "person.fill", label: "Customer", value: order.customer?.name ?? "Customer")
+                        infoRow(icon: "dollarsign.circle.fill", label: "Total", value: String(format: "$%.2f", order.totalAmount))
+                        infoRow(icon: "clock.fill", label: "Pickup Window",
+                                value: "\(order.pickupWindowStart.formatted(date: .omitted, time: .shortened)) – \(order.pickupWindowEnd.formatted(date: .omitted, time: .shortened))")
+                        infoRow(icon: "checkmark.circle.fill", label: "Status", value: order.status.rawValue)
+                        infoRow(icon: "calendar", label: "Ordered At", value: order.createdAt.formatted(date: .abbreviated, time: .shortened))
+                    } else {
+                        Text("No order information available.")
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                            .font(.system(size: 15, weight: .medium, design: .rounded))
+                    }
+                }
+                .padding(24)
+            }
+            .background(Color(.systemBackground))
+            .navigationTitle("Order Details")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func infoRow(icon: String, label: String, value: String) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: icon)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(Theme.Colors.primaryGradientStart)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(label).font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundColor(Theme.Colors.tertiaryLabel).tracking(0.5)
+                Text(value).font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .foregroundColor(Theme.Colors.label)
+            }
+            Spacer()
+        }
+        .padding(16)
+        .background(Color(.systemGray6))
+        .clipShape(RoundedRectangle(cornerRadius: 18))
     }
 }

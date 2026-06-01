@@ -431,6 +431,8 @@ private struct FigmaOrderCard: View {
 private struct FigmaActiveListingCard: View {
     let listing: FoodListing
     var onEdit: () -> Void = {}
+    var onCancel: () -> Void = {}
+    @State private var showCancelAlert = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -535,17 +537,25 @@ private struct FigmaActiveListingCard: View {
                             .clipShape(RoundedRectangle(cornerRadius: 16))
                     }
 
-                    Button("Cancel") { hapticFeedback(.light) }
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundColor(.secondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color(.systemBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(Color(.systemGray5), lineWidth: 1.5)
-                        )
+                    Button {
+                        hapticFeedback(.light)
+                        showCancelAlert = true
+                    } label: {
+                        Text("Cancel Listing")
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .foregroundColor(.red)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color(.systemBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.red.opacity(0.3), lineWidth: 1.5))
+                    }
+                    .alert("Cancel Listing?", isPresented: $showCancelAlert) {
+                        Button("Yes, Cancel", role: .destructive) { onCancel() }
+                        Button("Keep Active", role: .cancel) {}
+                    } message: {
+                        Text("This listing will be removed from the marketplace.")
+                    }
                 }
             }
             .padding(20)
@@ -1448,6 +1458,7 @@ struct ImpactMetric: View {
 
 // MARK: - Restaurant Orders View Model
 @MainActor
+@MainActor
 private class RestaurantOrdersViewModel: ObservableObject {
     @Published var pendingOrders: [Order] = []
     @Published var completedOrders: [Order] = []
@@ -1461,15 +1472,24 @@ private class RestaurantOrdersViewModel: ObservableObject {
         pendingOrders   = all.filter { $0.status == .pending || $0.status == .confirmed || $0.status == .ready }
         completedOrders = all.filter { $0.status == .completed || $0.status == .cancelled || $0.status == .noShow }
     }
+
+    /// Move an order from pending → completed (Confirm Pickup).
+    func confirmPickup(_ order: Order) {
+        guard let idx = pendingOrders.firstIndex(where: { $0.id == order.id }) else { return }
+        var updated = pendingOrders.remove(at: idx)
+        updated.status = .completed
+        completedOrders.insert(updated, at: 0)
+    }
 }
 
 // MARK: - Restaurant Orders View
 struct RestaurantOrdersView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = RestaurantOrdersViewModel()
-    @State private var selectedTab   = 0          // 0=Pending  1=Picked Up  2=Expired
+    @State private var selectedTab        = 0
     @State private var selectedOrder: Order? = nil
-    @State private var messageOrder:  Order? = nil
+    @State private var messageOrder: Order?  = nil
+    @State private var showRepostListing  = false
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -1482,8 +1502,9 @@ struct RestaurantOrdersView: View {
         .ignoresSafeArea(edges: .top)
         .background(Color(.systemGray6).opacity(0.3))
         .task { await viewModel.loadOrders() }
-        .sheet(item: $selectedOrder) { order in RestaurantOrderDetailView(order: order) }
-        .sheet(item: $messageOrder)  { order in MessageCustomerView(order: order) }
+        .sheet(item: $selectedOrder)       { order in RestaurantOrderDetailView(order: order) }
+        .sheet(item: $messageOrder)        { order in MessageCustomerView(order: order) }
+        .sheet(isPresented: $showRepostListing) { PostSurplusView() }
     }
 
     // MARK: Header
@@ -1639,7 +1660,10 @@ struct RestaurantOrdersView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
 
-                Button { hapticFeedback(.success) } label: {
+                Button {
+                    hapticFeedback(.success)
+                    viewModel.confirmPickup(order)
+                } label: {
                     Text("Confirm Pickup")
                         .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
@@ -1759,7 +1783,10 @@ struct RestaurantOrdersView: View {
                 }
                 Spacer()
             }
-            Button { hapticFeedback(.medium) } label: {
+            Button {
+                hapticFeedback(.medium)
+                showRepostListing = true
+            } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "arrow.clockwise")
                         .font(.system(size: 14, weight: .bold))

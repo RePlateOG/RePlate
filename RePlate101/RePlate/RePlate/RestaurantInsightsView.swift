@@ -12,7 +12,8 @@ import Charts
 // MARK: - Restaurant Insights View
 struct RestaurantInsightsView: View {
     @EnvironmentObject var appState: AppState
-    @State private var selectedPeriod = 0 // 0 = This Week, 1 = This Month
+    @State private var selectedPeriod  = 0 // 0 = This Week, 1 = This Month
+    @State private var showAllReviews  = false
 
     // MARK: Chart data
     private var chartData: [(day: String, meals: Int)] {
@@ -34,6 +35,7 @@ struct RestaurantInsightsView: View {
         }
         .ignoresSafeArea(edges: .top)
         .background(Color(.systemGray6).opacity(0.3))
+        .sheet(isPresented: $showAllReviews) { AllReviewsSheet() }
     }
 
     // MARK: - Gradient Header
@@ -49,14 +51,12 @@ struct RestaurantInsightsView: View {
                         .foregroundColor(.white.opacity(0.8))
                 }
                 Spacer()
-                Button { hapticFeedback(.light) } label: {
+                let shareText = "RePlate Impact Report: \(totalMeals) meals rescued, $\(Int(totalRevenue)) revenue, \(Int(totalCO2)) kg CO₂ saved."
+                ShareLink(item: shareText) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 14)
                             .fill(.white.opacity(0.2))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 14)
-                                    .stroke(.white.opacity(0.3), lineWidth: 1)
-                            )
+                            .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.3), lineWidth: 1))
                             .frame(width: 44, height: 44)
                         Image(systemName: "square.and.arrow.up")
                             .font(.system(size: 17, weight: .medium))
@@ -357,7 +357,10 @@ struct RestaurantInsightsView: View {
                     .font(.system(size: 17, weight: .bold, design: .rounded))
                     .foregroundColor(Theme.Colors.label)
                 Spacer()
-                Button { hapticFeedback(.light) } label: {
+                Button {
+                    hapticFeedback(.light)
+                    showAllReviews = true
+                } label: {
                     Text("See All")
                         .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundColor(Theme.Colors.primaryGradientStart)
@@ -506,7 +509,13 @@ struct RestaurantInsightsView: View {
     private func exportCard(
         icon: String, iconColor: Color, title: String, subtitle: String
     ) -> some View {
-        Button { hapticFeedback(.light) } label: {
+        let exportText: String = {
+            if title.contains("CSV") {
+                return "Date,Meals,Revenue\n" + chartData.map { "\($0.day),\($0.meals),$\(String(format:"%.2f",Double($0.meals)*4.8))" }.joined(separator: "\n")
+            }
+            return "RePlate Impact Report\nMeals Rescued: \(totalMeals)\nRevenue: $\(Int(totalRevenue))\nCO₂ Saved: \(Int(totalCO2))kg\nAvg Rating: 4.8/5"
+        }()
+        return ShareLink(item: exportText, subject: Text(title), message: Text(subtitle)) {
             VStack(alignment: .leading, spacing: 10) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 14)
@@ -532,5 +541,66 @@ struct RestaurantInsightsView: View {
             .shadow(color: Color.black.opacity(0.06), radius: 10, y: 3)
         }
         .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - All Reviews Sheet
+private struct AllReviewsSheet: View {
+    @Environment(\.dismiss) var dismiss
+
+    private struct Review: Identifiable {
+        let id = UUID(); let name: String; let initials: String
+        let stars: Int; let comment: String; let date: String; let color: Color
+    }
+    private let reviews: [Review] = [
+        .init(name:"Sarah J.",  initials:"SJ", stars:5, comment:"Food was fresh and ready exactly on time! Will definitely order again.", date:"2 days ago",  color:Color(hex:"5db996")),
+        .init(name:"Mike C.",   initials:"MC", stars:5, comment:"Amazing value. Got 6 croissants for $2.50. This app is a game changer!", date:"5 days ago",  color:Color(hex:"118b50")),
+        .init(name:"Emily D.",  initials:"ED", stars:4, comment:"Good quantity and really helpful staff at pickup. Minor wait but worth it.", date:"1 week ago", color:Color(hex:"3aa76d")),
+        .init(name:"James K.",  initials:"JK", stars:5, comment:"Incredible food at an unbeatable price. The portions were huge!", date:"1 week ago",  color:.orange),
+        .init(name:"Priya M.",  initials:"PM", stars:5, comment:"Staff was super friendly and the food was still warm. Highly recommend.", date:"2 weeks ago", color:.purple),
+        .init(name:"Carlos R.", initials:"CR", stars:4, comment:"Great deal. The salad was fresh and filling. Would order again.", date:"2 weeks ago", color:.pink),
+    ]
+
+    var body: some View {
+        NavigationView {
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 12) {
+                    ForEach(reviews) { r in
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack(spacing: 12) {
+                                ZStack {
+                                    Circle().fill(r.color.opacity(0.2)).frame(width: 40, height: 40)
+                                    Text(r.initials).font(.system(size: 13, weight: .black, design: .rounded)).foregroundColor(r.color)
+                                }
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(r.name).font(.system(size: 14, weight: .bold, design: .rounded)).foregroundColor(Theme.Colors.label)
+                                    HStack(spacing: 3) {
+                                        ForEach(0..<r.stars, id:\.self) { _ in
+                                            Image(systemName:"star.fill").font(.system(size:10)).foregroundColor(.orange)
+                                        }
+                                    }
+                                }
+                                Spacer()
+                                Text(r.date).font(.system(size:11, weight:.medium, design:.rounded)).foregroundColor(Theme.Colors.tertiaryLabel)
+                            }
+                            Text(r.comment).font(.system(size:13, weight:.medium, design:.rounded)).foregroundColor(Theme.Colors.secondaryLabel).lineSpacing(2).fixedSize(horizontal:false, vertical:true)
+                        }
+                        .padding(16)
+                        .background(Color(.systemBackground))
+                        .clipShape(RoundedRectangle(cornerRadius:22))
+                        .shadow(color:Color.black.opacity(0.05), radius:8, y:3)
+                    }
+                }
+                .padding(.horizontal, 20).padding(.top, 16).padding(.bottom, 40)
+            }
+            .background(Color(.systemGray6).opacity(0.3))
+            .navigationTitle("All Reviews")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
     }
 }

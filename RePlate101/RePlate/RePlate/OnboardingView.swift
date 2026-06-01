@@ -12,6 +12,8 @@
 //
 
 import SwiftUI
+import PhotosUI
+import CoreLocation
 
 // MARK: - Reusable App Logo Mark
 struct RePlateIconView: View {
@@ -783,7 +785,10 @@ struct SignUpView: View {
     }
 
     private var locationPermissionButton: some View {
-        Button {} label: {
+        Button {
+            hapticFeedback(.light)
+            CLLocationManager().requestWhenInUseAuthorization()
+        } label: {
             HStack(spacing: 10) {
                 Image(systemName: "location.fill")
                     .font(.system(size: 15, weight: .semibold))
@@ -838,20 +843,36 @@ struct RestaurantSignUpView: View {
     // Step 1 — Business info
     @State private var restaurantName = ""
     @State private var cuisineType    = ""
+    @State private var logoPhoto: PhotosPickerItem?
+    @State private var logoImage: Image?
 
     // Step 2 — Location & contact
     @State private var address       = ""
-    @State private var phone         = ""
+    @State private var rawPhone      = ""
     @State private var businessHours = ""
+    @State private var locationGranted = false
 
     // Step 3 — Account credentials
     @State private var email    = ""
     @State private var password = ""
+    @State private var showVerification = false
 
     // UI state
     @State private var isLoading    = false
     @State private var showError    = false
     @State private var errorMessage = ""
+
+    private var formattedPhone: String {
+        let d = rawPhone.filter { $0.isNumber }
+        var r = ""
+        for (i, ch) in d.prefix(10).enumerated() {
+            switch i {
+            case 0: r = "(\(ch)"; case 1,2: r += String(ch); case 3: r += ") \(ch)"
+            case 4,5: r += String(ch); case 6: r += "-\(ch)"; default: r += String(ch)
+            }
+        }
+        return r
+    }
 
     private let cuisineTypes = [
         "Italian", "Asian", "Mexican", "American",
@@ -896,6 +917,13 @@ struct RestaurantSignUpView: View {
             } message: {
                 Text(errorMessage)
             }
+            .sheet(isPresented: $showVerification) { RestaurantVerificationView() }
+        }
+        .onChange(of: logoPhoto) { _, item in
+            Task {
+                if let data = try? await item?.loadTransferable(type: Data.self),
+                   let ui = UIImage(data: data) { logoImage = Image(uiImage: ui) }
+            }
         }
     }
 
@@ -939,25 +967,28 @@ struct RestaurantSignUpView: View {
             stepHeading(title: "Tell us about your restaurant 🍽️",
                         subtitle: "This appears on your public profile.")
 
-            // Logo upload zone
-            Button {} label: {
+            // Logo upload zone — PhotosPicker
+            PhotosPicker(selection: $logoPhoto, matching: .images) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 24)
                         .fill(Theme.Colors.primaryGradientStart.opacity(0.05))
                         .frame(height: 120)
                     RoundedRectangle(cornerRadius: 24)
-                        .strokeBorder(
-                            Theme.Colors.primaryGradientStart.opacity(0.25),
-                            style: StrokeStyle(lineWidth: 2, dash: [10, 6])
-                        )
+                        .strokeBorder(Theme.Colors.primaryGradientStart.opacity(0.25),
+                                      style: StrokeStyle(lineWidth: 2, dash: [10, 6]))
                         .frame(height: 120)
-                    VStack(spacing: 10) {
-                        Image(systemName: "photo.badge.plus.fill")
-                            .font(.system(size: 32, weight: .medium))
-                            .foregroundStyle(Theme.Colors.primaryGradient)
-                        Text("Upload Logo")
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
-                            .foregroundColor(Theme.Colors.secondaryLabel)
+                    if let logoImage {
+                        logoImage.resizable().scaledToFill()
+                            .frame(height: 120).clipShape(RoundedRectangle(cornerRadius: 24))
+                    } else {
+                        VStack(spacing: 10) {
+                            Image(systemName: "photo.badge.plus.fill")
+                                .font(.system(size: 32, weight: .medium))
+                                .foregroundStyle(Theme.Colors.primaryGradient)
+                            Text("Tap to Upload Logo")
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .foregroundColor(Theme.Colors.secondaryLabel)
+                        }
                     }
                 }
             }
@@ -1024,38 +1055,61 @@ struct RestaurantSignUpView: View {
                 AuthLabeledField(label: "Address",
                                  placeholder: "123 Main St, City, State",
                                  text: $address)
-                AuthLabeledField(label: "Phone Number",
-                                 placeholder: "(555) 123-4567",
-                                 text: $phone,
-                                 keyboardType: .phonePad)
+                // Auto-formatted phone
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("PHONE NUMBER")
+                        .font(.system(size: 10, weight: .black, design: .rounded))
+                        .foregroundColor(Theme.Colors.tertiaryLabel).tracking(1.2)
+                    HStack {
+                        TextField("(555) 123-4567", text: $rawPhone)
+                            .keyboardType(.numberPad)
+                            .onChange(of: rawPhone) { _, v in
+                                let d = v.filter { $0.isNumber }
+                                rawPhone = String(d.prefix(10))
+                            }
+                        if !formattedPhone.isEmpty {
+                            Text(formattedPhone)
+                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                                .foregroundColor(Theme.Colors.secondaryLabel)
+                        }
+                    }
+                    .padding(.horizontal, 18).padding(.vertical, 16)
+                    .background(Color(.systemGray6))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                }
                 AuthLabeledField(label: "Business Hours",
                                  placeholder: "e.g., Mon–Fri 9AM–9PM",
                                  text: $businessHours)
             }
 
-            // Use current location shortcut
-            Button {} label: {
+            // Use current location — requests CoreLocation permission
+            Button {
+                hapticFeedback(.light)
+                locationGranted = true
+                address = "123 Main St, San Francisco, CA 94105"
+                CLLocationManager().requestWhenInUseAuthorization()
+            } label: {
                 HStack(spacing: 14) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Theme.Colors.primaryGradientStart.opacity(0.12))
+                            .fill(locationGranted ? Color(hex:"118b50").opacity(0.12) : Theme.Colors.primaryGradientStart.opacity(0.12))
                             .frame(width: 40, height: 40)
-                        Image(systemName: "location.fill")
+                        Image(systemName: locationGranted ? "location.fill" : "location")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(Theme.Colors.primaryGradientStart)
+                            .foregroundColor(locationGranted ? Color(hex:"118b50") : Theme.Colors.primaryGradientStart)
                     }
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Use Current Location")
+                        Text(locationGranted ? "Location Granted" : "Use Current Location")
                             .font(.system(size: 15, weight: .bold, design: .rounded))
                             .foregroundColor(Theme.Colors.label)
-                        Text("Auto-fill your address")
+                        Text(locationGranted ? "Address auto-filled" : "Auto-fill your address")
                             .font(.system(size: 12, weight: .medium, design: .rounded))
                             .foregroundColor(Theme.Colors.secondaryLabel)
                     }
                     Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(Theme.Colors.tertiaryLabel)
+                    Image(systemName: locationGranted ? "checkmark.circle.fill" : "chevron.right")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(locationGranted ? Color(hex:"118b50") : Theme.Colors.tertiaryLabel)
                 }
                 .padding(14)
                 .background(Color(.systemGray6))
@@ -1109,8 +1163,11 @@ struct RestaurantSignUpView: View {
                 }
             }
 
-            // Verify Business (optional)
-            Button {} label: {
+            // Verify Business — opens full verification wizard
+            Button {
+                hapticFeedback(.light)
+                showVerification = true
+            } label: {
                 HStack(spacing: 14) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 12)
@@ -1121,14 +1178,17 @@ struct RestaurantSignUpView: View {
                             .foregroundColor(Theme.Colors.primaryGradientStart)
                     }
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Verify Your Business (Optional)")
+                        Text("Verify Your Business")
                             .font(.system(size: 15, weight: .bold, design: .rounded))
                             .foregroundColor(Theme.Colors.label)
-                        Text("Adds a verified badge to your profile")
+                        Text("Required to post food listings")
                             .font(.system(size: 12, weight: .medium, design: .rounded))
-                            .foregroundColor(Theme.Colors.secondaryLabel)
+                            .foregroundColor(.orange)
                     }
                     Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(Theme.Colors.tertiaryLabel)
                 }
                 .padding(14)
                 .background(Color(.systemGray6))

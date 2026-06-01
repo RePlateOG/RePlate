@@ -590,6 +590,12 @@ struct SettingsView: View {
     @State private var orderUpdatesNotifications = true
     @State private var impactMilestonesNotifications = true
     @State private var showDeleteAccountConfirmation = false
+    @State private var showLegalPage: LegalPageView.LegalPage? = nil
+    @State private var showExportShare = false
+
+    private var exportCSV: String {
+        "RePlate Account Export\nDate,\(Date().formatted(date: .abbreviated, time: .shortened))\nNotifications Enabled,\(notificationsEnabled)\nPush,\(pushNotificationsEnabled)\nEmail,\(emailNotificationsEnabled)"
+    }
 
     var body: some View {
         NavigationView {
@@ -612,6 +618,9 @@ struct SettingsView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") { dismiss() }
                 }
+            }
+            .sheet(item: $showLegalPage) { page in
+                NavigationView { LegalPageView(page: page) }
             }
             .alert("Delete Account", isPresented: $showDeleteAccountConfirmation) {
                 Button("Cancel", role: .cancel) {}
@@ -696,6 +705,7 @@ struct SettingsView: View {
 
             VStack(spacing: 0) {
                 Button {
+                    showLegalPage = .privacyPolicy
                 } label: {
                     HStack {
                         Text("Privacy Policy")
@@ -710,8 +720,7 @@ struct SettingsView: View {
 
                 Divider()
 
-                Button {
-                } label: {
+                ShareLink(item: exportCSV, subject: Text("My RePlate Data"), message: Text("Exported account data from RePlate")) {
                     HStack {
                         Text("Export My Data")
                             .font(Theme.Typography.body)
