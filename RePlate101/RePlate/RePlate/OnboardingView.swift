@@ -98,106 +98,106 @@ struct OnboardingView: View {
         ZStack {
             Color(.systemBackground).ignoresSafeArea()
             blobBackground
-
             VStack(spacing: 0) {
-                // Skip button row
-                HStack {
-                    Spacer()
-                    if currentPage < pages.count - 1 {
-                        Button("Skip") {
-                            hapticFeedback(.light)
-                            withAnimation(.easeInOut(duration: 0.35)) {
-                                currentPage = pages.count - 1
-                            }
-                        }
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .foregroundColor(Theme.Colors.secondaryLabel)
-                    }
-                }
-                .frame(height: 44)
-                .padding(.horizontal, 24)
-                .padding(.top, 8)
-
-                // Swipeable pages
-                TabView(selection: $currentPage) {
-                    ForEach(Array(pages.enumerated()), id: \.offset) { idx, page in
-                        OnboardingPageView(page: page).tag(idx)
-                    }
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .animation(.easeInOut(duration: 0.35), value: currentPage)
-
-                // Dot indicators
-                HStack(spacing: 8) {
-                    ForEach(0..<pages.count, id: \.self) { i in
-                        Capsule()
-                            .fill(i == currentPage
-                                  ? Theme.Colors.primaryGradientStart
-                                  : Color(.systemGray4))
-                            .frame(width: i == currentPage ? 24 : 8, height: 8)
-                            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: currentPage)
-                    }
-                }
-                .padding(.bottom, 24)
-
-                // Bottom actions
-                Group {
-                    if currentPage < pages.count - 1 {
-                        Button {
-                            hapticFeedback(.light)
-                            withAnimation(.easeInOut(duration: 0.35)) { currentPage += 1 }
-                        } label: {
-                            HStack(spacing: 8) {
-                                Text("Next")
-                                    .font(.system(size: 17, weight: .bold, design: .rounded))
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 14, weight: .bold))
-                            }
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 56)
-                            .background(Theme.Colors.primaryGradient)
-                            .clipShape(RoundedRectangle(cornerRadius: 20))
-                            .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.35), radius: 12, y: 5)
-                        }
-                        .padding(.horizontal, 24)
-                    } else {
-                        VStack(spacing: 12) {
-                            Button {
-                                hapticFeedback(.medium)
-                                showAuth = true
-                            } label: {
-                                Text("Get Started")
-                                    .font(.system(size: 17, weight: .bold, design: .rounded))
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 56)
-                                    .background(Theme.Colors.primaryGradient)
-                                    .clipShape(RoundedRectangle(cornerRadius: 20))
-                                    .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.35), radius: 12, y: 5)
-                            }
-                            Button {
-                                hapticFeedback(.light)
-                                showSignIn = true
-                            } label: {
-                                Text("Log In")
-                                    .font(.system(size: 17, weight: .semibold, design: .rounded))
-                                    .foregroundColor(Theme.Colors.primaryGradientStart)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 56)
-                                    .background(Color(.systemGray6))
-                                    .clipShape(RoundedRectangle(cornerRadius: 20))
-                                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color(.systemGray5), lineWidth: 1))
-                            }
-                        }
-                        .padding(.horizontal, 24)
-                    }
-                }
-                .padding(.bottom, 48)
+                skipRow
+                pageCarousel
+                pageIndicators
+                bottomActions.padding(.bottom, 48)
             }
         }
         .fullScreenCover(isPresented: $showAuth)  { AuthenticationView() }
         .sheet(isPresented: $showSignIn)           { SignInView() }
+    }
+
+    @ViewBuilder
+    private var skipRow: some View {
+        HStack {
+            Spacer()
+            if currentPage < pages.count - 1 {
+                Button("Skip") {
+                    hapticFeedback(.light)
+                    withAnimation(.easeInOut(duration: 0.35)) { currentPage = pages.count - 1 }
+                }
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundColor(Theme.Colors.secondaryLabel)
+            }
+        }
+        .frame(height: 44)
+        .padding(.horizontal, 24)
+        .padding(.top, 8)
+    }
+
+    private var pageCarousel: some View {
+        TabView(selection: $currentPage) {
+            ForEach(Array(pages.enumerated()), id: \.offset) { idx, page in
+                OnboardingPageView(page: page).tag(idx)
+            }
+        }
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .animation(.easeInOut(duration: 0.35), value: currentPage)
+    }
+
+    private var pageIndicators: some View {
+        HStack(spacing: 8) {
+            ForEach(0..<pages.count, id: \.self) { i in
+                Capsule()
+                    .fill(i == currentPage ? Theme.Colors.primaryGradientStart : Color(.systemGray4))
+                    .frame(width: i == currentPage ? 24 : 8, height: 8)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: currentPage)
+            }
+        }
+        .padding(.bottom, 24)
+    }
+
+    @ViewBuilder
+    private var bottomActions: some View {
+        if currentPage < pages.count - 1 {
+            nextPageButton
+        } else {
+            finalPageButtons
+        }
+    }
+
+    private var nextPageButton: some View {
+        Button {
+            hapticFeedback(.light)
+            withAnimation(.easeInOut(duration: 0.35)) { currentPage += 1 }
+        } label: {
+            HStack(spacing: 8) {
+                Text("Next").font(.system(size: 17, weight: .bold, design: .rounded))
+                Image(systemName: "chevron.right").font(.system(size: 14, weight: .bold))
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity).frame(height: 56)
+            .background(Theme.Colors.primaryGradient)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.35), radius: 12, y: 5)
+        }
+        .padding(.horizontal, 24)
+    }
+
+    private var finalPageButtons: some View {
+        VStack(spacing: 12) {
+            Button { hapticFeedback(.medium); showAuth = true } label: {
+                Text("Get Started")
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity).frame(height: 56)
+                    .background(Theme.Colors.primaryGradient)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.35), radius: 12, y: 5)
+            }
+            Button { hapticFeedback(.light); showSignIn = true } label: {
+                Text("Log In")
+                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                    .foregroundColor(Theme.Colors.primaryGradientStart)
+                    .frame(maxWidth: .infinity).frame(height: 56)
+                    .background(Color(.systemGray6))
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color(.systemGray5), lineWidth: 1))
+            }
+        }
+        .padding(.horizontal, 24)
     }
 
     private var blobBackground: some View {
@@ -511,110 +511,12 @@ struct SignInView: View {
         NavigationView {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("Welcome Back")
-                        .font(.system(size: 30, weight: .heavy, design: .rounded))
-                        .foregroundColor(Theme.Colors.label)
-                        .padding(.top, 32)
-
-                    Text("Sign in to your RePlate account")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(Theme.Colors.secondaryLabel)
-                        .padding(.top, 6)
-                        .padding(.bottom, 40)
-
-                    VStack(spacing: 20) {
-                        AuthLabeledField(
-                            label: "Email",
-                            placeholder: "you@example.com",
-                            text: $email,
-                            keyboardType: .emailAddress
-                        )
-                        .textInputAutocapitalization(.never)
-
-                        AuthLabeledField(
-                            label: "Password",
-                            placeholder: "Your password",
-                            text: $password,
-                            isSecure: true
-                        )
-                    }
-                    .padding(.bottom, 12)
-
-                    Button("Forgot Password?") {}
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(Theme.Colors.primaryGradientStart)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                        .padding(.bottom, 28)
-
-                    // Sign In button
-                    Button {
-                        Task { await signIn() }
-                    } label: {
-                        ZStack {
-                            if isLoading {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                            } else {
-                                Text("Sign In")
-                                    .font(.system(size: 17, weight: .bold, design: .rounded))
-                                    .foregroundColor(.white)
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background(Theme.Colors.primaryGradient)
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
-                        .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.30), radius: 12, y: 5)
-                    }
-                    .disabled(isLoading)
-
-                    // ─── Or divider ───────────────────────────────────
-                    HStack(spacing: 12) {
-                        Rectangle().fill(Color(.systemGray5)).frame(height: 1)
-                        Text("or")
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
-                            .foregroundColor(Theme.Colors.tertiaryLabel)
-                        Rectangle().fill(Color(.systemGray5)).frame(height: 1)
-                    }
-                    .padding(.vertical, 20)
-
-                    // Sign in with Apple
-                    Button {
-                        hapticFeedback(.medium)
-                        Task {
-                            isLoading = true
-                            defer { isLoading = false }
-                            let auth: AuthService = AuthService.shared
-                            let ok = await auth.signInWithApple()
-                            if ok {
-                                appState.isAuthenticated = true
-                                appState.currentUser = auth.currentUser
-                                appState.completeOnboarding()
-                                dismiss()
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: "apple.logo")
-                                .font(.system(size: 18, weight: .medium))
-                            Text("Sign in with Apple")
-                                .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background(Color.black)
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
-                    }
-                    .disabled(isLoading)
-
-                    // Demo hint
-                    Text("Demo: use any email/password\n(use \"restaurant@…\" for a restaurant account)")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Theme.Colors.tertiaryLabel)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 20)
+                    signInHeading
+                    signInFields
+                    signInButton
+                    orDivider
+                    appleButton
+                    demoHint
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 40)
@@ -625,9 +527,7 @@ struct SignInView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button { dismiss() } label: {
                         ZStack {
-                            Circle()
-                                .fill(Color(.systemGray6))
-                                .frame(width: 36, height: 36)
+                            Circle().fill(Color(.systemGray6)).frame(width: 36, height: 36)
                             Image(systemName: "chevron.left")
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundColor(Theme.Colors.secondaryLabel)
@@ -637,10 +537,108 @@ struct SignInView: View {
             }
             .alert("Error", isPresented: $showError) {
                 Button("OK", role: .cancel) {}
-            } message: {
-                Text(errorMessage)
-            }
+            } message: { Text(errorMessage) }
         }
+    }
+
+    private var signInHeading: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Welcome Back")
+                .font(.system(size: 30, weight: .heavy, design: .rounded))
+                .foregroundColor(Theme.Colors.label)
+                .padding(.top, 32)
+            Text("Sign in to your RePlate account")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(Theme.Colors.secondaryLabel)
+                .padding(.top, 6)
+                .padding(.bottom, 40)
+        }
+    }
+
+    private var signInFields: some View {
+        VStack(spacing: 0) {
+            VStack(spacing: 20) {
+                AuthLabeledField(label: "Email", placeholder: "you@example.com",
+                                 text: $email, keyboardType: .emailAddress)
+                    .textInputAutocapitalization(.never)
+                AuthLabeledField(label: "Password", placeholder: "Your password",
+                                 text: $password, isSecure: true)
+            }
+            .padding(.bottom, 12)
+
+            Button("Forgot Password?") {}
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(Theme.Colors.primaryGradientStart)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.bottom, 28)
+        }
+    }
+
+    private var signInButton: some View {
+        Button { Task { await signIn() } } label: {
+            ZStack {
+                if isLoading {
+                    ProgressView().progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else {
+                    Text("Sign In")
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                }
+            }
+            .frame(maxWidth: .infinity).frame(height: 56)
+            .background(Theme.Colors.primaryGradient)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.30), radius: 12, y: 5)
+        }
+        .disabled(isLoading)
+    }
+
+    private var orDivider: some View {
+        HStack(spacing: 12) {
+            Rectangle().fill(Color(.systemGray5)).frame(height: 1)
+            Text("or")
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundColor(Theme.Colors.tertiaryLabel)
+            Rectangle().fill(Color(.systemGray5)).frame(height: 1)
+        }
+        .padding(.vertical, 20)
+    }
+
+    private var appleButton: some View {
+        Button {
+            hapticFeedback(.medium)
+            Task {
+                isLoading = true
+                defer { isLoading = false }
+                let auth: AuthService = AuthService.shared
+                let ok = await auth.signInWithApple()
+                if ok {
+                    appState.isAuthenticated = true
+                    appState.currentUser = auth.currentUser
+                    appState.completeOnboarding()
+                    dismiss()
+                }
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "apple.logo").font(.system(size: 18, weight: .medium))
+                Text("Sign in with Apple").font(.system(size: 16, weight: .semibold, design: .rounded))
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity).frame(height: 56)
+            .background(Color.black)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+        }
+        .disabled(isLoading)
+    }
+
+    private var demoHint: some View {
+        Text("Demo: use any email/password\n(use \"restaurant@…\" for a restaurant account)")
+            .font(.system(size: 12, weight: .medium))
+            .foregroundColor(Theme.Colors.tertiaryLabel)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
+            .padding(.top, 20)
     }
 
     func signIn() async {
