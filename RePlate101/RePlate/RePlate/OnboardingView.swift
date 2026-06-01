@@ -3,16 +3,17 @@
 //  RePlate
 //
 //  Created by Jyotika Sadani on 5/26/26.
-//  Auth flow redesigned to match RePlate 2.0 Figma:
-//    • AuthenticationView  → "Join the Movement" card-picker
-//    • SignInView          → clean labeled form, no social buttons
-//    • SignUpView          → account-type-aware (customer vs restaurant)
+//  Auth flow — RePlate 2.0:
+//    • OnboardingView       → 3-slide paginated welcome flow
+//    • AuthenticationView   → "Join the Movement" card-picker
+//    • SignInView           → labeled form + Sign in with Apple
+//    • SignUpView           → customer account creation
+//    • RestaurantSignUpView → dedicated 3-step restaurant wizard
 //
 
 import SwiftUI
 
 // MARK: - Reusable App Logo Mark
-/// Green gradient square icon used as the app's logo mark throughout the UI.
 struct RePlateIconView: View {
     var size: CGFloat = 80
 
@@ -33,197 +34,289 @@ struct RePlateIconView: View {
     }
 }
 
-// MARK: - Onboarding (Figma 2.0 — single-screen welcome)
+// MARK: - Onboarding Page Data
+private struct OnboardingPageData {
+    let icon: String
+    let iconColors: [Color]
+    let badge: String
+    let badgeIcon: String
+    let title: String
+    let subtitle: String
+    let highlights: [(icon: String, label: String, color: Color)]
+}
+
+// MARK: - Onboarding View (3-slide paginated flow)
 struct OnboardingView: View {
     @EnvironmentObject var appState: AppState
-    @State private var showAuth   = false
-    @State private var showSignIn = false
+    @State private var currentPage = 0
+    @State private var showAuth    = false
+    @State private var showSignIn  = false
+
+    private let pages: [OnboardingPageData] = [
+        .init(
+            icon: "fork.knife",
+            iconColors: [Color(hex: "118b50"), Color(hex: "5db996")],
+            badge: "50–80% off",
+            badgeIcon: "tag.fill",
+            title: "Rescue Surplus Food",
+            subtitle: "Restaurants post their daily leftovers at a fraction of the original price.",
+            highlights: [
+                ("bag.fill",   "Same-day pickup",    Color(hex: "118b50")),
+                ("sparkles",   "Fresh & verified",   Color(hex: "5db996")),
+                ("percent",    "Up to 80% savings",  Color(hex: "3aa76d")),
+            ]
+        ),
+        .init(
+            icon: "leaf.fill",
+            iconColors: [Color(hex: "3aa76d"), Color(hex: "5db996")],
+            badge: "1M+ meals rescued",
+            badgeIcon: "globe.americas.fill",
+            title: "Every Meal Counts",
+            subtitle: "Join thousands reducing food waste and carbon emissions, one meal at a time.",
+            highlights: [
+                ("scalemass.fill",  "2.3M lbs food saved",    Color(hex: "118b50")),
+                ("cloud.fill",      "3.2M kg CO₂ prevented",  Color(hex: "5db996")),
+                ("person.3.fill",   "40K+ happy customers",   Color(hex: "3aa76d")),
+            ]
+        ),
+        .init(
+            icon: "heart.fill",
+            iconColors: [Color(hex: "118b50"), Color(hex: "5db996")],
+            badge: "Community ❤️",
+            badgeIcon: "heart.fill",
+            title: "Be Part of the Change",
+            subtitle: "A growing community of food-lovers and local restaurants making a real difference.",
+            highlights: [
+                ("building.2.fill",     "500+ partner restaurants",  Color(hex: "118b50")),
+                ("star.fill",           "4.8 avg rating",            Color(hex: "5db996")),
+                ("arrow.2.circlepath",  "Zero food wasted",          Color(hex: "3aa76d")),
+            ]
+        ),
+    ]
 
     var body: some View {
         ZStack {
             Color(.systemBackground).ignoresSafeArea()
-
-            // Blob decorations
-            Circle()
-                .fill(LinearGradient(
-                    colors: [
-                        Theme.Colors.primaryGradientStart.opacity(0.35),
-                        Theme.Colors.primaryGradientEnd.opacity(0.35)
-                    ],
-                    startPoint: .topLeading, endPoint: .bottomTrailing
-                ))
-                .frame(width: 280, height: 280)
-                .blur(radius: 60)
-                .offset(x: -100, y: -100)
-
-            Circle()
-                .fill(LinearGradient(
-                    colors: [
-                        Theme.Colors.accent.opacity(0.30),
-                        Theme.Colors.primaryGradientEnd.opacity(0.25)
-                    ],
-                    startPoint: .topLeading, endPoint: .bottomTrailing
-                ))
-                .frame(width: 240, height: 240)
-                .blur(radius: 50)
-                .offset(x: 120, y: 400)
+            blobBackground
 
             VStack(spacing: 0) {
-                Spacer()
-
-                // Hero circle + sparkles badge
-                ZStack(alignment: .topTrailing) {
-                    ZStack {
-                        Circle()
-                            .fill(Theme.Colors.primaryGradient)
-                            .frame(width: 192, height: 192)
-                            .shadow(
-                                color: Theme.Colors.primaryGradientStart.opacity(0.35),
-                                radius: 24, y: 8
-                            )
-                        Image(systemName: "fork.knife")
-                            .font(.system(size: 72, weight: .medium))
-                            .foregroundColor(.white.opacity(0.85))
-                    }
-                    .overlay(Circle().stroke(Theme.Colors.accent, lineWidth: 4))
-
-                    ZStack {
-                        Circle()
-                            .fill(Theme.Colors.accent)
-                            .frame(width: 52, height: 52)
-                            .shadow(color: Color.black.opacity(0.12), radius: 8, y: 4)
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 22, weight: .semibold))
-                            .foregroundColor(Theme.Colors.primaryGradientStart)
-                    }
-                    .offset(x: 8, y: -8)
-                }
-                .padding(.bottom, 32)
-
-                // Logo + wordmark + subtitle
-                VStack(spacing: 12) {
-                    RePlateIconView(size: 64)
-
-                    Text("RePlate")
-                        .font(.system(size: 34, weight: .heavy, design: .rounded))
-                        .foregroundStyle(Theme.Colors.primaryGradient)
-
-                    Text("Reducing food waste, one delicious meal at a time.")
-                        .font(.system(size: 15, weight: .medium, design: .rounded))
+                // Skip button row
+                HStack {
+                    Spacer()
+                    if currentPage < pages.count - 1 {
+                        Button("Skip") {
+                            hapticFeedback(.light)
+                            withAnimation(.easeInOut(duration: 0.35)) {
+                                currentPage = pages.count - 1
+                            }
+                        }
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
                         .foregroundColor(Theme.Colors.secondaryLabel)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 40)
+                    }
                 }
-                .padding(.bottom, 40)
+                .frame(height: 44)
+                .padding(.horizontal, 24)
+                .padding(.top, 8)
 
-                // Feature rows
-                VStack(spacing: 14) {
-                    WelcomeFeatureRow(
-                        icon: "leaf.fill",
-                        iconBackground: Theme.Colors.primaryGradientStart,
-                        title: "Eco-Friendly",
-                        subtitle: "Reduce your carbon footprint"
-                    )
-                    WelcomeFeatureRow(
-                        icon: "fork.knife",
-                        iconBackground: Theme.Colors.primaryGradientEnd,
-                        title: "Fresh Food",
-                        subtitle: "Quality surplus at low cost"
-                    )
-                    WelcomeFeatureRow(
-                        icon: "heart.fill",
-                        iconBackground: Theme.Colors.accent,
-                        title: "Community",
-                        subtitle: "Help local businesses thrive",
-                        iconForeground: Theme.Colors.primaryGradientStart
-                    )
+                // Swipeable pages
+                TabView(selection: $currentPage) {
+                    ForEach(Array(pages.enumerated()), id: \.offset) { idx, page in
+                        OnboardingPageView(page: page).tag(idx)
+                    }
                 }
-                .padding(.horizontal, 32)
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .animation(.easeInOut(duration: 0.35), value: currentPage)
 
-                Spacer()
+                // Dot indicators
+                HStack(spacing: 8) {
+                    ForEach(0..<pages.count, id: \.self) { i in
+                        Capsule()
+                            .fill(i == currentPage
+                                  ? Theme.Colors.primaryGradientStart
+                                  : Color(.systemGray4))
+                            .frame(width: i == currentPage ? 24 : 8, height: 8)
+                            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: currentPage)
+                    }
+                }
+                .padding(.bottom, 24)
 
-                // Action buttons
-                VStack(spacing: 12) {
-                    Button {
-                        hapticFeedback(.medium)
-                        showAuth = true
-                    } label: {
-                        Text("Get Started")
-                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                // Bottom actions
+                Group {
+                    if currentPage < pages.count - 1 {
+                        Button {
+                            hapticFeedback(.light)
+                            withAnimation(.easeInOut(duration: 0.35)) { currentPage += 1 }
+                        } label: {
+                            HStack(spacing: 8) {
+                                Text("Next")
+                                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .bold))
+                            }
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 56)
                             .background(Theme.Colors.primaryGradient)
                             .clipShape(RoundedRectangle(cornerRadius: 20))
-                            .shadow(
-                                color: Theme.Colors.primaryGradientStart.opacity(0.35),
-                                radius: 12, y: 5
-                            )
-                    }
-
-                    Button {
-                        hapticFeedback(.light)
-                        showSignIn = true
-                    } label: {
-                        Text("Log In")
-                            .font(.system(size: 17, weight: .semibold, design: .rounded))
-                            .foregroundColor(Theme.Colors.primaryGradientStart)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 56)
-                            .background(Color(.systemGray6))
-                            .clipShape(RoundedRectangle(cornerRadius: 20))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .stroke(Color(.systemGray5), lineWidth: 1)
-                            )
+                            .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.35), radius: 12, y: 5)
+                        }
+                        .padding(.horizontal, 24)
+                    } else {
+                        VStack(spacing: 12) {
+                            Button {
+                                hapticFeedback(.medium)
+                                showAuth = true
+                            } label: {
+                                Text("Get Started")
+                                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 56)
+                                    .background(Theme.Colors.primaryGradient)
+                                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                                    .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.35), radius: 12, y: 5)
+                            }
+                            Button {
+                                hapticFeedback(.light)
+                                showSignIn = true
+                            } label: {
+                                Text("Log In")
+                                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                                    .foregroundColor(Theme.Colors.primaryGradientStart)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 56)
+                                    .background(Color(.systemGray6))
+                                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color(.systemGray5), lineWidth: 1))
+                            }
+                        }
+                        .padding(.horizontal, 24)
                     }
                 }
-                .padding(.horizontal, 24)
                 .padding(.bottom, 48)
             }
         }
-        .fullScreenCover(isPresented: $showAuth) { AuthenticationView() }
+        .fullScreenCover(isPresented: $showAuth)  { AuthenticationView() }
         .sheet(isPresented: $showSignIn)           { SignInView() }
+    }
+
+    private var blobBackground: some View {
+        ZStack {
+            Circle()
+                .fill(LinearGradient(
+                    colors: [Theme.Colors.primaryGradientStart.opacity(0.25),
+                             Theme.Colors.primaryGradientEnd.opacity(0.20)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                ))
+                .frame(width: 280, height: 280)
+                .blur(radius: 60)
+                .offset(x: -100, y: -200)
+            Circle()
+                .fill(LinearGradient(
+                    colors: [Theme.Colors.accent.opacity(0.25),
+                             Theme.Colors.primaryGradientEnd.opacity(0.20)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                ))
+                .frame(width: 240, height: 240)
+                .blur(radius: 50)
+                .offset(x: 120, y: 300)
+        }
+        .ignoresSafeArea()
     }
 }
 
-// MARK: - Welcome Feature Row
-private struct WelcomeFeatureRow: View {
-    let icon: String
-    let iconBackground: Color
-    let title: String
-    let subtitle: String
-    var iconForeground: Color = .white
+// MARK: - Onboarding Page View
+private struct OnboardingPageView: View {
+    let page: OnboardingPageData
 
     var body: some View {
-        HStack(spacing: 16) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(iconBackground)
-                    .frame(width: 44, height: 44)
-                Image(systemName: icon)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(iconForeground)
+        VStack(spacing: 0) {
+            // Hero circle + badge
+            ZStack(alignment: .topTrailing) {
+                ZStack {
+                    Circle()
+                        .fill(LinearGradient(
+                            colors: page.iconColors,
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ))
+                        .frame(width: 176, height: 176)
+                        .shadow(color: page.iconColors[0].opacity(0.35), radius: 24, y: 8)
+                    Image(systemName: page.icon)
+                        .font(.system(size: 66, weight: .medium))
+                        .foregroundColor(.white.opacity(0.9))
+                }
+                .overlay(Circle().stroke(Theme.Colors.accent, lineWidth: 3))
+
+                HStack(spacing: 4) {
+                    Image(systemName: page.badgeIcon)
+                        .font(.system(size: 9, weight: .bold))
+                    Text(page.badge)
+                        .font(.system(size: 10, weight: .black, design: .rounded))
+                }
+                .foregroundColor(Theme.Colors.primaryGradientStart)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Theme.Colors.accent)
+                .clipShape(Capsule())
+                .shadow(color: Color.black.opacity(0.1), radius: 6, y: 3)
+                .offset(x: 12, y: -6)
             }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+            .padding(.bottom, 26)
+
+            // Title + subtitle
+            VStack(spacing: 10) {
+                Text(page.title)
+                    .font(.system(size: 28, weight: .heavy, design: .rounded))
                     .foregroundColor(Theme.Colors.label)
-                Text(subtitle)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .multilineTextAlignment(.center)
+                Text(page.subtitle)
+                    .font(.system(size: 15, weight: .medium, design: .rounded))
                     .foregroundColor(Theme.Colors.secondaryLabel)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(3)
+                    .padding(.horizontal, 8)
             }
+            .padding(.bottom, 24)
+
+            // Highlights
+            VStack(spacing: 10) {
+                ForEach(Array(page.highlights.enumerated()), id: \.offset) { _, h in
+                    HStack(spacing: 14) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(h.color.opacity(0.14))
+                                .frame(width: 40, height: 40)
+                            Image(systemName: h.icon)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(h.color)
+                        }
+                        Text(h.label)
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .foregroundColor(Theme.Colors.label)
+                        Spacer()
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(h.color.opacity(0.7))
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color(.systemBackground).opacity(0.85))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(h.color.opacity(0.18), lineWidth: 1)
+                            )
+                    )
+                }
+            }
+            .padding(.horizontal, 16)
+
             Spacer()
         }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 18)
-                .fill(Color(.systemBackground).opacity(0.5))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18)
-                        .stroke(Color(.systemGray5), lineWidth: 1)
-                )
-        )
+        .padding(.top, 20)
+        .padding(.horizontal, 16)
     }
 }
 
@@ -232,15 +325,14 @@ struct AuthenticationView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) var dismiss
 
-    @State private var showSignIn          = false
+    @State private var showSignIn           = false
     @State private var showRestaurantSignUp = false
-    @State private var showCustomerSignUp  = false
+    @State private var showCustomerSignUp   = false
 
     var body: some View {
         ZStack {
             Color(.systemBackground).ignoresSafeArea()
 
-            // Blob decoration
             Circle()
                 .fill(Theme.Colors.primaryGradientStart.opacity(0.12))
                 .frame(width: 300, height: 300)
@@ -250,7 +342,6 @@ struct AuthenticationView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
-                    // Back button
                     Button { dismiss() } label: {
                         ZStack {
                             Circle()
@@ -264,7 +355,6 @@ struct AuthenticationView: View {
                     .padding(.top, 16)
                     .padding(.bottom, 28)
 
-                    // Heading
                     Text("Join the Movement")
                         .font(.system(size: 30, weight: .heavy, design: .rounded))
                         .foregroundColor(Theme.Colors.label)
@@ -275,7 +365,6 @@ struct AuthenticationView: View {
                         .padding(.top, 6)
                         .padding(.bottom, 36)
 
-                    // Restaurant card
                     AccountTypePickerCard(
                         icon: "fork.knife",
                         title: "Restaurant",
@@ -287,7 +376,6 @@ struct AuthenticationView: View {
                     }
                     .padding(.bottom, 20)
 
-                    // Customer card
                     AccountTypePickerCard(
                         icon: "person.fill",
                         title: "Customer",
@@ -298,7 +386,6 @@ struct AuthenticationView: View {
                         showCustomerSignUp = true
                     }
 
-                    // Footer
                     Text("You can always change this later in settings")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(Theme.Colors.tertiaryLabel)
@@ -306,7 +393,6 @@ struct AuthenticationView: View {
                         .padding(.top, 36)
                         .padding(.bottom, 16)
 
-                    // Log in link
                     Button {
                         hapticFeedback(.light)
                         showSignIn = true
@@ -322,12 +408,12 @@ struct AuthenticationView: View {
             }
         }
         .sheet(isPresented: $showSignIn)            { SignInView() }
-        .sheet(isPresented: $showRestaurantSignUp)  { SignUpView(accountType: .restaurant) }
+        .sheet(isPresented: $showRestaurantSignUp)  { RestaurantSignUpView() }
         .sheet(isPresented: $showCustomerSignUp)    { SignUpView(accountType: .customer) }
     }
 }
 
-// MARK: - Account Type Picker Card  (Figma 2.0 image-style card)
+// MARK: - Account Type Picker Card
 private struct AccountTypePickerCard: View {
     let icon: String
     let title: String
@@ -338,7 +424,6 @@ private struct AccountTypePickerCard: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 0) {
-                // Gradient icon block (replaces photo in Figma)
                 ZStack {
                     RoundedRectangle(cornerRadius: 20)
                         .fill(LinearGradient(
@@ -353,7 +438,6 @@ private struct AccountTypePickerCard: View {
                 .frame(width: 90, height: 90)
                 .padding(.leading, 8)
 
-                // Text block
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
                         ZStack {
@@ -377,7 +461,6 @@ private struct AccountTypePickerCard: View {
 
                 Spacer(minLength: 8)
 
-                // Chevron in accent circle
                 ZStack {
                     Circle()
                         .fill(accentColor)
@@ -404,34 +487,30 @@ private struct AccountTypePickerCard: View {
     }
 }
 
-// MARK: - Springy Button Style  (scale-on-press, shared by auth cards)
+// MARK: - Springy Button Style
 private struct SpringyButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
-            .animation(
-                .spring(response: 0.3, dampingFraction: 0.7),
-                value: configuration.isPressed
-            )
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
     }
 }
 
-// MARK: - Sign In View  (Figma 2.0 — clean labeled form)
+// MARK: - Sign In View
 struct SignInView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) var dismiss
 
-    @State private var email    = ""
-    @State private var password = ""
-    @State private var isLoading  = false
-    @State private var showError  = false
+    @State private var email        = ""
+    @State private var password     = ""
+    @State private var isLoading    = false
+    @State private var showError    = false
     @State private var errorMessage = ""
 
     var body: some View {
         NavigationView {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
-                    // Heading
                     Text("Welcome Back")
                         .font(.system(size: 30, weight: .heavy, design: .rounded))
                         .foregroundColor(Theme.Colors.label)
@@ -443,7 +522,6 @@ struct SignInView: View {
                         .padding(.top, 6)
                         .padding(.bottom, 40)
 
-                    // Form
                     VStack(spacing: 20) {
                         AuthLabeledField(
                             label: "Email",
@@ -462,14 +540,13 @@ struct SignInView: View {
                     }
                     .padding(.bottom, 12)
 
-                    // Forgot password
                     Button("Forgot Password?") {}
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(Theme.Colors.primaryGradientStart)
                         .frame(maxWidth: .infinity, alignment: .trailing)
-                        .padding(.bottom, 32)
+                        .padding(.bottom, 28)
 
-                    // Sign in button
+                    // Sign In button
                     Button {
                         Task { await signIn() }
                     } label: {
@@ -487,10 +564,47 @@ struct SignInView: View {
                         .frame(height: 56)
                         .background(Theme.Colors.primaryGradient)
                         .clipShape(RoundedRectangle(cornerRadius: 20))
-                        .shadow(
-                            color: Theme.Colors.primaryGradientStart.opacity(0.30),
-                            radius: 12, y: 5
-                        )
+                        .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.30), radius: 12, y: 5)
+                    }
+                    .disabled(isLoading)
+
+                    // ─── Or divider ───────────────────────────────────
+                    HStack(spacing: 12) {
+                        Rectangle().fill(Color(.systemGray5)).frame(height: 1)
+                        Text("or")
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundColor(Theme.Colors.tertiaryLabel)
+                        Rectangle().fill(Color(.systemGray5)).frame(height: 1)
+                    }
+                    .padding(.vertical, 20)
+
+                    // Sign in with Apple
+                    Button {
+                        hapticFeedback(.medium)
+                        Task {
+                            isLoading = true
+                            defer { isLoading = false }
+                            let auth: AuthService = AuthService.shared
+                            let ok = await auth.signInWithApple()
+                            if ok {
+                                appState.isAuthenticated = true
+                                appState.currentUser = auth.currentUser
+                                appState.completeOnboarding()
+                                dismiss()
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "apple.logo")
+                                .font(.system(size: 18, weight: .medium))
+                            Text("Sign in with Apple")
+                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 56)
+                        .background(Color.black)
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
                     }
                     .disabled(isLoading)
 
@@ -552,77 +666,33 @@ struct SignInView: View {
     }
 }
 
-// MARK: - Sign Up View  (Figma 2.0 — account-type-aware)
+// MARK: - Sign Up View (customer)
 struct SignUpView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) var dismiss
     let accountType: User.AccountType
 
-    // Shared fields
-    @State private var name            = ""
-    @State private var email           = ""
-    @State private var password        = ""
-    // Restaurant-only extras (collected in UI; stored for future profile update)
-    @State private var address         = ""
-    @State private var businessHours   = ""
-    @State private var phoneNumber     = ""
-    // Customer only
-    @State private var agreedToTerms   = false
-    // UI
-    @State private var isLoading       = false
-    @State private var showError       = false
-    @State private var errorMessage    = ""
-
-    private var isCustomer: Bool { accountType == .customer }
+    @State private var name          = ""
+    @State private var email         = ""
+    @State private var password      = ""
+    @State private var isLoading     = false
+    @State private var showError     = false
+    @State private var errorMessage  = ""
 
     var body: some View {
         NavigationView {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
-                    // Subheading
-                    Text(isCustomer
-                         ? "Join RePlate and start saving food"
-                         : "Register your restaurant with RePlate")
+                    Text("Join RePlate and start saving food")
                         .font(.system(size: 15, weight: .medium))
                         .foregroundColor(Theme.Colors.secondaryLabel)
                         .padding(.top, 8)
                         .padding(.bottom, 28)
 
-                    // ── Customer: photo upload circle ─────────────────
-                    if isCustomer {
-                        customerPhotoUpload
-                            .padding(.bottom, 28)
-                    } else {
-                        restaurantLogoUpload
-                            .padding(.bottom, 24)
-                    }
+                    customerPhotoUpload.padding(.bottom, 28)
 
-                    // ── Form fields ───────────────────────────────────
                     VStack(spacing: 18) {
-                        AuthLabeledField(
-                            label: isCustomer ? "Full Name" : "Restaurant Name",
-                            placeholder: isCustomer ? "Your name" : "e.g., Bella's Italian Kitchen",
-                            text: $name
-                        )
-
-                        if !isCustomer {
-                            AuthLabeledField(
-                                label: "Address",
-                                placeholder: "123 Main St, City, State",
-                                text: $address
-                            )
-                            AuthLabeledField(
-                                label: "Business Hours",
-                                placeholder: "e.g., Mon–Fri 9AM–9PM",
-                                text: $businessHours
-                            )
-                            AuthLabeledField(
-                                label: "Phone Number",
-                                placeholder: "(555) 123-4567",
-                                text: $phoneNumber,
-                                keyboardType: .phonePad
-                            )
-                        }
+                        AuthLabeledField(label: "Full Name", placeholder: "Your name", text: $name)
 
                         AuthLabeledField(
                             label: "Email",
@@ -641,22 +711,14 @@ struct SignUpView: View {
                     }
                     .padding(.bottom, 24)
 
-                    // ── Special action button ─────────────────────────
-                    if isCustomer {
-                        locationPermissionButton
-                            .padding(.bottom, 8)
-                        Text("We need your location to show surplus food near you")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(Theme.Colors.tertiaryLabel)
-                            .multilineTextAlignment(.center)
-                            .frame(maxWidth: .infinity)
-                            .padding(.bottom, 24)
-                    } else {
-                        verifyBusinessButton
-                            .padding(.bottom, 24)
-                    }
+                    locationPermissionButton.padding(.bottom, 8)
+                    Text("We need your location to show surplus food near you")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(Theme.Colors.tertiaryLabel)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                        .padding(.bottom, 28)
 
-                    // ── Create account button ─────────────────────────
                     Button {
                         Task { await signUp() }
                     } label: {
@@ -665,7 +727,7 @@ struct SignUpView: View {
                                 ProgressView()
                                     .progressViewStyle(CircularProgressViewStyle(tint: .white))
                             } else {
-                                Text(isCustomer ? "Create Customer Account" : "Create Business Account")
+                                Text("Create Account")
                                     .font(.system(size: 17, weight: .bold, design: .rounded))
                                     .foregroundColor(.white)
                             }
@@ -674,10 +736,7 @@ struct SignUpView: View {
                         .frame(height: 56)
                         .background(Theme.Colors.primaryGradient)
                         .clipShape(RoundedRectangle(cornerRadius: 20))
-                        .shadow(
-                            color: Theme.Colors.primaryGradientStart.opacity(0.30),
-                            radius: 12, y: 5
-                        )
+                        .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.30), radius: 12, y: 5)
                     }
                     .disabled(isLoading)
                     .padding(.bottom, 40)
@@ -685,15 +744,13 @@ struct SignUpView: View {
                 .padding(.horizontal, 24)
             }
             .background(Color(.systemBackground))
-            .navigationTitle(isCustomer ? "Create Account" : "Create Business Account")
+            .navigationTitle("Create Account")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button { dismiss() } label: {
                         ZStack {
-                            Circle()
-                                .fill(Color(.systemGray6))
-                                .frame(width: 36, height: 36)
+                            Circle().fill(Color(.systemGray6)).frame(width: 36, height: 36)
                             Image(systemName: "chevron.left")
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundColor(Theme.Colors.secondaryLabel)
@@ -709,18 +766,12 @@ struct SignUpView: View {
         }
     }
 
-    // MARK: - Customer Photo Upload
     private var customerPhotoUpload: some View {
         VStack(spacing: 8) {
             ZStack {
+                Circle().fill(Color(.systemGray6)).frame(width: 96, height: 96)
                 Circle()
-                    .fill(Color(.systemGray6))
-                    .frame(width: 96, height: 96)
-                Circle()
-                    .strokeBorder(
-                        Color(.systemGray4),
-                        style: StrokeStyle(lineWidth: 2, dash: [6, 4])
-                    )
+                    .strokeBorder(Color(.systemGray4), style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
                     .frame(width: 96, height: 96)
                 Image(systemName: "camera.fill")
                     .font(.system(size: 28, weight: .medium))
@@ -733,35 +784,6 @@ struct SignUpView: View {
         .frame(maxWidth: .infinity)
     }
 
-    // MARK: - Restaurant Logo Upload
-    private var restaurantLogoUpload: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Restaurant Logo")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(Theme.Colors.secondaryLabel)
-
-            ZStack {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color(.systemGray6))
-                RoundedRectangle(cornerRadius: 20)
-                    .strokeBorder(
-                        Color(.systemGray4),
-                        style: StrokeStyle(lineWidth: 2, dash: [8, 5])
-                    )
-                VStack(spacing: 10) {
-                    Image(systemName: "arrow.up.to.line")
-                        .font(.system(size: 28, weight: .medium))
-                        .foregroundColor(Theme.Colors.tertiaryLabel)
-                    Text("Tap to upload logo")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(Theme.Colors.secondaryLabel)
-                }
-            }
-            .frame(height: 130)
-        }
-    }
-
-    // MARK: - Location Permission Button (customer)
     private var locationPermissionButton: some View {
         Button {} label: {
             HStack(spacing: 10) {
@@ -778,24 +800,6 @@ struct SignUpView: View {
         }
     }
 
-    // MARK: - Verify Business Button (restaurant)
-    private var verifyBusinessButton: some View {
-        Button {} label: {
-            HStack(spacing: 10) {
-                Image(systemName: "shield.fill")
-                    .font(.system(size: 15, weight: .semibold))
-                Text("Verify Business (Optional)")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-            }
-            .foregroundColor(Theme.Colors.label)
-            .frame(maxWidth: .infinity)
-            .frame(height: 52)
-            .background(Color(.systemGray6))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-        }
-    }
-
-    // MARK: - Sign Up Logic
     func signUp() async {
         guard !name.isEmpty, !email.isEmpty, !password.isEmpty else {
             errorMessage = "Please fill in all fields"
@@ -812,10 +816,461 @@ struct SignUpView: View {
 
         let auth: AuthService = AuthService.shared
         let success = await auth.signUp(
-            name: name,
+            name: name, email: email, password: password, accountType: accountType
+        )
+        if success {
+            appState.isAuthenticated = true
+            appState.currentUser = auth.currentUser
+            appState.completeOnboarding()
+            dismiss()
+        } else {
+            errorMessage = auth.errorMessage ?? "Could not create account"
+            showError = true
+        }
+    }
+}
+
+// MARK: - Restaurant Sign Up View (dedicated 3-step wizard)
+struct RestaurantSignUpView: View {
+    @EnvironmentObject var appState: AppState
+    @Environment(\.dismiss) var dismiss
+
+    @State private var step = 1
+
+    // Step 1 — Business info
+    @State private var restaurantName = ""
+    @State private var cuisineType    = ""
+
+    // Step 2 — Location & contact
+    @State private var address       = ""
+    @State private var phone         = ""
+    @State private var businessHours = ""
+
+    // Step 3 — Account credentials
+    @State private var email    = ""
+    @State private var password = ""
+
+    // UI state
+    @State private var isLoading    = false
+    @State private var showError    = false
+    @State private var errorMessage = ""
+
+    private let cuisineTypes = [
+        "Italian", "Asian", "Mexican", "American",
+        "Mediterranean", "Bakery", "Cafe", "Other",
+    ]
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 0) {
+                progressHeader
+
+                ScrollView(showsIndicators: false) {
+                    Group {
+                        switch step {
+                        case 1:  step1BusinessInfo
+                        case 2:  step2LocationContact
+                        default: step3Account
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 28)
+                    .padding(.bottom, 60)
+                }
+                .animation(.spring(response: 0.35, dampingFraction: 0.85), value: step)
+            }
+            .background(Color(.systemBackground))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button { dismiss() } label: {
+                        ZStack {
+                            Circle().fill(Color(.systemGray6)).frame(width: 36, height: 36)
+                            Image(systemName: "xmark")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(Theme.Colors.secondaryLabel)
+                        }
+                    }
+                }
+            }
+            .alert("Error", isPresented: $showError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorMessage)
+            }
+        }
+    }
+
+    // MARK: Progress Header
+    private var progressHeader: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                ForEach(1...3, id: \.self) { s in
+                    Capsule()
+                        .fill(s <= step
+                              ? Theme.Colors.primaryGradientStart
+                              : Color(.systemGray5))
+                        .frame(height: 5)
+                        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: step)
+                }
+            }
+            .padding(.horizontal, 24)
+
+            Text(stepLabel)
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundColor(Theme.Colors.tertiaryLabel)
+        }
+        .padding(.vertical, 14)
+        .background(
+            Color(.systemBackground)
+                .shadow(color: Color.black.opacity(0.04), radius: 4, y: 2)
+        )
+    }
+
+    private var stepLabel: String {
+        switch step {
+        case 1:  return "Step 1 of 3 — Business Info"
+        case 2:  return "Step 2 of 3 — Location & Contact"
+        default: return "Step 3 of 3 — Create Account"
+        }
+    }
+
+    // MARK: Step 1 — Business Info
+    private var step1BusinessInfo: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            stepHeading(title: "Tell us about your restaurant 🍽️",
+                        subtitle: "This appears on your public profile.")
+
+            // Logo upload zone
+            Button {} label: {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 24)
+                        .fill(Theme.Colors.primaryGradientStart.opacity(0.05))
+                        .frame(height: 120)
+                    RoundedRectangle(cornerRadius: 24)
+                        .strokeBorder(
+                            Theme.Colors.primaryGradientStart.opacity(0.25),
+                            style: StrokeStyle(lineWidth: 2, dash: [10, 6])
+                        )
+                        .frame(height: 120)
+                    VStack(spacing: 10) {
+                        Image(systemName: "photo.badge.plus.fill")
+                            .font(.system(size: 32, weight: .medium))
+                            .foregroundStyle(Theme.Colors.primaryGradient)
+                        Text("Upload Logo")
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                    }
+                }
+            }
+
+            AuthLabeledField(
+                label: "Restaurant Name",
+                placeholder: "e.g., Bella's Italian Kitchen",
+                text: $restaurantName
+            )
+
+            // Cuisine type chips
+            VStack(alignment: .leading, spacing: 10) {
+                Text("CUISINE TYPE")
+                    .font(.system(size: 10, weight: .black, design: .rounded))
+                    .foregroundColor(Theme.Colors.tertiaryLabel)
+                    .tracking(1.2)
+
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.flexible()), count: 4),
+                    spacing: 10
+                ) {
+                    ForEach(cuisineTypes, id: \.self) { type in
+                        Button {
+                            hapticFeedback(.light)
+                            cuisineType = type
+                        } label: {
+                            Text(type)
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .foregroundColor(cuisineType == type ? .white : Theme.Colors.label)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 10)
+                                .frame(maxWidth: .infinity)
+                                .background(
+                                    cuisineType == type
+                                        ? Theme.Colors.primaryGradient
+                                        : LinearGradient(colors: [Color(.systemGray6)],
+                                                         startPoint: .leading, endPoint: .trailing)
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
+            }
+
+            nextOnlyButton(label: "Next: Location & Contact") {
+                guard !restaurantName.isEmpty else {
+                    errorMessage = "Please enter your restaurant name"
+                    showError = true
+                    return
+                }
+                advance()
+            }
+        }
+    }
+
+    // MARK: Step 2 — Location & Contact
+    private var step2LocationContact: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            stepHeading(title: "Where are you located? 📍",
+                        subtitle: "Customers use this to find you.")
+
+            VStack(spacing: 18) {
+                AuthLabeledField(label: "Address",
+                                 placeholder: "123 Main St, City, State",
+                                 text: $address)
+                AuthLabeledField(label: "Phone Number",
+                                 placeholder: "(555) 123-4567",
+                                 text: $phone,
+                                 keyboardType: .phonePad)
+                AuthLabeledField(label: "Business Hours",
+                                 placeholder: "e.g., Mon–Fri 9AM–9PM",
+                                 text: $businessHours)
+            }
+
+            // Use current location shortcut
+            Button {} label: {
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Theme.Colors.primaryGradientStart.opacity(0.12))
+                            .frame(width: 40, height: 40)
+                        Image(systemName: "location.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(Theme.Colors.primaryGradientStart)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Use Current Location")
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundColor(Theme.Colors.label)
+                        Text("Auto-fill your address")
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(Theme.Colors.tertiaryLabel)
+                }
+                .padding(14)
+                .background(Color(.systemGray6))
+                .clipShape(RoundedRectangle(cornerRadius: 18))
+            }
+
+            backNextRow {
+                guard !address.isEmpty else {
+                    errorMessage = "Please enter your address"
+                    showError = true
+                    return
+                }
+                advance()
+            }
+        }
+    }
+
+    // MARK: Step 3 — Account Credentials
+    private var step3Account: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            stepHeading(title: "Create your account 🔐",
+                        subtitle: "You'll use these to log in to RePlate.")
+
+            VStack(spacing: 18) {
+                AuthLabeledField(label: "Business Email",
+                                 placeholder: "hello@yourrestaurant.com",
+                                 text: $email,
+                                 keyboardType: .emailAddress)
+                    .textInputAutocapitalization(.never)
+                AuthLabeledField(label: "Password",
+                                 placeholder: "Min. 8 characters",
+                                 text: $password,
+                                 isSecure: true)
+            }
+
+            // Password strength bar
+            if !password.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 6) {
+                        ForEach(0..<4, id: \.self) { i in
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(strengthColor(bar: i))
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 4)
+                        }
+                    }
+                    .animation(.easeInOut(duration: 0.2), value: password.count)
+                    Text(strengthLabel)
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundColor(strengthColor(bar: 0))
+                }
+            }
+
+            // Verify Business (optional)
+            Button {} label: {
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Theme.Colors.primaryGradientStart.opacity(0.12))
+                            .frame(width: 40, height: 40)
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(Theme.Colors.primaryGradientStart)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Verify Your Business (Optional)")
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundColor(Theme.Colors.label)
+                        Text("Adds a verified badge to your profile")
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                    }
+                    Spacer()
+                }
+                .padding(14)
+                .background(Color(.systemGray6))
+                .clipShape(RoundedRectangle(cornerRadius: 18))
+            }
+
+            // Back + Create Account
+            HStack(spacing: 12) {
+                backButton
+
+                Button {
+                    Task { await createAccount() }
+                } label: {
+                    ZStack {
+                        if isLoading {
+                            ProgressView().tint(.white).scaleEffect(0.85)
+                        } else {
+                            HStack(spacing: 8) {
+                                Text("Create Account")
+                                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 13, weight: .black))
+                            }
+                            .foregroundColor(.white)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 56)
+                    .background(Theme.Colors.primaryGradient)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.3), radius: 10, y: 5)
+                }
+                .disabled(isLoading)
+                .buttonStyle(PlainButtonStyle())
+            }
+        }
+    }
+
+    // MARK: Reusable sub-views
+    private func stepHeading(title: String, subtitle: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.system(size: 26, weight: .heavy, design: .rounded))
+                .foregroundColor(Theme.Colors.label)
+            Text(subtitle)
+                .font(.system(size: 15, weight: .medium, design: .rounded))
+                .foregroundColor(Theme.Colors.secondaryLabel)
+        }
+    }
+
+    private func nextOnlyButton(label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Text(label).font(.system(size: 16, weight: .bold, design: .rounded))
+                Image(systemName: "chevron.right").font(.system(size: 13, weight: .black))
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 56)
+            .background(Theme.Colors.primaryGradient)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.3), radius: 10, y: 5)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    private func backNextRow(onNext: @escaping () -> Void) -> some View {
+        HStack(spacing: 12) {
+            backButton
+            Button(action: onNext) {
+                HStack(spacing: 8) {
+                    Text("Next").font(.system(size: 16, weight: .bold, design: .rounded))
+                    Image(systemName: "chevron.right").font(.system(size: 13, weight: .black))
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+                .background(Theme.Colors.primaryGradient)
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+                .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.3), radius: 10, y: 5)
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+    }
+
+    private var backButton: some View {
+        Button {
+            hapticFeedback(.light)
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { step -= 1 }
+        } label: {
+            Text("Back")
+                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .foregroundColor(Theme.Colors.secondaryLabel)
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+                .background(Color(.systemGray6))
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+        }
+    }
+
+    private func advance() {
+        hapticFeedback(.light)
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { step += 1 }
+    }
+
+    private var strengthLabel: String {
+        switch password.count {
+        case 0..<6:  return "Too short"
+        case 6..<8:  return "Weak"
+        case 8..<12: return "Fair"
+        default:     return "Strong"
+        }
+    }
+
+    private func strengthColor(bar: Int) -> Color {
+        let filled = min(password.count / 3, 4)
+        let palette: [Color] = [.red, .orange, Color(hex: "5db996"), Color(hex: "118b50")]
+        return bar < filled ? palette[min(filled - 1, palette.count - 1)] : Color(.systemGray5)
+    }
+
+    private func createAccount() async {
+        guard !email.isEmpty, !password.isEmpty else {
+            errorMessage = "Please fill in all fields"
+            showError = true
+            return
+        }
+        guard password.count >= 8 else {
+            errorMessage = "Password must be at least 8 characters"
+            showError = true
+            return
+        }
+        isLoading = true
+        defer { isLoading = false }
+
+        let auth: AuthService = AuthService.shared
+        let success = await auth.signUp(
+            name: restaurantName,
             email: email,
             password: password,
-            accountType: accountType
+            accountType: .restaurant
         )
         if success {
             appState.isAuthenticated = true
@@ -870,9 +1325,6 @@ struct AuthLabeledField: View {
 }
 
 // MARK: - Legacy / Preserved Structs
-// AccountTypeButton, SocialSignInButton, CheckboxToggleStyle kept for
-// backward compatibility with any code that may reference them.
-
 struct AccountTypeButton: View {
     let type: User.AccountType
     let isSelected: Bool
@@ -920,8 +1372,7 @@ struct SocialSignInButton: View {
         Button(action: action) {
             HStack(spacing: Theme.Spacing.sm) {
                 Image(systemName: icon)
-                Text(title)
-                    .font(Theme.Typography.headline)
+                Text(title).font(Theme.Typography.headline)
             }
             .frame(maxWidth: .infinity)
             .frame(height: 56)
@@ -939,18 +1390,16 @@ struct SocialSignInButton: View {
 struct CheckboxToggleStyle: ToggleStyle {
     func makeBody(configuration: Configuration) -> some View {
         HStack(alignment: .top, spacing: Theme.Spacing.sm) {
-            Image(
-                systemName: configuration.isOn ? "checkmark.square.fill" : "square"
-            )
-            .foregroundColor(
-                configuration.isOn
-                    ? Theme.Colors.primaryGradientStart
-                    : Theme.Colors.secondaryLabel
-            )
-            .onTapGesture {
-                configuration.isOn.toggle()
-                hapticFeedback(.light)
-            }
+            Image(systemName: configuration.isOn ? "checkmark.square.fill" : "square")
+                .foregroundColor(
+                    configuration.isOn
+                        ? Theme.Colors.primaryGradientStart
+                        : Theme.Colors.secondaryLabel
+                )
+                .onTapGesture {
+                    configuration.isOn.toggle()
+                    hapticFeedback(.light)
+                }
             configuration.label
         }
     }
