@@ -298,7 +298,9 @@ struct RestaurantVerificationView: View {
                     .font(.system(size: 13, weight: .bold, design: .rounded))
                     .foregroundColor(uploaded.wrappedValue ? Theme.Colors.secondaryLabel : .white)
                     .padding(.horizontal, 16).padding(.vertical, 8)
-                    .background(uploaded.wrappedValue ? Color(.systemGray5) : Theme.Colors.primaryGradient)
+                    .background(uploaded.wrappedValue
+                        ? AnyShapeStyle(Color(.systemGray5))
+                        : AnyShapeStyle(Theme.Colors.primaryGradient))
                     .clipShape(Capsule())
             }
         }
