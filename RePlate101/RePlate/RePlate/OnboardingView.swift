@@ -499,7 +499,7 @@ struct SignInView: View {
                     .disabled(isLoading)
 
                     // Demo hint
-                    Text("Demo: use any email/password\n(use "restaurant@…" for a restaurant account)")
+                    Text("Demo: use any email/password\n(use \"restaurant@…\" for a restaurant account)")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(Theme.Colors.tertiaryLabel)
                         .multilineTextAlignment(.center)
