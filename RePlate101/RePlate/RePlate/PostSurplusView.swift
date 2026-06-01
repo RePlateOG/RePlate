@@ -188,7 +188,9 @@ struct PostSurplusView: View {
                             .frame(width: 80, height: 80)
                         Image(systemName: hasPhoto ? "checkmark.circle.fill" : "photo.on.rectangle.angled")
                             .font(.system(size: 34, weight: .medium))
-                            .foregroundStyle(hasPhoto ? Theme.Colors.primaryGradientStart : Theme.Colors.primaryGradient)
+                            .foregroundStyle(hasPhoto
+                                ? AnyShapeStyle(Theme.Colors.primaryGradientStart)
+                                : AnyShapeStyle(Theme.Colors.primaryGradient))
                     }
                     Text(hasPhoto ? "Photo Added" : "Upload Photo")
                         .font(.system(size: 16, weight: .bold, design: .rounded))
@@ -383,7 +385,7 @@ struct PostSurplusView: View {
                                     .foregroundColor(Theme.Colors.primaryGradientStart)
                                     .keyboardType(.numberPad)
                                     .opacity(originalDigits.isEmpty ? 0 : 1)
-                                    .onChange(of: originalDigits) { v in
+                                    .onChange(of: originalDigits) { _, v in
                                         let digits = v.filter { $0.isNumber }
                                         originalDigits = digits.count <= 8 ? digits : String(digits.prefix(8))
                                         manualOverride = false; overrideDigits = ""
@@ -455,7 +457,7 @@ struct PostSurplusView: View {
                                         .font(.system(size: 22, weight: .heavy, design: .rounded))
                                         .foregroundColor(Theme.Colors.primaryGradientStart)
                                         .keyboardType(.numberPad)
-                                        .onChange(of: overrideDigits) { v in
+                                        .onChange(of: overrideDigits) { _, v in
                                             let d = v.filter { $0.isNumber }
                                             overrideDigits = d.count <= 8 ? d : String(d.prefix(8))
                                         }
@@ -781,9 +783,11 @@ struct PostSurplusView: View {
                     ? AnyShapeStyle(Theme.Colors.primaryGradient)
                     : AnyShapeStyle(Color(.systemGray6)))
                 .clipShape(RoundedRectangle(cornerRadius: 22))
-                .overlay(style == .gray
-                    ? AnyShapeStyle(RoundedRectangle(cornerRadius: 22).stroke(Color(.systemGray4), lineWidth: 1))
-                    : AnyShapeStyle(Color.clear))
+                .overlay {
+                    if style == .gray {
+                        RoundedRectangle(cornerRadius: 22).stroke(Color(.systemGray4), lineWidth: 1)
+                    }
+                }
         }
     }
 
