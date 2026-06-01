@@ -85,13 +85,13 @@ struct LegalPageView: View {
 // MARK: - Shared legal text components
 private struct Section: View {
     let title: String
-    let body: String
-    var body_view: some View {
+    let content: String
+    var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.system(size: 16, weight: .bold, design: .rounded))
                 .foregroundColor(Theme.Colors.label)
-            Text(body)
+            Text(content)
                 .font(.system(size: 14, weight: .regular, design: .rounded))
                 .foregroundColor(Theme.Colors.secondaryLabel)
                 .lineSpacing(4)
@@ -99,7 +99,6 @@ private struct Section: View {
         }
         .padding(.bottom, 20)
     }
-    var body: some View { body_view }
 }
 
 private struct BulletList: View {
@@ -128,10 +127,10 @@ private struct PrivacyPolicyContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Section(title: "1. Introduction",
-                    body: "RePlate, Inc. (\"RePlate,\" \"we,\" \"our,\" or \"us\") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application and related services (collectively, the \"Platform\"). Please read this policy carefully.")
+                    content: "RePlate, Inc. (\"RePlate,\" \"we,\" \"our,\" or \"us\") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application and related services (collectively, the \"Platform\"). Please read this policy carefully.")
 
             Section(title: "2. Information We Collect",
-                    body: "We collect information you provide directly, information collected automatically, and information from third parties.")
+                    content: "We collect information you provide directly, information collected automatically, and information from third parties.")
 
             BulletList(items: [
                 "Account information: name, email address, phone number, account type (customer or restaurant), and profile photo.",
@@ -144,7 +143,7 @@ private struct PrivacyPolicyContent: View {
             ])
 
             Section(title: "3. How We Use Your Information",
-                    body: "We use the collected information to provide, improve, and personalise our services.")
+                    content: "We use the collected information to provide, improve, and personalise our services.")
 
             BulletList(items: [
                 "Create and manage your account.",
@@ -158,22 +157,22 @@ private struct PrivacyPolicyContent: View {
             ])
 
             Section(title: "4. Information Sharing",
-                    body: "We do not sell your personal information. We may share information with service providers who assist in operating the Platform (e.g., payment processors, cloud storage), with other users only as necessary for completing a transaction (e.g., sharing your name with a restaurant for pickup confirmation), and with law enforcement when required by law.")
+                    content: "We do not sell your personal information. We may share information with service providers who assist in operating the Platform (e.g., payment processors, cloud storage), with other users only as necessary for completing a transaction (e.g., sharing your name with a restaurant for pickup confirmation), and with law enforcement when required by law.")
 
             Section(title: "5. Data Retention",
-                    body: "We retain your information for as long as your account is active or as needed to provide services. You may request deletion of your account and associated data at any time through the app settings.")
+                    content: "We retain your information for as long as your account is active or as needed to provide services. You may request deletion of your account and associated data at any time through the app settings.")
 
             Section(title: "6. Your Rights",
-                    body: "Depending on your jurisdiction, you may have rights to access, correct, port, or delete your personal data. To exercise these rights, contact us at privacy@replate.app.")
+                    content: "Depending on your jurisdiction, you may have rights to access, correct, port, or delete your personal data. To exercise these rights, contact us at privacy@replate.app.")
 
             Section(title: "7. Security",
-                    body: "We use industry-standard encryption and security practices to protect your data. However, no system is completely secure, and we cannot guarantee the absolute security of your information.")
+                    content: "We use industry-standard encryption and security practices to protect your data. However, no system is completely secure, and we cannot guarantee the absolute security of your information.")
 
             Section(title: "8. Children's Privacy",
-                    body: "The Platform is not directed to children under 13. We do not knowingly collect personal information from children under 13. If we become aware that we have collected such information, we will delete it promptly.")
+                    content: "The Platform is not directed to children under 13. We do not knowingly collect personal information from children under 13. If we become aware that we have collected such information, we will delete it promptly.")
 
             Section(title: "9. Contact Us",
-                    body: "Questions about this policy? Contact us at privacy@replate.app or write to RePlate, Inc., Privacy Team, San Francisco, CA.")
+                    content: "Questions about this policy? Contact us at privacy@replate.app or write to RePlate, Inc., Privacy Team, San Francisco, CA.")
         }
     }
 }
@@ -183,16 +182,16 @@ private struct TermsOfServiceContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Section(title: "1. Acceptance of Terms",
-                    body: "By creating an account or using RePlate, you agree to these Terms of Service (\"Terms\"). If you do not agree, do not use the Platform. These Terms constitute a legally binding agreement between you and RePlate, Inc.")
+                    content: "By creating an account or using RePlate, you agree to these Terms of Service (\"Terms\"). If you do not agree, do not use the Platform. These Terms constitute a legally binding agreement between you and RePlate, Inc.")
 
             Section(title: "2. Eligibility",
-                    body: "You must be at least 18 years old to use RePlate. By using the Platform, you represent that you meet this requirement. Restaurant accounts must be operated by an authorised representative of the business.")
+                    content: "You must be at least 18 years old to use RePlate. By using the Platform, you represent that you meet this requirement. Restaurant accounts must be operated by an authorised representative of the business.")
 
             Section(title: "3. Accounts",
-                    body: "You are responsible for maintaining the confidentiality of your account credentials and for all activities under your account. Notify us immediately of any unauthorised access. You may not share or transfer your account.")
+                    content: "You are responsible for maintaining the confidentiality of your account credentials and for all activities under your account. Notify us immediately of any unauthorised access. You may not share or transfer your account.")
 
             Section(title: "4. Restaurant Obligations",
-                    body: "Restaurants using RePlate agree to:")
+                    content: "Restaurants using RePlate agree to:")
 
             BulletList(items: [
                 "Complete verification before posting listings.",
@@ -205,7 +204,7 @@ private struct TermsOfServiceContent: View {
             ])
 
             Section(title: "5. Customer Obligations",
-                    body: "Customers using RePlate agree to:")
+                    content: "Customers using RePlate agree to:")
 
             BulletList(items: [
                 "Arrive within the designated pickup window.",
@@ -216,25 +215,25 @@ private struct TermsOfServiceContent: View {
             ])
 
             Section(title: "6. Prohibited Activities",
-                    body: "Users may not post false or misleading information, manipulate pricing or availability, create fake accounts, harass other users, use the Platform for commercial resale, or attempt to circumvent platform security.")
+                    content: "Users may not post false or misleading information, manipulate pricing or availability, create fake accounts, harass other users, use the Platform for commercial resale, or attempt to circumvent platform security.")
 
             Section(title: "7. Payments",
-                    body: "RePlate processes payments through third-party payment providers. By making a purchase, you agree to the payment provider's terms. RePlate charges restaurants a service fee on completed orders.")
+                    content: "RePlate processes payments through third-party payment providers. By making a purchase, you agree to the payment provider's terms. RePlate charges restaurants a service fee on completed orders.")
 
             Section(title: "8. Disclaimers",
-                    body: "RePlate is a technology platform connecting restaurants and customers. We do not prepare, inspect, or guarantee the quality of food. All food is consumed at the user's own risk. RePlate makes no warranties about the accuracy of listings.")
+                    content: "RePlate is a technology platform connecting restaurants and customers. We do not prepare, inspect, or guarantee the quality of food. All food is consumed at the user's own risk. RePlate makes no warranties about the accuracy of listings.")
 
             Section(title: "9. Limitation of Liability",
-                    body: "To the maximum extent permitted by law, RePlate shall not be liable for indirect, incidental, consequential, or punitive damages. Our total liability shall not exceed the amount you paid to RePlate in the 12 months preceding the claim.")
+                    content: "To the maximum extent permitted by law, RePlate shall not be liable for indirect, incidental, consequential, or punitive damages. Our total liability shall not exceed the amount you paid to RePlate in the 12 months preceding the claim.")
 
             Section(title: "10. Termination",
-                    body: "We may suspend or terminate accounts that violate these Terms. You may delete your account at any time through app settings.")
+                    content: "We may suspend or terminate accounts that violate these Terms. You may delete your account at any time through app settings.")
 
             Section(title: "11. Governing Law",
-                    body: "These Terms are governed by the laws of California, USA. Disputes shall be resolved through binding arbitration in San Francisco, CA.")
+                    content: "These Terms are governed by the laws of California, USA. Disputes shall be resolved through binding arbitration in San Francisco, CA.")
 
             Section(title: "12. Contact",
-                    body: "Legal questions: legal@replate.app")
+                    content: "Legal questions: legal@replate.app")
         }
     }
 }
@@ -244,10 +243,10 @@ private struct CommunityGuidelinesContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Section(title: "Our Mission",
-                    body: "RePlate exists to reduce food waste and build stronger communities. Our community guidelines help ensure the Platform remains safe, fair, and beneficial for everyone.")
+                    content: "RePlate exists to reduce food waste and build stronger communities. Our community guidelines help ensure the Platform remains safe, fair, and beneficial for everyone.")
 
             Section(title: "For Restaurants",
-                    body: "Great restaurant partners on RePlate:")
+                    content: "Great restaurant partners on RePlate:")
 
             BulletList(items: [
                 "Post food that is fresh, safe, and accurately described.",
@@ -259,7 +258,7 @@ private struct CommunityGuidelinesContent: View {
             ])
 
             Section(title: "For Customers",
-                    body: "Great customers on RePlate:")
+                    content: "Great customers on RePlate:")
 
             BulletList(items: [
                 "Pick up orders within the confirmed window.",
@@ -271,7 +270,7 @@ private struct CommunityGuidelinesContent: View {
             ])
 
             Section(title: "Zero Tolerance",
-                    body: "The following behaviours result in immediate account suspension:")
+                    content: "The following behaviours result in immediate account suspension:")
 
             BulletList(items: [
                 "Harassment, threats, or abusive language directed at any user.",
@@ -283,10 +282,10 @@ private struct CommunityGuidelinesContent: View {
             ])
 
             Section(title: "Reporting",
-                    body: "Use the in-app report feature to flag violations. Our moderation team reviews all reports within 24 hours. Serious violations are escalated immediately.")
+                    content: "Use the in-app report feature to flag violations. Our moderation team reviews all reports within 24 hours. Serious violations are escalated immediately.")
 
             Section(title: "Consequences",
-                    body: "Depending on severity: first offences may result in a warning, repeated violations in temporary suspension, and serious violations in permanent ban. Illegal activity is reported to law enforcement.")
+                    content: "Depending on severity: first offences may result in a warning, repeated violations in temporary suspension, and serious violations in permanent ban. Illegal activity is reported to law enforcement.")
         }
     }
 }
@@ -296,10 +295,10 @@ private struct FoodSafetyPolicyContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Section(title: "Our Commitment",
-                    body: "Food safety is the foundation of RePlate. We require all participating restaurants to comply with applicable food safety laws and follow best practices for surplus food distribution.")
+                    content: "Food safety is the foundation of RePlate. We require all participating restaurants to comply with applicable food safety laws and follow best practices for surplus food distribution.")
 
             Section(title: "Restaurant Requirements",
-                    body: "All restaurants on RePlate must:")
+                    content: "All restaurants on RePlate must:")
 
             BulletList(items: [
                 "Hold a valid food service permit in their jurisdiction.",
@@ -313,19 +312,19 @@ private struct FoodSafetyPolicyContent: View {
             ])
 
             Section(title: "Allergen Disclosure",
-                    body: "Restaurants must disclose all common allergens in their listings including: nuts, dairy, eggs, wheat/gluten, soy, shellfish, fish, and sesame. Customers with severe allergies should contact the restaurant directly before ordering.")
+                    content: "Restaurants must disclose all common allergens in their listings including: nuts, dairy, eggs, wheat/gluten, soy, shellfish, fish, and sesame. Customers with severe allergies should contact the restaurant directly before ordering.")
 
             Section(title: "Food Expiry",
-                    body: "All listings must specify a pickup window. Food listings automatically expire at the end of the stated pickup window. Restaurants must remove listings for food that is no longer available or safe for consumption.")
+                    content: "All listings must specify a pickup window. Food listings automatically expire at the end of the stated pickup window. Restaurants must remove listings for food that is no longer available or safe for consumption.")
 
             Section(title: "Customer Responsibility",
-                    body: "Customers accept that surplus food may have a shorter shelf life than freshly prepared items. Customers should consume food promptly, store it properly, and report concerns immediately.")
+                    content: "Customers accept that surplus food may have a shorter shelf life than freshly prepared items. Customers should consume food promptly, store it properly, and report concerns immediately.")
 
             Section(title: "Reporting Food Safety Issues",
-                    body: "Report food safety concerns immediately through the in-app reporting feature or by emailing safety@replate.app. Serious health concerns should also be reported to local health authorities.")
+                    content: "Report food safety concerns immediately through the in-app reporting feature or by emailing safety@replate.app. Serious health concerns should also be reported to local health authorities.")
 
             Section(title: "Enforcement",
-                    body: "Restaurants with verified food safety violations are immediately suspended pending investigation. Confirmed violations result in permanent removal from the Platform and may be reported to regulatory authorities.")
+                    content: "Restaurants with verified food safety violations are immediately suspended pending investigation. Confirmed violations result in permanent removal from the Platform and may be reported to regulatory authorities.")
         }
     }
 }
@@ -335,10 +334,10 @@ private struct RefundPolicyContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Section(title: "Overview",
-                    body: "RePlate facilitates transactions between restaurants and customers. Our refund policy is designed to be fair to both parties while accounting for the nature of surplus food.")
+                    content: "RePlate facilitates transactions between restaurants and customers. Our refund policy is designed to be fair to both parties while accounting for the nature of surplus food.")
 
             Section(title: "Eligible Refunds",
-                    body: "You are entitled to a full refund if:")
+                    content: "You are entitled to a full refund if:")
 
             BulletList(items: [
                 "The restaurant cancels your order.",
@@ -349,7 +348,7 @@ private struct RefundPolicyContent: View {
             ])
 
             Section(title: "Non-Eligible Situations",
-                    body: "Refunds are generally not available if:")
+                    content: "Refunds are generally not available if:")
 
             BulletList(items: [
                 "You miss the pickup window without notifying the restaurant.",
@@ -360,16 +359,16 @@ private struct RefundPolicyContent: View {
             ])
 
             Section(title: "How to Request a Refund",
-                    body: "1. Open the order in the Orders tab.\n2. Tap 'Report Issue'.\n3. Select the reason and provide any supporting details or photos.\n4. Submit your request.\n\nOur team will review within 1–2 business days.")
+                    content: "1. Open the order in the Orders tab.\n2. Tap 'Report Issue'.\n3. Select the reason and provide any supporting details or photos.\n4. Submit your request.\n\nOur team will review within 1–2 business days.")
 
             Section(title: "Refund Processing",
-                    body: "Approved refunds are returned to your original payment method within 3–7 business days, depending on your bank. RePlate credits may be offered as an alternative with faster processing.")
+                    content: "Approved refunds are returned to your original payment method within 3–7 business days, depending on your bank. RePlate credits may be offered as an alternative with faster processing.")
 
             Section(title: "Disputes",
-                    body: "If you disagree with a refund decision, you may escalate to support@replate.app within 14 days of the original decision. Escalated cases are reviewed by our Trust & Safety team.")
+                    content: "If you disagree with a refund decision, you may escalate to support@replate.app within 14 days of the original decision. Escalated cases are reviewed by our Trust & Safety team.")
 
             Section(title: "Platform Service Fees",
-                    body: "RePlate's platform service fee is non-refundable except in cases where the order was cancelled by the restaurant or a technical error occurred on our side.")
+                    content: "RePlate's platform service fee is non-refundable except in cases where the order was cancelled by the restaurant or a technical error occurred on our side.")
         }
     }
 }
@@ -379,10 +378,10 @@ private struct DataPolicyContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Section(title: "Data We Collect",
-                    body: "This policy provides additional detail on how RePlate collects, processes, and protects your data beyond our Privacy Policy.")
+                    content: "This policy provides additional detail on how RePlate collects, processes, and protects your data beyond our Privacy Policy.")
 
             Section(title: "Categories of Data",
-                    body: "We process the following categories of personal data:")
+                    content: "We process the following categories of personal data:")
 
             BulletList(items: [
                 "Identity data: name, username, profile photo.",
@@ -396,13 +395,13 @@ private struct DataPolicyContent: View {
             ])
 
             Section(title: "Legal Basis for Processing",
-                    body: "We process your data on the following bases: contract performance (to deliver our service), legitimate interests (to improve the Platform and prevent fraud), legal obligation (to comply with applicable law), and consent (for optional features such as marketing communications).")
+                    content: "We process your data on the following bases: contract performance (to deliver our service), legitimate interests (to improve the Platform and prevent fraud), legal obligation (to comply with applicable law), and consent (for optional features such as marketing communications).")
 
             Section(title: "Data Transfers",
-                    body: "Your data may be processed in the United States and other countries where our service providers operate. We ensure appropriate safeguards are in place for international transfers.")
+                    content: "Your data may be processed in the United States and other countries where our service providers operate. We ensure appropriate safeguards are in place for international transfers.")
 
             Section(title: "Third-Party Services",
-                    body: "We use carefully selected third-party providers for:")
+                    content: "We use carefully selected third-party providers for:")
 
             BulletList(items: [
                 "Payment processing (Stripe)",
@@ -413,16 +412,16 @@ private struct DataPolicyContent: View {
             ])
 
             Section(title: "Your Data Rights",
-                    body: "You have the right to: access a copy of your data, correct inaccurate data, request deletion, restrict processing, port your data to another service, and object to processing for direct marketing. To exercise any right, visit Settings > Privacy > Manage My Data or email privacy@replate.app.")
+                    content: "You have the right to: access a copy of your data, correct inaccurate data, request deletion, restrict processing, port your data to another service, and object to processing for direct marketing. To exercise any right, visit Settings > Privacy > Manage My Data or email privacy@replate.app.")
 
             Section(title: "Data Deletion",
-                    body: "When you delete your account: profile data is deleted within 30 days, transaction records are retained for 7 years for legal and tax compliance, aggregated anonymised impact statistics may be retained indefinitely.")
+                    content: "When you delete your account: profile data is deleted within 30 days, transaction records are retained for 7 years for legal and tax compliance, aggregated anonymised impact statistics may be retained indefinitely.")
 
             Section(title: "Cookies & Tracking",
-                    body: "The RePlate mobile app uses local storage (not browser cookies) to maintain your session and preferences. We use analytics SDKs that collect anonymised, aggregated usage data. We do not use cross-app tracking.")
+                    content: "The RePlate mobile app uses local storage (not browser cookies) to maintain your session and preferences. We use analytics SDKs that collect anonymised, aggregated usage data. We do not use cross-app tracking.")
 
             Section(title: "Contact",
-                    body: "For data-related questions: privacy@replate.app\nData Protection Officer: dpo@replate.app")
+                    content: "For data-related questions: privacy@replate.app\nData Protection Officer: dpo@replate.app")
         }
     }
 }
