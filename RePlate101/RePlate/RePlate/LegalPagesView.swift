@@ -128,7 +128,7 @@ private struct PrivacyPolicyContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Section(title: "1. Introduction",
-                    body: "RePlate, Inc. ("RePlate," "we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application and related services (collectively, the "Platform"). Please read this policy carefully.")
+                    body: "RePlate, Inc. (\"RePlate,\" \"we,\" \"our,\" or \"us\") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application and related services (collectively, the \"Platform\"). Please read this policy carefully.")
 
             Section(title: "2. Information We Collect",
                     body: "We collect information you provide directly, information collected automatically, and information from third parties.")
@@ -183,7 +183,7 @@ private struct TermsOfServiceContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Section(title: "1. Acceptance of Terms",
-                    body: "By creating an account or using RePlate, you agree to these Terms of Service ("Terms"). If you do not agree, do not use the Platform. These Terms constitute a legally binding agreement between you and RePlate, Inc.")
+                    body: "By creating an account or using RePlate, you agree to these Terms of Service (\"Terms\"). If you do not agree, do not use the Platform. These Terms constitute a legally binding agreement between you and RePlate, Inc.")
 
             Section(title: "2. Eligibility",
                     body: "You must be at least 18 years old to use RePlate. By using the Platform, you represent that you meet this requirement. Restaurant accounts must be operated by an authorised representative of the business.")

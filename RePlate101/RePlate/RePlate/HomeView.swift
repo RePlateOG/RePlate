@@ -86,24 +86,14 @@ struct HomeView: View {
                 .padding(.bottom, 24)
 
                 // Bold headline
-                Group {
-                    Text("Feed your ") +
-                    Text("belly")
-                        .foregroundColor(Theme.Colors.primaryGradientStart)
-                        .italic()
-                }
-                .font(.system(size: 36, weight: .heavy, design: .rounded))
-                .foregroundColor(Theme.Colors.label)
+                Text("Feed your \(Text("belly").foregroundColor(Theme.Colors.primaryGradientStart).italic())")
+                    .font(.system(size: 36, weight: .heavy, design: .rounded))
+                    .foregroundColor(Theme.Colors.label)
 
-                Group {
-                    Text("save the ") +
-                    Text("world.")
-                        .foregroundColor(Theme.Colors.primaryGradientStart)
-                        .italic()
-                }
-                .font(.system(size: 36, weight: .heavy, design: .rounded))
-                .foregroundColor(Theme.Colors.label)
-                .padding(.bottom, 20)
+                Text("save the \(Text("world.").foregroundColor(Theme.Colors.primaryGradientStart).italic())")
+                    .font(.system(size: 36, weight: .heavy, design: .rounded))
+                    .foregroundColor(Theme.Colors.label)
+                    .padding(.bottom, 20)
 
                 // Search bar
                 NavigationLink(destination: SearchView()) {
