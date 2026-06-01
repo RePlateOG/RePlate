@@ -1458,7 +1458,6 @@ struct ImpactMetric: View {
 
 // MARK: - Restaurant Orders View Model
 @MainActor
-@MainActor
 private class RestaurantOrdersViewModel: ObservableObject {
     @Published var pendingOrders: [Order] = []
     @Published var completedOrders: [Order] = []
