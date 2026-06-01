@@ -538,14 +538,15 @@ struct SignInView: View {
         isLoading = true
         defer { isLoading = false }
 
-        let success = await AuthService.shared.signIn(email: email, password: password)
+        let auth: AuthService = AuthService.shared
+        let success = await auth.signIn(email: email, password: password)
         if success {
             appState.isAuthenticated = true
-            appState.currentUser = AuthService.shared.currentUser
+            appState.currentUser = auth.currentUser
             appState.completeOnboarding()
             dismiss()
         } else {
-            errorMessage = AuthService.shared.errorMessage ?? "Invalid email or password"
+            errorMessage = auth.errorMessage ?? "Invalid email or password"
             showError = true
         }
     }
@@ -809,7 +810,8 @@ struct SignUpView: View {
         isLoading = true
         defer { isLoading = false }
 
-        let success = await AuthService.shared.signUp(
+        let auth: AuthService = AuthService.shared
+        let success = await auth.signUp(
             name: name,
             email: email,
             password: password,
@@ -817,11 +819,11 @@ struct SignUpView: View {
         )
         if success {
             appState.isAuthenticated = true
-            appState.currentUser = AuthService.shared.currentUser
+            appState.currentUser = auth.currentUser
             appState.completeOnboarding()
             dismiss()
         } else {
-            errorMessage = AuthService.shared.errorMessage ?? "Could not create account"
+            errorMessage = auth.errorMessage ?? "Could not create account"
             showError = true
         }
     }
