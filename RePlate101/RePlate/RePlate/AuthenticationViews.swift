@@ -9,7 +9,7 @@ import SwiftUI
 
 // MARK: - Account Type Selection
 struct AccountTypeSelectionView: View {
-    @EnvironmentObject var authService: AuthService
+    @EnvironmentObject var authService: RePlateAuthService
     @State private var selectedType: User.AccountType?
     @State private var showSignIn = false
     @State private var showSignUp = false

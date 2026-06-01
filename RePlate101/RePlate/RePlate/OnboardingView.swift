@@ -610,7 +610,7 @@ struct SignInView: View {
             Task {
                 isLoading = true
                 defer { isLoading = false }
-                let auth: AuthService = AuthService.shared
+                let auth: RePlateAuthService = RePlateAuthService.shared
                 let ok = await auth.signInWithApple()
                 if ok {
                     appState.isAuthenticated = true
@@ -650,7 +650,7 @@ struct SignInView: View {
         isLoading = true
         defer { isLoading = false }
 
-        let auth: AuthService = AuthService.shared
+        let auth: RePlateAuthService = RePlateAuthService.shared
         let success = await auth.signIn(email: email, password: password)
         if success {
             appState.isAuthenticated = true
@@ -812,7 +812,7 @@ struct SignUpView: View {
         isLoading = true
         defer { isLoading = false }
 
-        let auth: AuthService = AuthService.shared
+        let auth: RePlateAuthService = RePlateAuthService.shared
         let success = await auth.signUp(
             name: name, email: email, password: password, accountType: accountType
         )
@@ -1263,7 +1263,7 @@ struct RestaurantSignUpView: View {
         isLoading = true
         defer { isLoading = false }
 
-        let auth: AuthService = AuthService.shared
+        let auth: RePlateAuthService = RePlateAuthService.shared
         let success = await auth.signUp(
             name: restaurantName,
             email: email,

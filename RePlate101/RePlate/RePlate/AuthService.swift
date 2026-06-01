@@ -9,8 +9,8 @@ import SwiftUI
 import Combine
 
 @MainActor
-class AuthService: ObservableObject {
-    static let shared = AuthService()
+class RePlateAuthService: ObservableObject {
+    static let shared = RePlateAuthService()
     
     @Published var isAuthenticated = false
     @Published var currentUser: User?

@@ -78,7 +78,7 @@ class AppState: ObservableObject {
     }
     
     // MARK: - Services
-    private let authService = AuthService.shared
+    private let authService = RePlateAuthService.shared
     private let locationService = LocationService.shared
     
     // MARK: - Initialization
@@ -133,4 +133,4 @@ class AppState: ObservableObject {
 }
 
 // LocationService is defined in LocationService.swift
-// AuthService is defined in AuthService.swift
+// RePlateAuthService is defined in AuthService.swift

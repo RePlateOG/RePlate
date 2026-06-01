@@ -245,7 +245,7 @@ class ProfileViewModel: ObservableObject {
         try? await Task.sleep(nanoseconds: 500_000_000)
         
         // Load from auth service
-        user = AuthService.shared.currentUser
+        user = RePlateAuthService.shared.currentUser
     }
     
     func updateProfile(name: String, email: String, phoneNumber: String?) async {
@@ -266,7 +266,7 @@ class ProfileViewModel: ObservableObject {
     
     func deleteAccount() async {
         // Delete account
-        AuthService.shared.signOut()
+        RePlateAuthService.shared.signOut()
     }
 }
 
