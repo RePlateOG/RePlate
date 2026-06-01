@@ -34,7 +34,7 @@ struct RestaurantDashboardView: View {
         .refreshable { await viewModel.refreshDashboard() }
         .task { await viewModel.loadDashboard() }
         .sheet(isPresented: $showPostListing) {
-            PostListingView()
+            PostSurplusView()
         }
         .sheet(isPresented: $showSettings) {
             RestaurantSettingsView()

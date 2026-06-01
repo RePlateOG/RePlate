@@ -110,7 +110,13 @@ struct RestaurantInsightsView: View {
             statsGrid
                 .padding(.horizontal, 20)
 
-            feedbackCard
+            ratingsCard
+                .padding(.horizontal, 20)
+
+            recentReviewsSection
+                .padding(.horizontal, 20)
+
+            communityImpactCard
                 .padding(.horizontal, 20)
 
             exportSection
@@ -246,30 +252,41 @@ struct RestaurantInsightsView: View {
         .shadow(color: Color.black.opacity(0.06), radius: 10, y: 3)
     }
 
-    // MARK: - Feedback Card
-    private var feedbackCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Customer Feedback")
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
-                    .foregroundColor(Theme.Colors.label)
-                Spacer()
-                HStack(spacing: 4) {
-                    ForEach(0..<5, id: \.self) { i in
-                        Image(systemName: i < 4 ? "star.fill" : "star.leadinghalf.filled")
-                            .font(.system(size: 12))
-                            .foregroundColor(.orange)
-                    }
-                    Text("4.8")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundColor(Theme.Colors.label)
-                }
-            }
+    // MARK: - Ratings Card
+    private var ratingsCard: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text("Customer Ratings")
+                .font(.system(size: 17, weight: .bold, design: .rounded))
+                .foregroundColor(Theme.Colors.label)
 
-            VStack(spacing: 12) {
-                ratingBar(label: "Freshness",   value: 0.95)
-                ratingBar(label: "Pickup Exp.", value: 0.88)
-                ratingBar(label: "Value",       value: 0.92)
+            HStack(alignment: .center, spacing: 20) {
+                // Big average
+                VStack(spacing: 6) {
+                    Text("4.8")
+                        .font(.system(size: 48, weight: .heavy, design: .rounded))
+                        .foregroundStyle(Theme.Colors.primaryGradient)
+                    HStack(spacing: 3) {
+                        ForEach(0..<5, id: \.self) { i in
+                            Image(systemName: i < 4 ? "star.fill" : "star.leadinghalf.filled")
+                                .font(.system(size: 13))
+                                .foregroundColor(.orange)
+                        }
+                    }
+                    Text("238 reviews")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundColor(Theme.Colors.secondaryLabel)
+                }
+                .frame(width: 100)
+
+                // Distribution bars
+                VStack(spacing: 8) {
+                    starDistBar(stars: 5, proportion: 0.85)
+                    starDistBar(stars: 4, proportion: 0.12)
+                    starDistBar(stars: 3, proportion: 0.03)
+                    starDistBar(stars: 2, proportion: 0.00)
+                    starDistBar(stars: 1, proportion: 0.00)
+                }
+                .frame(maxWidth: .infinity)
             }
         }
         .padding(20)
@@ -278,30 +295,186 @@ struct RestaurantInsightsView: View {
         .shadow(color: Color.black.opacity(0.06), radius: 12, y: 4)
     }
 
-    private func ratingBar(label: String, value: Double) -> some View {
-        HStack(spacing: 12) {
-            Text(label)
-                .font(.system(size: 13, weight: .medium, design: .rounded))
+    private func starDistBar(stars: Int, proportion: Double) -> some View {
+        HStack(spacing: 8) {
+            Text("\(stars)")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
                 .foregroundColor(Theme.Colors.secondaryLabel)
-                .frame(width: 76, alignment: .leading)
+                .frame(width: 10)
+            Image(systemName: "star.fill")
+                .font(.system(size: 9))
+                .foregroundColor(.orange)
 
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 6)
+                    RoundedRectangle(cornerRadius: 4)
                         .fill(Color(.systemGray5))
-                        .frame(height: 8)
-                    RoundedRectangle(cornerRadius: 6)
+                        .frame(height: 6)
+                    RoundedRectangle(cornerRadius: 4)
                         .fill(Theme.Colors.primaryGradient)
-                        .frame(width: geo.size.width * value, height: 8)
+                        .frame(width: geo.size.width * proportion, height: 6)
                 }
             }
-            .frame(height: 8)
+            .frame(height: 6)
 
-            Text("\(Int(value * 100))%")
-                .font(.system(size: 12, weight: .bold, design: .rounded))
-                .foregroundColor(Theme.Colors.primaryGradientStart)
-                .frame(width: 36, alignment: .trailing)
+            Text(proportion > 0 ? "\(Int(proportion * 100))%" : "0%")
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .foregroundColor(Theme.Colors.secondaryLabel)
+                .frame(width: 28, alignment: .trailing)
         }
+    }
+
+    // MARK: - Recent Reviews Section
+    private struct ReviewData: Identifiable {
+        let id = UUID()
+        let name: String
+        let initials: String
+        let stars: Int
+        let comment: String
+        let date: String
+        let avatarColor: Color
+    }
+
+    private let recentReviews: [ReviewData] = [
+        .init(name: "Sarah J.", initials: "SJ", stars: 5,
+              comment: "Food was fresh and ready exactly on time! Will definitely order again.",
+              date: "2 days ago",
+              avatarColor: Color(hex: "5db996")),
+        .init(name: "Mike C.",  initials: "MC", stars: 5,
+              comment: "Amazing value. Got 6 croissants for $2.50. This app is a game changer!",
+              date: "5 days ago",
+              avatarColor: Color(hex: "118b50")),
+        .init(name: "Emily D.", initials: "ED", stars: 4,
+              comment: "Good quantity and really helpful staff at pickup. Minor wait but worth it.",
+              date: "1 week ago",
+              avatarColor: Color(hex: "3aa76d")),
+    ]
+
+    private var recentReviewsSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text("Recent Reviews")
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .foregroundColor(Theme.Colors.label)
+                Spacer()
+                Button { hapticFeedback(.light) } label: {
+                    Text("See All")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                }
+            }
+
+            VStack(spacing: 12) {
+                ForEach(recentReviews) { review in
+                    reviewCard(review)
+                }
+            }
+        }
+    }
+
+    private func reviewCard(_ review: ReviewData) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                // Avatar circle
+                ZStack {
+                    Circle()
+                        .fill(review.avatarColor.opacity(0.2))
+                        .frame(width: 40, height: 40)
+                    Text(review.initials)
+                        .font(.system(size: 13, weight: .black, design: .rounded))
+                        .foregroundColor(review.avatarColor)
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(review.name)
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundColor(Theme.Colors.label)
+                    HStack(spacing: 3) {
+                        ForEach(0..<review.stars, id: \.self) { _ in
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 10))
+                                .foregroundColor(.orange)
+                        }
+                    }
+                }
+
+                Spacer()
+
+                Text(review.date)
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundColor(Theme.Colors.tertiaryLabel)
+            }
+
+            Text(review.comment)
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundColor(Theme.Colors.secondaryLabel)
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 22))
+        .shadow(color: Color.black.opacity(0.05), radius: 10, y: 3)
+    }
+
+    // MARK: - Community Impact Card
+    private var communityImpactCard: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(.white.opacity(0.2))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "globe.americas.fill")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundColor(.white)
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Community Impact")
+                        .font(.system(size: 18, weight: .heavy, design: .rounded))
+                        .foregroundColor(.white)
+                    Text("RePlate platform totals")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundColor(.white.opacity(0.75))
+                }
+            }
+
+            HStack(spacing: 0) {
+                communityStatColumn(value: "12,487", label: "Meals\nRescued",    icon: "bag.fill")
+                Divider()
+                    .frame(width: 1, height: 56)
+                    .background(.white.opacity(0.3))
+                    .padding(.horizontal, 4)
+                communityStatColumn(value: "23,156", label: "lbs Food\nSaved",  icon: "scalemass.fill")
+                Divider()
+                    .frame(width: 1, height: 56)
+                    .background(.white.opacity(0.3))
+                    .padding(.horizontal, 4)
+                communityStatColumn(value: "15,234", label: "kg CO₂\nPrevented", icon: "leaf.fill")
+            }
+        }
+        .padding(22)
+        .background(Theme.Colors.primaryGradient)
+        .clipShape(RoundedRectangle(cornerRadius: 26))
+        .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.3), radius: 16, y: 8)
+    }
+
+    private func communityStatColumn(value: String, label: String, icon: String) -> some View {
+        VStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.white.opacity(0.8))
+            Text(value)
+                .font(.system(size: 20, weight: .heavy, design: .rounded))
+                .foregroundColor(.white)
+            Text(label)
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .foregroundColor(.white.opacity(0.7))
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Export Section
