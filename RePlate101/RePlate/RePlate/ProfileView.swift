@@ -7,12 +7,16 @@
 //
 
 import SwiftUI
+import PhotosUI
 
 struct ProfileView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = ProfileViewModel()
-    @State private var showSettings = false
-    @State private var showEditProfile = false
+    @State private var showSettings     = false
+    @State private var showEditProfile  = false
+    @State private var showLegalPage: LegalPageView.LegalPage? = nil
+    @State private var selectedPhoto: PhotosPickerItem?
+    @State private var profileImage: Image?
 
     private var displayName: String {
         viewModel.user?.name ?? appState.currentUser?.name ?? "User"
@@ -37,6 +41,17 @@ struct ProfileView: View {
         .task { await viewModel.loadProfile() }
         .sheet(isPresented: $showEditProfile) { EditProfileView() }
         .sheet(isPresented: $showSettings) { SettingsView() }
+        .sheet(item: $showLegalPage) { page in
+            NavigationView { LegalPageView(page: page) }
+        }
+        .onChange(of: selectedPhoto) { newItem in
+            Task {
+                if let data = try? await newItem?.loadTransferable(type: Data.self),
+                   let ui = UIImage(data: data) {
+                    profileImage = Image(uiImage: ui)
+                }
+            }
+        }
     }
 
     // MARK: - Gradient Header
@@ -69,15 +84,30 @@ struct ProfileView: View {
             .padding(.top, 60)
             .padding(.bottom, 28)
 
-            // Avatar
-            ZStack {
-                Circle()
-                    .fill(.white.opacity(0.2))
-                    .frame(width: 96, height: 96)
-                    .overlay(Circle().stroke(.white.opacity(0.4), lineWidth: 3))
-                Text(displayName.prefix(1).uppercased())
-                    .font(.system(size: 42, weight: .black, design: .rounded))
-                    .foregroundColor(.white)
+            // Avatar — tappable PhotosPicker
+            PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                ZStack(alignment: .bottomTrailing) {
+                    Circle()
+                        .fill(.white.opacity(0.2))
+                        .frame(width: 96, height: 96)
+                        .overlay(Circle().stroke(.white.opacity(0.4), lineWidth: 3))
+                    if let profileImage {
+                        profileImage.resizable().scaledToFill()
+                            .clipShape(Circle()).frame(width: 96, height: 96)
+                    } else {
+                        Text(displayName.prefix(1).uppercased())
+                            .font(.system(size: 42, weight: .black, design: .rounded))
+                            .foregroundColor(.white)
+                    }
+                    // Camera badge
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 28, height: 28)
+                        .background(Theme.Colors.primaryGradientStart)
+                        .clipShape(Circle())
+                        .offset(x: 4, y: 4)
+                }
             }
 
             Spacer().frame(height: 14)
@@ -225,22 +255,23 @@ struct ProfileView: View {
             }
             .padding(.horizontal, 20)
 
-            Button {
-                hapticFeedback()
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 16, weight: .bold))
-                    Text("Share Your Impact")
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
+            if let user = viewModel.user ?? appState.currentUser {
+                let shareText = "I've rescued \(user.mealsSaved) meals and saved \(String(format: "%.1f", user.co2Reduced)) kg of CO₂ with @RePlate! Join me in reducing food waste."
+                ShareLink(item: shareText) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 16, weight: .bold))
+                        Text("Share Your Impact")
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Theme.Colors.primaryGradient)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
                 }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(Theme.Colors.primaryGradient)
-                .clipShape(RoundedRectangle(cornerRadius: 20))
+                .padding(.horizontal, 20)
             }
-            .padding(.horizontal, 20)
         }
     }
 
@@ -283,11 +314,21 @@ struct ProfileView: View {
                 .padding(.horizontal, 20)
 
             VStack(spacing: 0) {
-                MenuButton(icon: "info.circle", title: "About RePlate") {}
+                MenuButton(icon: "info.circle", title: "About RePlate") {
+                    showLegalPage = .communityGuidelines
+                }
                 Divider().padding(.leading, 60)
-                MenuButton(icon: "doc.text", title: "Terms of Service") {}
+                MenuButton(icon: "doc.text", title: "Terms of Service") {
+                    showLegalPage = .termsOfService
+                }
                 Divider().padding(.leading, 60)
-                MenuButton(icon: "lock.shield", title: "Privacy Policy") {}
+                MenuButton(icon: "lock.shield", title: "Privacy Policy") {
+                    showLegalPage = .privacyPolicy
+                }
+                Divider().padding(.leading, 60)
+                MenuButton(icon: "person.badge.shield.checkmark", title: "Food Safety Policy") {
+                    showLegalPage = .foodSafetyPolicy
+                }
                 Divider().padding(.leading, 60)
                 MenuButton(icon: "arrow.down.doc", title: "Export Data") {
                     Task { await viewModel.exportData() }
@@ -399,32 +440,72 @@ struct MenuButton: View {
 struct EditProfileView: View {
     @Environment(\.dismiss) var dismiss
     @StateObject private var viewModel = ProfileViewModel()
-    @State private var name = ""
-    @State private var email = ""
-    @State private var phoneNumber = ""
-    @State private var isLoading = false
+    @State private var name          = ""
+    @State private var email         = ""
+    @State private var rawPhone      = ""   // raw digits only
+    @State private var isLoading     = false
+    @State private var selectedPhoto: PhotosPickerItem?
+    @State private var profileImage: Image?
+
+    /// Auto-formats raw digits to (xxx) xxx-xxxx
+    private var formattedPhone: String {
+        let d = rawPhone.filter { $0.isNumber }
+        var r = ""
+        for (i, ch) in d.prefix(10).enumerated() {
+            switch i {
+            case 0: r = "(\(ch)"
+            case 1, 2: r += String(ch)
+            case 3: r += ") \(ch)"
+            case 4, 5: r += String(ch)
+            case 6: r += "-\(ch)"
+            default: r += String(ch)
+            }
+        }
+        return r
+    }
 
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: Theme.Spacing.lg) {
-                    // Avatar
-                    Button {
-                        // Change photo
-                    } label: {
+                    // Avatar with PhotosPicker
+                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
                         VStack(spacing: Theme.Spacing.sm) {
-                            Circle()
-                                .fill(Theme.Colors.primaryGradient)
-                                .frame(width: 100, height: 100)
-                                .overlay(
-                                    Text(name.prefix(1).uppercased())
-                                        .font(.system(size: 40, weight: .bold))
-                                        .foregroundColor(.white)
-                                )
-
+                            ZStack(alignment: .bottomTrailing) {
+                                Circle()
+                                    .fill(Theme.Colors.primaryGradient)
+                                    .frame(width: 100, height: 100)
+                                    .overlay(
+                                        Group {
+                                            if let profileImage {
+                                                profileImage.resizable().scaledToFill()
+                                                    .clipShape(Circle())
+                                            } else {
+                                                Text(name.prefix(1).uppercased())
+                                                    .font(.system(size: 40, weight: .bold))
+                                                    .foregroundColor(.white)
+                                            }
+                                        }
+                                    )
+                                Image(systemName: "camera.fill")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .frame(width: 30, height: 30)
+                                    .background(Theme.Colors.primaryGradientStart)
+                                    .clipShape(Circle())
+                                    .offset(x: 4, y: 4)
+                            }
                             Text("Change Photo")
                                 .font(Theme.Typography.subheadline)
                                 .foregroundColor(Theme.Colors.primaryGradientStart)
+                        }
+                    }
+                    .onChange(of: selectedPhoto) { newItem in
+                        Task {
+                            if let data = try? await newItem?.loadTransferable(type: Data.self),
+                               let ui = UIImage(data: data) {
+                                profileImage = Image(uiImage: ui)
+                            }
                         }
                     }
                     .padding(.vertical, Theme.Spacing.lg)
@@ -437,12 +518,28 @@ struct EditProfileView: View {
                             .textInputAutocapitalization(.never)
                             .keyboardType(.emailAddress)
 
-                        CustomTextField(
-                            placeholder: "Phone Number (Optional)",
-                            text: $phoneNumber,
-                            icon: "phone"
-                        )
-                        .keyboardType(.phonePad)
+                        // Auto-formatted phone field
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(spacing: 14) {
+                                Image(systemName: "phone")
+                                    .foregroundColor(Theme.Colors.primaryGradientStart)
+                                    .frame(width: 20)
+                                TextField("Phone Number (Optional)", text: $rawPhone)
+                                    .keyboardType(.numberPad)
+                                    .onChange(of: rawPhone) { v in
+                                        let digits = v.filter { $0.isNumber }
+                                        rawPhone = String(digits.prefix(10))
+                                    }
+                                if !formattedPhone.isEmpty {
+                                    Text(formattedPhone)
+                                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                                        .foregroundColor(Theme.Colors.secondaryLabel)
+                                }
+                            }
+                            .padding(Theme.Spacing.md)
+                            .background(Theme.Colors.secondaryBackground)
+                            .cornerRadius(Theme.CornerRadius.md)
+                        }
                     }
 
                     PrimaryButton("Save Changes", isLoading: isLoading) {
@@ -464,7 +561,8 @@ struct EditProfileView: View {
                 await viewModel.loadProfile()
                 name = viewModel.user?.name ?? ""
                 email = viewModel.user?.email ?? ""
-                phoneNumber = viewModel.user?.phoneNumber ?? ""
+                // Strip non-digit characters from saved phone
+                rawPhone = (viewModel.user?.phoneNumber ?? "").filter { $0.isNumber }
             }
         }
     }
@@ -474,7 +572,7 @@ struct EditProfileView: View {
         await viewModel.updateProfile(
             name: name,
             email: email,
-            phoneNumber: phoneNumber.isEmpty ? nil : phoneNumber
+            phoneNumber: formattedPhone.isEmpty ? nil : formattedPhone
         )
         isLoading = false
         dismiss()

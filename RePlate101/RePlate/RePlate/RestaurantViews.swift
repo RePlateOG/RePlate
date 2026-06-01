@@ -13,10 +13,15 @@ import Combine
 struct RestaurantDashboardView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = RestaurantDashboardViewModel()
-    @State private var showPostListing = false
-    @State private var showSettings = false
+    @State private var showPostListing      = false
+    @State private var showVerificationGate = false
+    @State private var showSettings         = false
     @State private var selectedOrder: Order? = nil
     @State private var selectedListing: FoodListing? = nil
+
+    private var isVerified: Bool {
+        appState.currentUser?.verifiedRestaurant ?? false
+    }
 
     private var restaurantDisplayName: String {
         appState.currentUser?.name ?? "Verde Bistro"
@@ -34,9 +39,8 @@ struct RestaurantDashboardView: View {
         .background(Color(.systemGray6).opacity(0.3))
         .refreshable { await viewModel.refreshDashboard() }
         .task { await viewModel.loadDashboard() }
-        .sheet(isPresented: $showPostListing) {
-            PostSurplusView()
-        }
+        .sheet(isPresented: $showPostListing) { PostSurplusView() }
+        .sheet(isPresented: $showVerificationGate) { VerificationGateView() }
         .sheet(isPresented: $showSettings) {
             RestaurantSettingsView()
         }
@@ -178,7 +182,7 @@ struct RestaurantDashboardView: View {
     private var postSurplusButton: some View {
         Button {
             hapticFeedback(.medium)
-            showPostListing = true
+            if isVerified { showPostListing = true } else { showVerificationGate = true }
         } label: {
             HStack(spacing: 14) {
                 ZStack {

@@ -217,8 +217,17 @@ struct ConversationView: View {
     
     func sendMessage() {
         guard !messageText.isEmpty else { return }
-        
-        // Send message logic
+        let newMessage = Message(
+            id: UUID().uuidString,
+            orderId: conversation.orderId,
+            senderId: "currentUser",
+            receiverId: "restaurant",
+            content: messageText,
+            timestamp: Date(),
+            read: false,
+            messageType: .text
+        )
+        withAnimation { messages.append(newMessage) }
         hapticFeedback(.light)
         messageText = ""
     }
@@ -227,7 +236,7 @@ struct ConversationView: View {
 // MARK: - Message Bubble
 struct MessageBubble: View {
     let message: Message
-    let isFromCurrentUser = Bool.random() // Simulate
+    private var isFromCurrentUser: Bool { message.senderId == "currentUser" }
     
     var body: some View {
         HStack {
