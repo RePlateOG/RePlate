@@ -1299,6 +1299,234 @@ struct ContactSupportView: View {
     }
 }
 
+// MARK: - Staff Accounts View
+struct StaffAccountsView: View {
+    @Environment(\.dismiss) var dismiss
+    @State private var showAddForm = false
+    @State private var newName  = ""
+    @State private var newEmail = ""
+    @State private var newRole  = "Staff"
+    private let roles = ["Staff", "Manager", "Admin"]
+
+    // Internal model — not persisted
+    @State private var staffMembers: [StaffMember] = [
+        StaffMember(name: "Maria Garcia", email: "maria@verde.com", role: "Manager"),
+        StaffMember(name: "Luca Rossi",   email: "luca@verde.com",  role: "Staff"),
+    ]
+
+    private struct StaffMember: Identifiable {
+        let id = UUID()
+        let name: String
+        let email: String
+        let role: String
+    }
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 0) {
+                SubScreenHeader(
+                    title: "Staff Accounts",
+                    subtitle: "Manage your team's access",
+                    onDismiss: { dismiss() }
+                )
+
+                VStack(spacing: 24) {
+                    // Info banner
+                    HStack(spacing: 12) {
+                        Image(systemName: "envelope.badge.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(Theme.Colors.primaryGradientStart)
+                        Text("Staff will receive an email invitation to download RePlate and join your restaurant.")
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(16)
+                    .background(Theme.Colors.primaryGradientStart.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 18))
+
+                    // Add form / button
+                    if showAddForm {
+                        addMemberForm
+                    } else {
+                        addMemberButton
+                    }
+
+                    // Staff list
+                    if !staffMembers.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            sectionLabel("Team Members (\(staffMembers.count))")
+                            VStack(spacing: 10) {
+                                ForEach(staffMembers) { member in
+                                    staffCard(member: member)
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 28)
+                .padding(.bottom, 48)
+            }
+        }
+        .ignoresSafeArea(edges: .top)
+        .background(Color(.systemGray6).opacity(0.3))
+    }
+
+    // MARK: Add button
+    private var addMemberButton: some View {
+        Button {
+            hapticFeedback(.medium)
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { showAddForm = true }
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Theme.Colors.primaryGradient)
+                        .frame(width: 38, height: 38)
+                    Image(systemName: "plus")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(.white)
+                }
+                Text("Add Staff Member")
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundColor(Theme.Colors.primaryGradientStart)
+                Spacer()
+            }
+            .padding(18)
+            .background(Color(.systemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 22))
+            .shadow(color: Color.black.opacity(0.07), radius: 10, y: 3)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    // MARK: Inline add form
+    private var addMemberForm: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionLabel("New Staff Member")
+            FormCard {
+                VStack(spacing: 16) {
+                    AuthLabeledField(label: "Full Name", placeholder: "e.g. Jane Smith",     text: $newName)
+                    AuthLabeledField(label: "Email",     placeholder: "jane@restaurant.com", text: $newEmail, keyboardType: .emailAddress)
+
+                    // Role chips
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Role")
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                        HStack(spacing: 10) {
+                            ForEach(roles, id: \.self) { role in
+                                Button {
+                                    hapticFeedback(.light)
+                                    newRole = role
+                                } label: {
+                                    Text(role)
+                                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                                        .foregroundColor(newRole == role ? .white : Theme.Colors.label)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 9)
+                                        .background(
+                                            newRole == role
+                                                ? Theme.Colors.primaryGradient
+                                                : LinearGradient(
+                                                    colors: [Color(.systemGray6)],
+                                                    startPoint: .leading,
+                                                    endPoint: .trailing
+                                                )
+                                        )
+                                        .clipShape(Capsule())
+                                }
+                            }
+                        }
+                    }
+
+                    HStack(spacing: 12) {
+                        Button("Cancel") {
+                            hapticFeedback(.light)
+                            withAnimation { showAddForm = false }
+                            newName = ""; newEmail = ""; newRole = "Staff"
+                        }
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundColor(Theme.Colors.secondaryLabel)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color(.systemGray6))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                        let canSend = !newName.trimmingCharacters(in: .whitespaces).isEmpty &&
+                                      !newEmail.trimmingCharacters(in: .whitespaces).isEmpty
+
+                        Button("Send Invite") {
+                            guard canSend else { return }
+                            hapticFeedback(.success)
+                            let m = StaffMember(name: newName, email: newEmail, role: newRole)
+                            withAnimation { staffMembers.append(m); showAddForm = false }
+                            newName = ""; newEmail = ""; newRole = "Staff"
+                        }
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Theme.Colors.primaryGradient)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .opacity(canSend ? 1 : 0.5)
+                        .disabled(!canSend)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: Staff card row
+    private func staffCard(member: StaffMember) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(Theme.Colors.primaryGradientStart.opacity(0.12))
+                    .frame(width: 44, height: 44)
+                Text(String(member.name.prefix(1)).uppercased())
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .foregroundColor(Theme.Colors.primaryGradientStart)
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                Text(member.name)
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .foregroundColor(Theme.Colors.label)
+                Text(member.email)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundColor(Theme.Colors.secondaryLabel)
+            }
+            Spacer()
+            Text(member.role)
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundColor(Theme.Colors.primaryGradientStart)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Theme.Colors.primaryGradientStart.opacity(0.1))
+                .clipShape(Capsule())
+
+            Button {
+                hapticFeedback(.light)
+                withAnimation { staffMembers.removeAll { $0.id == member.id } }
+            } label: {
+                ZStack {
+                    Circle()
+                        .fill(Color.red.opacity(0.1))
+                        .frame(width: 34, height: 34)
+                    Image(systemName: "trash")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.red)
+                }
+            }
+        }
+        .padding(14)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .shadow(color: Color.black.opacity(0.06), radius: 8, y: 3)
+    }
+}
+
 // MARK: - Message Customer View
 private struct ChatMessage: Identifiable {
     let id = UUID()

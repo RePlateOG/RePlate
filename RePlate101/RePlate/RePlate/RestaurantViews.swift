@@ -1420,24 +1420,651 @@ struct ImpactMetric: View {
     let value: String
     let label: String
     let color: Color
-    
+
     var body: some View {
         VStack(spacing: Theme.Spacing.sm) {
             Image(systemName: icon)
                 .font(.system(size: 24))
                 .foregroundColor(color)
-            
+
             Text(value)
                 .font(Theme.Typography.title3)
                 .fontWeight(.bold)
                 .foregroundColor(Theme.Colors.label)
-            
+
             Text(label)
                 .font(Theme.Typography.caption)
                 .foregroundColor(Theme.Colors.secondaryLabel)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
+    }
+}
+
+// MARK: - Restaurant Orders View Model
+@MainActor
+private class RestaurantOrdersViewModel: ObservableObject {
+    @Published var pendingOrders: [Order] = []
+    @Published var completedOrders: [Order] = []
+    @Published var isLoading = false
+
+    func loadOrders() async {
+        isLoading = true
+        defer { isLoading = false }
+        try? await Task.sleep(nanoseconds: 600_000_000)
+        let all = MockData.sampleOrders
+        pendingOrders   = all.filter { $0.status == .pending || $0.status == .confirmed || $0.status == .ready }
+        completedOrders = all.filter { $0.status == .completed || $0.status == .cancelled || $0.status == .noShow }
+    }
+}
+
+// MARK: - Restaurant Orders View
+struct RestaurantOrdersView: View {
+    @EnvironmentObject var appState: AppState
+    @StateObject private var viewModel = RestaurantOrdersViewModel()
+    @State private var selectedTab   = 0          // 0=Pending  1=Picked Up  2=Expired
+    @State private var selectedOrder: Order? = nil
+    @State private var messageOrder:  Order? = nil
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 0) {
+                gradientHeader
+                mainContent
+            }
+            .padding(.bottom, 100)
+        }
+        .ignoresSafeArea(edges: .top)
+        .background(Color(.systemGray6).opacity(0.3))
+        .task { await viewModel.loadOrders() }
+        .sheet(item: $selectedOrder) { order in RestaurantOrderDetailView(order: order) }
+        .sheet(item: $messageOrder)  { order in MessageCustomerView(order: order) }
+    }
+
+    // MARK: Header
+    private var gradientHeader: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Orders")
+                        .font(.system(size: 26, weight: .heavy, design: .rounded))
+                        .foregroundColor(.white)
+                    Text("Manage your pickup requests")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundColor(.white.opacity(0.8))
+                }
+                Spacer()
+                if !viewModel.pendingOrders.isEmpty {
+                    Text("\(viewModel.pendingOrders.count)")
+                        .font(.system(size: 15, weight: .black, design: .rounded))
+                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                        .frame(width: 44, height: 44)
+                        .background(.white)
+                        .clipShape(Circle())
+                        .shadow(color: Color.black.opacity(0.1), radius: 6, y: 3)
+                }
+            }
+            .padding(.top, 60)
+            .padding(.bottom, 20)
+
+            // Tab pill
+            HStack(spacing: 0) {
+                ForEach(["Pending","Picked Up","Expired"], id: \.self) { tab in
+                    let idx = ["Pending","Picked Up","Expired"].firstIndex(of: tab)!
+                    Button {
+                        hapticFeedback(.light)
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { selectedTab = idx }
+                    } label: {
+                        Text(tab)
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundColor(selectedTab == idx ? Theme.Colors.primaryGradientStart : .white.opacity(0.7))
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 9)
+                            .background(selectedTab == idx ? Color.white : Color.clear)
+                            .clipShape(Capsule())
+                    }
+                }
+            }
+            .padding(4)
+            .background(.white.opacity(0.15))
+            .clipShape(Capsule())
+            .padding(.bottom, 44)
+        }
+        .padding(.horizontal, 20)
+        .background(Theme.Colors.primaryGradient)
+        .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 40, bottomTrailingRadius: 40))
+    }
+
+    // MARK: Content switch
+    @ViewBuilder
+    private var mainContent: some View {
+        VStack(spacing: 16) {
+            if viewModel.isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 40)
+            } else if selectedTab == 0 {
+                pendingContent
+            } else if selectedTab == 1 {
+                completedContent
+            } else {
+                expiredContent
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 24)
+    }
+
+    // MARK: Pending
+    @ViewBuilder
+    private var pendingContent: some View {
+        if viewModel.pendingOrders.isEmpty {
+            ordersEmptyState(icon: "tray.fill", title: "No Pending Orders", message: "New orders will appear here")
+        } else {
+            ForEach(viewModel.pendingOrders) { order in pendingCard(order) }
+        }
+    }
+
+    private func pendingCard(_ order: Order) -> some View {
+        VStack(spacing: 0) {
+            // Customer row
+            HStack(alignment: .top, spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Theme.Colors.primaryGradientStart.opacity(0.12))
+                        .frame(width: 48, height: 48)
+                    Text(String(order.pickupCode.prefix(1)).uppercased())
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(order.customer?.name ?? "Customer")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundColor(Theme.Colors.label)
+                    if let listing = order.listing {
+                        Text(listing.title)
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("$\(String(format: "%.2f", order.totalAmount))")
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                    Text("Qty: \(order.quantity)")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundColor(Theme.Colors.secondaryLabel)
+                }
+            }
+            .padding(.bottom, 14)
+
+            // Pickup window banner
+            HStack(spacing: 8) {
+                Image(systemName: "clock.badge.exclamationmark.fill")
+                    .font(.system(size: 13))
+                    .foregroundColor(.orange)
+                Text("Pickup: \(order.pickupWindowStart.formatted(date: .omitted, time: .shortened)) – \(order.pickupWindowEnd.formatted(date: .omitted, time: .shortened))")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundColor(.orange)
+                Spacer()
+            }
+            .padding(12)
+            .background(Color.orange.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .padding(.bottom, 14)
+
+            // Action buttons
+            HStack(spacing: 10) {
+                Button("Details") { hapticFeedback(.light); selectedOrder = order }
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundColor(Theme.Colors.secondaryLabel)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color(.systemGray6))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+
+                Button { hapticFeedback(.light); messageOrder = order } label: {
+                    Image(systemName: "bubble.left")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                        .frame(width: 46, height: 42)
+                        .background(Theme.Colors.primaryGradientStart.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+
+                Button { hapticFeedback(.success) } label: {
+                    Text("Confirm Pickup")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Theme.Colors.primaryGradient)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+            }
+        }
+        .padding(18)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 26))
+        .shadow(color: Color.black.opacity(0.07), radius: 12, y: 4)
+    }
+
+    // MARK: Completed (Picked Up)
+    @ViewBuilder
+    private var completedContent: some View {
+        let picked = viewModel.completedOrders.filter { $0.status == .completed }
+        if picked.isEmpty {
+            ordersEmptyState(icon: "checkmark.circle.fill", title: "No Completed Orders", message: "Picked-up orders will appear here")
+        } else {
+            ForEach(picked) { order in completedCard(order) }
+        }
+    }
+
+    private func completedCard(_ order: Order) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.green.opacity(0.1))
+                    .frame(width: 48, height: 48)
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.green)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    Text(order.customer?.name ?? "Customer")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundColor(Theme.Colors.label)
+                    Text("Collected")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundColor(.green)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.green.opacity(0.1))
+                        .clipShape(Capsule())
+                }
+                if let listing = order.listing {
+                    Text(listing.title)
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundColor(Theme.Colors.secondaryLabel)
+                }
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 8) {
+                Text("$\(String(format: "%.2f", order.totalAmount))")
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundColor(Theme.Colors.primaryGradientStart)
+                Button("Details") { hapticFeedback(.light); selectedOrder = order }
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundColor(Theme.Colors.secondaryLabel)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color(.systemGray6))
+                    .clipShape(Capsule())
+            }
+        }
+        .padding(16)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 22))
+        .shadow(color: Color.black.opacity(0.06), radius: 10, y: 3)
+    }
+
+    // MARK: Expired
+    @ViewBuilder
+    private var expiredContent: some View {
+        let expired = viewModel.completedOrders.filter { $0.isOverdue }
+        if expired.isEmpty {
+            ordersEmptyState(icon: "clock.badge.xmark.fill", title: "No Expired Orders", message: "Listings past their pickup window will appear here")
+        } else {
+            ForEach(expired) { order in expiredCard(order) }
+        }
+    }
+
+    private func expiredCard(_ order: Order) -> some View {
+        VStack(spacing: 14) {
+            HStack(alignment: .top, spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.red.opacity(0.1))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "clock.badge.xmark.fill")
+                        .font(.system(size: 18))
+                        .foregroundColor(.red)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Text(order.customer?.name ?? "Customer")
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundColor(Theme.Colors.label)
+                        Text("Expired")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundColor(.red)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.red.opacity(0.1))
+                            .clipShape(Capsule())
+                    }
+                    if let listing = order.listing {
+                        Text(listing.title)
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                    }
+                }
+                Spacer()
+            }
+            Button { hapticFeedback(.medium) } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 14, weight: .bold))
+                    Text("Repost to Marketplace")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(Theme.Colors.primaryGradient)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+            }
+        }
+        .padding(16)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 22))
+        .shadow(color: Color.black.opacity(0.06), radius: 10, y: 3)
+    }
+
+    // MARK: Empty state
+    private func ordersEmptyState(icon: String, title: String, message: String) -> some View {
+        VStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(Theme.Colors.primaryGradientStart.opacity(0.08))
+                    .frame(width: 80, height: 80)
+                Image(systemName: icon)
+                    .font(.system(size: 32))
+                    .foregroundStyle(Theme.Colors.primaryGradient)
+            }
+            VStack(spacing: 6) {
+                Text(title)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundColor(Theme.Colors.label)
+                Text(message)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundColor(Theme.Colors.secondaryLabel)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
+    }
+}
+
+// MARK: - Restaurant Profile View
+struct RestaurantProfileView: View {
+    @EnvironmentObject var appState: AppState
+    @State private var showRestaurantDetails = false
+    @State private var showLocationPickup    = false
+    @State private var showPaymentSettings   = false
+    @State private var showNotifications     = false
+    @State private var showStaffAccounts     = false
+    @State private var showHelpCenter        = false
+    @State private var showContactSupport    = false
+    @State private var showSignOutConfirm    = false
+
+    private var restaurantName: String { appState.currentUser?.name ?? "Verde Bistro" }
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 0) {
+                gradientHeader
+                mainContent
+            }
+            .padding(.bottom, 100)
+        }
+        .ignoresSafeArea(edges: .top)
+        .background(Color(.systemGray6).opacity(0.3))
+        .sheet(isPresented: $showRestaurantDetails) { RestaurantDetailsEditView() }
+        .sheet(isPresented: $showLocationPickup)    { LocationPickupEditView() }
+        .sheet(isPresented: $showPaymentSettings)   { PaymentSettingsView() }
+        .sheet(isPresented: $showNotifications)     { NotificationsPreferencesView() }
+        .sheet(isPresented: $showStaffAccounts)     { StaffAccountsView() }
+        .sheet(isPresented: $showHelpCenter)        { HelpCenterView() }
+        .sheet(isPresented: $showContactSupport)    { ContactSupportView() }
+        .alert("Sign Out?", isPresented: $showSignOutConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Sign Out", role: .destructive) { appState.signOut() }
+        } message: {
+            Text("You'll need to sign in again to access your restaurant account.")
+        }
+    }
+
+    // MARK: Header
+    private var gradientHeader: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Spacer()
+                Text("Profile")
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                Spacer()
+            }
+            .padding(.top, 60)
+            .padding(.bottom, 24)
+
+            // Logo circle
+            ZStack {
+                Circle()
+                    .fill(.white.opacity(0.2))
+                    .frame(width: 90, height: 90)
+                    .overlay(Circle().stroke(.white.opacity(0.4), lineWidth: 2))
+                Image(systemName: "storefront.fill")
+                    .font(.system(size: 36, weight: .medium))
+                    .foregroundColor(.white)
+            }
+            .padding(.bottom, 14)
+
+            // Name + verified badge
+            HStack(spacing: 8) {
+                Text(restaurantName)
+                    .font(.system(size: 22, weight: .heavy, design: .rounded))
+                    .foregroundColor(.white)
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(Theme.Colors.accent)
+            }
+            Text("Mediterranean")
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundColor(.white.opacity(0.8))
+                .padding(.top, 4)
+                .padding(.bottom, 44)
+        }
+        .padding(.horizontal, 20)
+        .background(Theme.Colors.primaryGradient)
+        .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 40, bottomTrailingRadius: 40))
+    }
+
+    // MARK: Main Content
+    private var mainContent: some View {
+        VStack(spacing: 24) {
+            infoCard
+                .padding(.horizontal, 20)
+                .offset(y: -24)
+                .padding(.bottom, -24)
+
+            quickStats
+                .padding(.horizontal, 20)
+
+            profileSection(
+                label: "Business Settings",
+                rows: [
+                    ("storefront.fill",  "Restaurant Details", "Name, cuisine & hours",      { showRestaurantDetails = true }),
+                    ("location.fill",    "Location & Pickup",  "Address and instructions",   { showLocationPickup = true }),
+                    ("banknote.fill",    "Payment Settings",   "Bank and payout details",    { showPaymentSettings = true }),
+                ]
+            )
+            .padding(.horizontal, 20)
+
+            profileSection(
+                label: "Preferences",
+                rows: [
+                    ("bell.fill",        "Notifications",      "Push and email preferences", { showNotifications = true }),
+                    ("person.2.fill",    "Staff Accounts",     "Manage team access",         { showStaffAccounts = true }),
+                ]
+            )
+            .padding(.horizontal, 20)
+
+            profileSection(
+                label: "Support",
+                rows: [
+                    ("questionmark.circle.fill", "Help Center",     "FAQs and tutorials",      { showHelpCenter = true }),
+                    ("bubble.left.fill",          "Contact Support", "Get help from our team",  { showContactSupport = true }),
+                ]
+            )
+            .padding(.horizontal, 20)
+
+            // Sign out
+            Button {
+                hapticFeedback(.light)
+                showSignOutConfirm = true
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                        .font(.system(size: 15, weight: .semibold))
+                    Text("Sign Out")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                }
+                .foregroundColor(.red)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 17)
+                .background(Color.red.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color.red.opacity(0.2), lineWidth: 1)
+                )
+            }
+            .padding(.horizontal, 20)
+        }
+        .padding(.top, 36)
+    }
+
+    // MARK: Info Card
+    private var infoCard: some View {
+        VStack(spacing: 0) {
+            profileInfoRow(icon: "mappin.circle.fill", value: "742 Evergreen Terrace, Springfield CA")
+            Divider().padding(.leading, 54)
+            profileInfoRow(icon: "clock.fill",         value: "Open: 9:00 AM – 10:00 PM")
+            Divider().padding(.leading, 54)
+            profileInfoRow(icon: "phone.fill",         value: "+1 (555) 234-5678")
+        }
+        .padding(18)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 26))
+        .shadow(color: Color.black.opacity(0.07), radius: 14, y: 5)
+    }
+
+    private func profileInfoRow(icon: String, value: String) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Theme.Colors.primaryGradientStart.opacity(0.1))
+                    .frame(width: 36, height: 36)
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(Theme.Colors.primaryGradientStart)
+            }
+            Text(value)
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundColor(Theme.Colors.label)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer()
+        }
+        .padding(.vertical, 11)
+    }
+
+    // MARK: Quick Stats
+    private var quickStats: some View {
+        HStack(spacing: 0) {
+            profileStatCell(value: "247", label: "Meals Saved")
+            Divider().frame(height: 40)
+            profileStatCell(value: "4.8", label: "Avg Rating")
+            Divider().frame(height: 40)
+            profileStatCell(value: "83",  label: "Reviews")
+        }
+        .padding(.vertical, 18)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 22))
+        .shadow(color: Color.black.opacity(0.06), radius: 12, y: 4)
+    }
+
+    private func profileStatCell(value: String, label: String) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.system(size: 22, weight: .heavy, design: .rounded))
+                .foregroundStyle(Theme.Colors.primaryGradient)
+            Text(label)
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .foregroundColor(Theme.Colors.secondaryLabel)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: Generic settings section
+    private func profileSection(
+        label: String,
+        rows: [(String, String, String, () -> Void)]
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(label.uppercased())
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundColor(Theme.Colors.secondaryLabel)
+                .tracking(0.8)
+                .padding(.horizontal, 4)
+
+            VStack(spacing: 0) {
+                ForEach(Array(rows.enumerated()), id: \.offset) { idx, row in
+                    Button {
+                        hapticFeedback(.light)
+                        row.3()
+                    } label: {
+                        HStack(spacing: 14) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Theme.Colors.primaryGradientStart.opacity(0.12))
+                                    .frame(width: 42, height: 42)
+                                Image(systemName: row.0)
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundColor(Theme.Colors.primaryGradientStart)
+                            }
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(row.1)
+                                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                    .foregroundColor(Theme.Colors.label)
+                                Text(row.2)
+                                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                                    .foregroundColor(Theme.Colors.secondaryLabel)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(Theme.Colors.tertiaryLabel)
+                        }
+                        .padding(.vertical, 14)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+
+                    if idx < rows.count - 1 {
+                        Divider().padding(.leading, 58)
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .background(Color(.systemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 24))
+            .shadow(color: Color.black.opacity(0.06), radius: 12, y: 4)
+        }
     }
 }
 

@@ -86,22 +86,37 @@ struct MainTabView: View {
                     HomeView()
                         .tag(AppState.Tab.home)
                 }
-                
-                // Search
-                SearchView()
-                    .tag(AppState.Tab.search)
-                
+
+                // Search / Insights
+                if appState.currentUser?.accountType == .restaurant {
+                    RestaurantInsightsView()
+                        .tag(AppState.Tab.search)
+                } else {
+                    SearchView()
+                        .tag(AppState.Tab.search)
+                }
+
                 // Orders
-                OrdersView()
-                    .tag(AppState.Tab.orders)
-                
+                if appState.currentUser?.accountType == .restaurant {
+                    RestaurantOrdersView()
+                        .tag(AppState.Tab.orders)
+                } else {
+                    OrdersView()
+                        .tag(AppState.Tab.orders)
+                }
+
                 // Messages
                 MessagesView()
                     .tag(AppState.Tab.messages)
-                
+
                 // Profile
-                ProfileView()
-                    .tag(AppState.Tab.profile)
+                if appState.currentUser?.accountType == .restaurant {
+                    RestaurantProfileView()
+                        .tag(AppState.Tab.profile)
+                } else {
+                    ProfileView()
+                        .tag(AppState.Tab.profile)
+                }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             
