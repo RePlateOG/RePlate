@@ -300,9 +300,9 @@ struct RestaurantDashboardView: View {
             } else {
                 VStack(spacing: 24) {
                     ForEach(viewModel.activeListings.prefix(3)) { listing in
-                        FigmaActiveListingCard(listing: listing) {
+                        FigmaActiveListingCard(listing: listing, onEdit: {
                             selectedListing = listing
-                        }
+                        })
                     }
                 }
                 .padding(.horizontal, 20)

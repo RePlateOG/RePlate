@@ -44,7 +44,7 @@ struct ProfileView: View {
         .sheet(item: $showLegalPage) { page in
             NavigationView { LegalPageView(page: page) }
         }
-        .onChange(of: selectedPhoto) { newItem in
+        .onChange(of: selectedPhoto) { _, newItem in
             Task {
                 if let data = try? await newItem?.loadTransferable(type: Data.self),
                    let ui = UIImage(data: data) {
@@ -500,7 +500,7 @@ struct EditProfileView: View {
                                 .foregroundColor(Theme.Colors.primaryGradientStart)
                         }
                     }
-                    .onChange(of: selectedPhoto) { newItem in
+                    .onChange(of: selectedPhoto) { _, newItem in
                         Task {
                             if let data = try? await newItem?.loadTransferable(type: Data.self),
                                let ui = UIImage(data: data) {
@@ -526,7 +526,7 @@ struct EditProfileView: View {
                                     .frame(width: 20)
                                 TextField("Phone Number (Optional)", text: $rawPhone)
                                     .keyboardType(.numberPad)
-                                    .onChange(of: rawPhone) { v in
+                                    .onChange(of: rawPhone) { _, v in
                                         let digits = v.filter { $0.isNumber }
                                         rawPhone = String(digits.prefix(10))
                                     }
