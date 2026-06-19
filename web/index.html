@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RePlate — Web Preview</title>
+<style>
+  /* ===== Design tokens (brand from Theme.swift) ===== */
+  :root {
+    --primary: #118b50;
+    --primary-end: #5db996;
+    --primary-dark: #0d6b3d;
+    --primary-soft: rgba(17,139,80,0.08);
+    --primary-soft-strong: rgba(17,139,80,0.12);
+    --gradient: linear-gradient(145deg, #118b50, #5db996);
+
+    --ink: #16201b;
+    --ink-2: #5d6b63;
+    --ink-3: #93a099;
+    --line: #e9ece9;
+    --surface: #ffffff;
+    --bg: #f6f8f6;
+
+    /* semantic state (used with text labels only) */
+    --pending: #b76e00;  --pending-bg: #fbf0dd;
+    --confirmed: #1763c4; --confirmed-bg: #e6eefb;
+    --ready: #15803d;    --ready-bg: #e3f3e8;
+    --done: #6b7770;     --done-bg: #eef1ee;
+
+    --r-sm: 12px;
+    --r-md: 16px;
+    --r-lg: 22px;
+    --r-pill: 999px;
+
+    --shadow: 0 1px 2px rgba(17,139,80,0.04), 0 6px 20px rgba(20,50,35,0.06);
+    --font: -apple-system, "SF Pro Text", "SF Pro Rounded", "Segoe UI", system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    height: 100%;
+    font-family: var(--font);
+    background:
+      radial-gradient(900px 600px at 50% -8%, #e4f1ea 0%, #eef2ef 42%, #e9ecea 100%);
+    color: var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    -webkit-font-smoothing: antialiased;
+  }
+  svg { display: block; }
+  .ico { width: 22px; height: 22px; stroke: currentColor; stroke-width: 1.75;
+         fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ===== Phone frame ===== */
+  .phone {
+    width: 384px; height: 824px; max-height: calc(100vh - 48px);
+    background: var(--bg);
+    border-radius: 52px; border: 11px solid #0c0d0c;
+    box-shadow: 0 40px 90px rgba(16,40,28,0.32), inset 0 0 2px rgba(255,255,255,0.35);
+    position: relative; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .notch { position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+    width: 116px; height: 30px; background: #0c0d0c; border-radius: var(--r-pill); z-index: 50; }
+
+  .screen { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .screen::-webkit-scrollbar { display: none; }
+
+  /* ===== Header ===== */
+  .header { background: var(--gradient); color: #fff; padding: 60px 22px 26px;
+    border-bottom-left-radius: 30px; border-bottom-right-radius: 30px; }
+  .header .greeting { font-size: 13px; opacity: 0.85; font-weight: 500; letter-spacing: 0.2px; }
+  .header .title { font-size: 25px; font-weight: 700; margin-top: 3px; letter-spacing: -0.4px; }
+  .header-row { display: flex; align-items: flex-start; justify-content: space-between; }
+  .loc { display: flex; align-items: center; gap: 5px; font-size: 12.5px; opacity: 0.92; margin-top: 11px; }
+  .loc .ico { width: 15px; height: 15px; }
+  .avatar { width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.18);
+    display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 15px;
+    border: 1px solid rgba(255,255,255,0.25); }
+
+  .impact { display: flex; gap: 8px; margin-top: 20px; }
+  .impact .stat { flex: 1; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.16);
+    border-radius: var(--r-md); padding: 12px 8px; text-align: center; }
+  .impact .num { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+  .impact .lbl { font-size: 9.5px; opacity: 0.85; margin-top: 3px; letter-spacing: 0.2px; text-transform: uppercase; }
+
+  /* ===== Content ===== */
+  .content { padding: 20px 16px 104px; }
+  .h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; margin: 4px 2px 14px; }
+  .section-head .link { color: var(--ink-3); font-size: 12.5px; font-weight: 500; }
+  .screen-title { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; margin: 0 2px 18px; }
+
+  /* category chips */
+  .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 10px; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { flex: 0 0 auto; padding: 8px 15px; border-radius: var(--r-pill);
+    background: var(--surface); border: 1px solid var(--line);
+    font-size: 13px; font-weight: 600; color: var(--ink-2); cursor: pointer; transition: all .18s ease; }
+  .chip:active { transform: scale(0.96); }
+  .chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+  /* listing card */
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
+    box-shadow: var(--shadow); overflow: hidden; margin-bottom: 14px; cursor: pointer; transition: transform .14s ease; }
+  .card:active { transform: scale(0.985); }
+  .photo { height: 138px; position: relative; display: flex; align-items: center; justify-content: center; }
+  .photo .ico { width: 46px; height: 46px; stroke: rgba(255,255,255,0.92); stroke-width: 1.5; }
+  .badge { position: absolute; top: 12px; font-size: 11px; font-weight: 700; letter-spacing: 0.2px;
+    padding: 5px 10px; border-radius: var(--r-pill); }
+  .badge.discount { left: 12px; background: #fff; color: var(--primary-dark); }
+  .badge.free { left: 12px; background: #fff; color: var(--ready); }
+  .badge.almost { right: 12px; background: rgba(0,0,0,0.32); color: #fff; backdrop-filter: blur(4px); }
+  .card .body { padding: 14px 16px 16px; }
+  .ttl { font-size: 15.5px; font-weight: 650; letter-spacing: -0.2px; }
+  .rest { font-size: 12.5px; color: var(--ink-2); margin-top: 4px; display: flex; align-items: center; gap: 5px; }
+  .rest .ico { width: 14px; height: 14px; }
+  .rest .verified { color: var(--primary); }
+  .rest .star { color: #e0a92b; }
+  .rest .dot { color: var(--ink-3); }
+  .diet { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 11px; }
+  .tag { font-size: 10.5px; font-weight: 600; padding: 4px 9px; border-radius: var(--r-pill);
+    background: var(--primary-soft); color: var(--primary-dark); }
+  .price-row { display: flex; align-items: center; justify-content: space-between; margin-top: 13px; }
+  .price { display: flex; align-items: baseline; gap: 7px; }
+  .price .now { font-size: 19px; font-weight: 750; color: var(--primary); letter-spacing: -0.4px; }
+  .price .was { font-size: 12.5px; color: var(--ink-3); text-decoration: line-through; }
+  .price .freep { font-size: 19px; font-weight: 750; color: var(--ready); letter-spacing: -0.4px; }
+  .pickup { font-size: 12px; color: var(--ink-2); display: flex; align-items: center; gap: 5px; }
+  .pickup .ico { width: 14px; height: 14px; }
+
+  /* orders */
+  .order { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
+    box-shadow: var(--shadow); padding: 16px; margin-bottom: 13px; }
+  .order .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .status { font-size: 11px; font-weight: 700; padding: 5px 11px; border-radius: var(--r-pill); white-space: nowrap; }
+  .order .code { margin-top: 15px; background: var(--bg); border-radius: var(--r-md); padding: 13px 14px;
+    display: flex; align-items: center; justify-content: space-between; }
+  .order .ck-lbl { font-size: 10px; color: var(--ink-3); font-weight: 700; letter-spacing: 0.4px; }
+  .order .pin { font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; font-size: 21px;
+    font-weight: 700; letter-spacing: 4px; color: var(--primary-dark); margin-top: 2px; }
+
+  /* messages */
+  .conv { display: flex; gap: 13px; align-items: center; background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--r-lg); padding: 14px; box-shadow: var(--shadow); margin-bottom: 11px; cursor: pointer; transition: transform .14s ease; }
+  .conv:active { transform: scale(0.985); }
+  .conv .pic { width: 48px; height: 48px; border-radius: 50%; background: var(--primary-soft-strong);
+    color: var(--primary-dark); display: flex; align-items: center; justify-content: center; font-weight: 650; font-size: 15px; flex: 0 0 auto; }
+  .conv .mid { flex: 1; min-width: 0; }
+  .conv .name { font-weight: 650; font-size: 14.5px; }
+  .conv .last { font-size: 12.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+  .conv .meta { text-align: right; flex: 0 0 auto; }
+  .conv .time { font-size: 11.5px; color: var(--ink-3); }
+  .unread { background: var(--primary); color: #fff; font-size: 11px; font-weight: 700; min-width: 19px; height: 19px;
+    border-radius: var(--r-pill); display: inline-flex; align-items: center; justify-content: center; padding: 0 6px; margin-top: 7px; }
+
+  /* profile */
+  .profile-head { text-align: center; padding: 6px 0 2px; }
+  .profile-head .pic { width: 82px; height: 82px; border-radius: 50%; background: var(--gradient); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 650; margin: 0 auto 12px; }
+  .profile-head .nm { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+  .profile-head .em { font-size: 13px; color: var(--ink-2); margin-top: 3px; }
+  .pstats { display: flex; gap: 8px; margin: 20px 0; }
+  .pstats .s { flex: 1; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
+    padding: 15px 8px; text-align: center; box-shadow: var(--shadow); }
+  .pstats .n { font-size: 19px; font-weight: 700; color: var(--primary); letter-spacing: -0.3px; }
+  .pstats .l { font-size: 10px; color: var(--ink-2); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .menu { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow); }
+  .menu .item { display: flex; align-items: center; gap: 14px; padding: 15px 16px; border-bottom: 1px solid var(--line);
+    font-size: 14.5px; font-weight: 500; cursor: pointer; color: var(--ink); }
+  .menu .item:last-child { border-bottom: none; }
+  .menu .item:active { background: var(--bg); }
+  .menu .item .lead { color: var(--primary); display: flex; }
+  .menu .item .chev { margin-left: auto; color: var(--ink-3); display: flex; }
+  .menu .item .chev .ico { width: 18px; height: 18px; }
+
+  /* search */
+  .searchbar { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--r-pill); padding: 12px 16px; margin-bottom: 16px; box-shadow: var(--shadow); color: var(--ink-3); }
+  .searchbar .ico { width: 18px; height: 18px; }
+  .searchbar input { border: none; outline: none; flex: 1; font-size: 14.5px; font-family: var(--font); background: transparent; color: var(--ink); }
+  .searchbar input::placeholder { color: var(--ink-3); }
+
+  /* tab bar */
+  .tabbar { position: absolute; bottom: 0; left: 0; right: 0; height: 82px;
+    background: rgba(255,255,255,0.94); backdrop-filter: blur(20px); border-top: 1px solid var(--line);
+    display: flex; align-items: flex-start; justify-content: space-around; padding-top: 11px; }
+  .tab { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--ink-3);
+    cursor: pointer; font-size: 10px; font-weight: 600; flex: 1; transition: color .15s ease; }
+  .tab .ico { width: 23px; height: 23px; }
+  .tab.active { color: var(--primary); }
+
+  .empty { text-align: center; color: var(--ink-2); padding: 56px 20px; }
+  .empty .ico { width: 40px; height: 40px; margin: 0 auto 14px; stroke: var(--ink-3); }
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="screen" id="screen"></div>
+    <nav class="tabbar" id="tabbar"></nav>
+  </div>
+
+  <script>
+  /* ===== Inline icon set (Lucide-style paths, uniform 1.75 stroke) ===== */
+  const PATHS = {
+    home: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.1-4.1"/>',
+    bag: '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+    message: '<path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z"/>',
+    user: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+    pin: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    star: '<path d="m12 3 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9 6.8 19.2l1-5.8L3.5 9.2l5.9-.9Z" fill="currentColor" stroke="none"/>',
+    verified: '<circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-4.5"/>',
+    chevron: '<path d="m9 18 6-6-6-6"/>',
+    card: '<rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/>',
+    bell: '<path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5H3.5S6 15 6 9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
+    leaf: '<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10Z"/><path d="M2 21c0-3 1.85-5.4 5.1-6"/>',
+    sliders: '<path d="M5 21v-7M5 10V3M12 21v-9M12 8V3M19 21v-5M19 12V3M2 14h6M9 8h6M16 16h6"/>',
+    help: '<circle cx="12" cy="12" r="9"/><path d="M9.2 9.2a2.8 2.8 0 0 1 5.4.9c0 1.9-2.6 2.4-2.6 4"/><path d="M12 17h.01"/>',
+    doc: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/>',
+    /* category glyphs */
+    meals: '<path d="M3 2v6a2 2 0 0 0 2 2 2 2 0 0 0 2-2V2"/><path d="M5 10v12"/><path d="M18 2c-1.7 0-3 1.8-3 4.5V12h3"/><path d="M18 2v20"/>',
+    bakery: '<path d="M20 21v-7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7"/><path d="M4 16c1 0 1.5-1 2.5-1s1.7 1.5 3 1.5 2-1.5 3-1.5 1.7 1.5 3 1.5 1.5-1 2.5-1"/><path d="M3 21h18"/><path d="M8 9V6M12 9V6M16 9V6"/>',
+    produce: '<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10Z"/><path d="M2 21c0-3 1.85-5.4 5.1-6"/>',
+    desserts: '<path d="m7 11 4.1 9.5a1 1 0 0 0 1.8 0L17 11"/><path d="M17 7a5 5 0 0 0-10 0"/><path d="M17 7a2 2 0 0 1 0 4H7a2 2 0 0 1 0-4"/>',
+    beverages: '<path d="M10 2v2M14 2v2"/><path d="M5 8h13a3.5 3.5 0 0 1 0 7h-1"/><path d="M5 8v9a4 4 0 0 0 4 4h4a4 4 0 0 0 4-4V8Z"/>',
+    snacks: '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+  };
+  const icon = (name, cls='ico') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${PATHS[name]||''}</svg>`;
+
+  /* ===== Mock data (from MockData.swift) ===== */
+  const RESTAURANTS = {
+    "1": { name: "Green Leaf Bistro", verified: true, rating: 4.8, c1: "#118b50", c2: "#5db996" },
+    "2": { name: "Sunset Cafe",       verified: true, rating: 4.6, c1: "#0f7a64", c2: "#4fb08c" },
+    "3": { name: "Ocean View Grill",  verified: true, rating: 4.7, c1: "#0d6b4a", c2: "#52a883" },
+  };
+  const CAT_ICON = { Meals:"meals", Bakery:"bakery", Produce:"produce", Beverages:"beverages", Desserts:"desserts", Snacks:"snacks", Other:"bag" };
+
+  const LISTINGS = [
+    { restId:"1", title:"Fresh Garden Salad Mix", category:"Meals", original:15.99, price:7.99, free:false, available:3, diet:["Vegetarian","Vegan","Gluten-Free"], pickup:"Pickup in 1 hr" },
+    { restId:"2", title:"Artisan Bread & Pastries", category:"Bakery", original:12.50, price:0, free:true, available:6, diet:["Vegetarian"], pickup:"Pickup in 30 min" },
+    { restId:"3", title:"Grilled Salmon Platter", category:"Meals", original:28.99, price:12.99, free:false, available:2, diet:["Gluten-Free","Dairy-Free"], pickup:"Pickup in 45 min" },
+    { restId:"1", title:"Organic Fruit Bowl", category:"Produce", original:8.99, price:3.99, free:false, available:8, diet:["Vegan","Gluten-Free","Dairy-Free"], pickup:"Pickup in 1 hr" },
+    { restId:"2", title:"Gourmet Dessert Box", category:"Desserts", original:18.99, price:8.99, free:false, available:1, diet:["Vegetarian"], pickup:"Pickup in 30 min" },
+  ];
+
+  const ORDERS = [
+    { listing:"Fresh Garden Salad Mix", rest:"1", qty:2, total:15.98, status:"Pending", key:"pending", code:"A1B2C3", window:"Today 6-8 PM" },
+    { listing:"Artisan Bread & Pastries", rest:"2", qty:1, total:0, status:"Confirmed", key:"confirmed", code:"D4E5F6", window:"Today 5:30-7 PM" },
+    { listing:"Grilled Salmon Platter", rest:"3", qty:1, total:12.99, status:"Ready", key:"ready", code:"G7H8I9", window:"Ready now" },
+    { listing:"Fresh Garden Salad Mix", rest:"1", qty:1, total:7.99, status:"Completed", key:"done", code:"J1K2L3", window:"Picked up" },
+  ];
+
+  const CONVERSATIONS = [
+    { name:"Green Leaf Bistro", init:"GL", last:"Perfect, see you at 6:30 PM.", time:"2m", unread:1 },
+    { name:"Sunset Cafe", init:"SC", last:"Your free pastries are reserved.", time:"1h", unread:0 },
+    { name:"Ocean View Grill", init:"OV", last:"Order is ready for pickup.", time:"3h", unread:0 },
+  ];
+
+  const IMPACT = { mealsSaved: 24, co2: 60, food: 48.5 };
+  const USER = { name: "John Doe", email: "customer@example.com", init: "JD" };
+  const CATEGORIES = ["All","Meals","Bakery","Produce","Beverages","Desserts","Snacks"];
+
+  const money = n => "$" + n.toFixed(2);
+  const pct = (o,p) => Math.round(((o-p)/o)*100);
+
+  function listingCard(l) {
+    const r = RESTAURANTS[l.restId];
+    const badge = l.free
+      ? `<span class="badge free">FREE</span>`
+      : `<span class="badge discount">-${pct(l.original,l.price)}%</span>`;
+    const almost = l.available <= 2 ? `<span class="badge almost">${l.available} left</span>` : "";
+    const priceBlock = l.free
+      ? `<span class="freep">Free</span>`
+      : `<span class="now">${money(l.price)}</span><span class="was">${money(l.original)}</span>`;
+    const diet = l.diet.map(d => `<span class="tag">${d}</span>`).join("");
+    return `<article class="card">
+      <div class="photo" style="background:linear-gradient(145deg, ${r.c1}, ${r.c2})">
+        ${icon(CAT_ICON[l.category])}${badge}${almost}
+      </div>
+      <div class="body">
+        <div class="ttl">${l.title}</div>
+        <div class="rest">
+          <span>${r.name}</span>
+          ${r.verified ? icon('verified','ico verified') : ''}
+          <span class="dot">&middot;</span>
+          ${icon('star','ico star')}<span>${r.rating}</span>
+        </div>
+        <div class="diet">${diet}</div>
+        <div class="price-row">
+          <div class="price">${priceBlock}</div>
+          <div class="pickup">${icon('clock')}<span>${l.pickup}</span></div>
+        </div>
+      </div>
+    </article>`;
+  }
+
+  const screens = {
+    home() {
+      return `
+      <header class="header">
+        <div class="header-row">
+          <div>
+            <div class="greeting">Good evening</div>
+            <div class="title">Find food nearby</div>
+            <div class="loc">${icon('pin')}<span>San Francisco, CA</span></div>
+          </div>
+          <div class="avatar">${USER.init}</div>
+        </div>
+        <div class="impact">
+          <div class="stat"><div class="num">${IMPACT.mealsSaved}</div><div class="lbl">Meals saved</div></div>
+          <div class="stat"><div class="num">${IMPACT.co2} kg</div><div class="lbl">CO2 cut</div></div>
+          <div class="stat"><div class="num">${IMPACT.food} lb</div><div class="lbl">Rescued</div></div>
+        </div>
+      </header>
+      <div class="content">
+        <div class="chips">${CATEGORIES.map((c,i)=>`<div class="chip ${i===0?'active':''}" onclick="filterCat(this,'${c}')">${c}</div>`).join("")}</div>
+        <div class="section-head"><div class="h2">Available now</div><span class="link">${LISTINGS.length} nearby</span></div>
+        <div id="listings">${LISTINGS.map(listingCard).join("")}</div>
+      </div>`;
+    },
+    search() {
+      return `
+      <div class="content" style="padding-top:58px">
+        <div class="screen-title">Search</div>
+        <div class="searchbar">${icon('search')}<input placeholder="Search food or restaurants" /></div>
+        <div class="chips">${CATEGORIES.map((c,i)=>`<div class="chip ${i===0?'active':''}" onclick="filterCat(this,'${c}')">${c}</div>`).join("")}</div>
+        <div class="section-head"><div class="h2">Results</div></div>
+        <div id="listings">${LISTINGS.map(listingCard).join("")}</div>
+      </div>`;
+    },
+    orders() {
+      const card = o => {
+        const r = RESTAURANTS[o.rest];
+        return `<div class="order">
+          <div class="top">
+            <div>
+              <div class="ttl">${o.listing}</div>
+              <div class="rest"><span>${r.name}</span><span class="dot">&middot;</span><span>Qty ${o.qty}</span></div>
+            </div>
+            <span class="status" style="color:var(--${o.key});background:var(--${o.key}-bg)">${o.status}</span>
+          </div>
+          <div class="code">
+            <div>
+              <div class="ck-lbl">PICKUP CODE</div>
+              <div class="pin">${o.code}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:11.5px;color:var(--ink-2)">${o.window}</div>
+              <div style="font-weight:750;margin-top:3px;letter-spacing:-0.3px">${o.total===0?'Free':money(o.total)}</div>
+            </div>
+          </div>
+        </div>`;
+      };
+      return `<div class="content" style="padding-top:58px"><div class="screen-title">My Orders</div>${ORDERS.map(card).join("")}</div>`;
+    },
+    messages() {
+      const conv = c => `<div class="conv">
+        <div class="pic">${c.init}</div>
+        <div class="mid"><div class="name">${c.name}</div><div class="last">${c.last}</div></div>
+        <div class="meta"><div class="time">${c.time}</div>${c.unread?`<div><span class="unread">${c.unread}</span></div>`:''}</div>
+      </div>`;
+      return `<div class="content" style="padding-top:58px"><div class="screen-title">Messages</div>${CONVERSATIONS.map(conv).join("")}</div>`;
+    },
+    profile() {
+      const menu = [
+        ["pin","Saved addresses"],["card","Payment methods"],["bell","Notifications"],
+        ["leaf","My impact"],["sliders","Settings"],["help","Help & support"],["doc","Terms & Privacy"],
+      ];
+      return `
+      <div class="content" style="padding-top:58px">
+        <div class="profile-head">
+          <div class="pic">${USER.init}</div>
+          <div class="nm">${USER.name}</div>
+          <div class="em">${USER.email}</div>
+        </div>
+        <div class="pstats">
+          <div class="s"><div class="n">${IMPACT.mealsSaved}</div><div class="l">Meals saved</div></div>
+          <div class="s"><div class="n">${IMPACT.co2} kg</div><div class="l">CO2 cut</div></div>
+          <div class="s"><div class="n">${IMPACT.food} lb</div><div class="l">Rescued</div></div>
+        </div>
+        <div class="menu">
+          ${menu.map(m=>`<div class="item"><span class="lead">${icon(m[0])}</span>${m[1]}<span class="chev">${icon('chevron')}</span></div>`).join("")}
+        </div>
+      </div>`;
+    },
+  };
+
+  const TABS = [
+    { id:"home", icon:"home", label:"Home" },
+    { id:"search", icon:"search", label:"Search" },
+    { id:"orders", icon:"bag", label:"Orders" },
+    { id:"messages", icon:"message", label:"Messages" },
+    { id:"profile", icon:"user", label:"Profile" },
+  ];
+
+  let current = "home";
+  function render() {
+    document.getElementById("screen").innerHTML = screens[current]();
+    document.getElementById("screen").scrollTop = 0;
+    document.getElementById("tabbar").innerHTML = TABS.map(t =>
+      `<div class="tab ${t.id===current?'active':''}" onclick="go('${t.id}')">${icon(t.icon)}<span>${t.label}</span></div>`).join("");
+  }
+  function go(id){ current = id; render(); }
+  function filterCat(el, cat){
+    el.parentElement.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+    el.classList.add('active');
+    const list = (cat==="All") ? LISTINGS : LISTINGS.filter(l=>l.category===cat);
+    const box = document.getElementById("listings");
+    if (box) box.innerHTML = list.length ? list.map(listingCard).join("")
+      : `<div class="empty">${icon('search')}<div>No ${cat.toLowerCase()} available right now</div></div>`;
+  }
+  window.go = go; window.filterCat = filterCat;
+  render();
+  </script>
+</body>
+</html>
