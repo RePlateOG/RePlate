@@ -1541,7 +1541,7 @@ struct MessageCustomerView: View {
     @State private var messageText = ""
     @State private var messages: [ChatMessage] = [
         ChatMessage(text: "Hi! I just placed an order for pickup.", isFromRestaurant: false, timestamp: Date().addingTimeInterval(-600)),
-        ChatMessage(text: "Great, we're getting it ready for you now! 🌿", isFromRestaurant: true, timestamp: Date().addingTimeInterval(-540)),
+        ChatMessage(text: "Great, we're getting it ready for you now!", isFromRestaurant: true, timestamp: Date().addingTimeInterval(-540)),
         ChatMessage(text: "Should I enter through the main entrance?", isFromRestaurant: false, timestamp: Date().addingTimeInterval(-300)),
     ]
 

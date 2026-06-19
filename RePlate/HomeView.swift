@@ -195,24 +195,25 @@ struct HomeView: View {
     }
 
     // MARK: - Data
-    private let foodCategories: [(emoji: String, label: String, color: Color)] = [
-        ("🥐", "Bakery",  Color.orange.opacity(0.12)),
-        ("🥗", "Healthy", Color.green.opacity(0.12)),
-        ("🍱", "Sushi",   Color.red.opacity(0.10)),
-        ("🍕", "Pizza",   Color.yellow.opacity(0.12)),
-        ("🍝", "Pasta",   Color.blue.opacity(0.10)),
-        ("🧃", "Drinks",  Color.purple.opacity(0.10)),
+    private let foodCategories: [(icon: String, label: String, color: Color)] = [
+        ("birthday.cake",                "Bakery",  Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("leaf.fill",                    "Healthy", Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("fish",                         "Sushi",   Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("fork.knife",                   "Pizza",   Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("takeoutbag.and.cup.and.straw", "Pasta",   Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("cup.and.saucer",               "Drinks",  Theme.Colors.primaryGradientStart.opacity(0.10)),
     ]
 }
 
 // MARK: - Category Pill
 private struct CategoryPill: View {
-    let cat: (emoji: String, label: String, color: Color)
+    let cat: (icon: String, label: String, color: Color)
 
     var body: some View {
         VStack(spacing: 6) {
-            Text(cat.emoji)
-                .font(.system(size: 28))
+            Image(systemName: cat.icon)
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundColor(Theme.Colors.primaryGradientStart)
             Text(cat.label)
                 .font(.system(size: 11, weight: .bold, design: .rounded))
                 .foregroundColor(.secondary)

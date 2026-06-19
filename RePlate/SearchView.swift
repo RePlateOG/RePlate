@@ -213,8 +213,9 @@ struct SearchView: View {
                         }
                     } label: {
                         VStack(spacing: 8) {
-                            Text(cat.emoji)
-                                .font(.system(size: 30))
+                            Image(systemName: cat.icon)
+                                .font(.system(size: 26, weight: .semibold))
+                                .foregroundColor(Theme.Colors.primaryGradientStart)
                             Text(cat.label)
                                 .font(.system(size: 12, weight: .bold, design: .rounded))
                                 .foregroundColor(Theme.Colors.label)
@@ -293,13 +294,13 @@ struct SearchView: View {
     }
 
     // MARK: - Category Data
-    private let searchCategories: [(emoji: String, label: String, color: Color)] = [
-        ("🥐", "Bakery",    Color.orange.opacity(0.12)),
-        ("🥗", "Meals",     Color.green.opacity(0.12)),
-        ("🥦", "Produce",   Color.teal.opacity(0.10)),
-        ("🧃", "Beverages", Color.purple.opacity(0.10)),
-        ("🎂", "Desserts",  Color.pink.opacity(0.10)),
-        ("🍿", "Snacks",    Color.yellow.opacity(0.12)),
+    private let searchCategories: [(icon: String, label: String, color: Color)] = [
+        ("birthday.cake",      "Bakery",    Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("fork.knife",         "Meals",     Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("carrot",             "Produce",   Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("cup.and.saucer",     "Beverages", Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("birthday.cake.fill", "Desserts",  Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("bag",                "Snacks",    Theme.Colors.primaryGradientStart.opacity(0.10)),
     ]
 }
 

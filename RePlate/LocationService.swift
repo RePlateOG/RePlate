@@ -34,7 +34,7 @@ private final class LocationManagerDelegate: NSObject, CLLocationManagerDelegate
 
 // MARK: - Location Service
 //
-// ⚠️  NO explicit @MainActor annotation on this class — intentional.
+// NOTE: NO explicit @MainActor annotation on this class - intentional.
 //
 // The project build setting SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor already
 // applies @MainActor implicitly to every type in the module, including this one.

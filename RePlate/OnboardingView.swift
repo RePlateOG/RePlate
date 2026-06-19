@@ -84,7 +84,7 @@ struct OnboardingView: View {
         .init(
             icon: "heart.fill",
             iconColors: [Color(hex: "118b50"), Color(hex: "5db996")],
-            badge: "Community ❤️",
+            badge: "Community",
             badgeIcon: "heart.fill",
             title: "Be Part of the Change",
             subtitle: "A growing community of food-lovers and local restaurants making a real difference.",
@@ -964,7 +964,7 @@ struct RestaurantSignUpView: View {
     // MARK: Step 1 — Business Info
     private var step1BusinessInfo: some View {
         VStack(alignment: .leading, spacing: 28) {
-            stepHeading(title: "Tell us about your restaurant 🍽️",
+            stepHeading(title: "Tell us about your restaurant",
                         subtitle: "This appears on your public profile.")
 
             // Logo upload zone — PhotosPicker
@@ -1048,7 +1048,7 @@ struct RestaurantSignUpView: View {
     // MARK: Step 2 — Location & Contact
     private var step2LocationContact: some View {
         VStack(alignment: .leading, spacing: 28) {
-            stepHeading(title: "Where are you located? 📍",
+            stepHeading(title: "Where are you located?",
                         subtitle: "Customers use this to find you.")
 
             VStack(spacing: 18) {
@@ -1130,7 +1130,7 @@ struct RestaurantSignUpView: View {
     // MARK: Step 3 — Account Credentials
     private var step3Account: some View {
         VStack(alignment: .leading, spacing: 28) {
-            stepHeading(title: "Create your account 🔐",
+            stepHeading(title: "Create your account",
                         subtitle: "You'll use these to log in to RePlate.")
 
             VStack(spacing: 18) {
