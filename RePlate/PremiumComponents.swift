@@ -77,8 +77,8 @@ struct FloatingTabBar: View {
             RoundedRectangle(cornerRadius: Theme.CornerRadius.xxxl)
                 .stroke(Theme.Colors.border.opacity(0.3), lineWidth: 0.5)
         )
-        .shadow(color: Color.black.opacity(0.1), radius: 24, y: 8)
-        .shadow(color: Color.black.opacity(0.05), radius: 12, y: 4)
+        .shadow(color: Color.black.opacity(0.06), radius: 24, y: 6)
+        .shadow(color: Color.black.opacity(0.03), radius: 8, y: 3)
         .padding(.horizontal, Theme.Spacing.screenPadding)
         .padding(.bottom, Theme.Spacing.base)
     }
@@ -246,7 +246,7 @@ struct ShadowModifier: ViewModifier {
         case .elevated:  return Color.black.opacity(0.06)
         case .flat:      return Color.clear
         case .glass:     return Color.black.opacity(0.04)
-        case .floating:  return Color.black.opacity(0.12)
+        case .floating:  return Color.black.opacity(0.07)
         }
     }
     private var shadowRadius: CGFloat {
@@ -609,7 +609,7 @@ struct ToastView: View {
         .padding(Theme.Spacing.base)
         .background(.ultraThinMaterial)
         .cornerRadius(Theme.CornerRadius.base)
-        .shadow(color: Color.black.opacity(0.1), radius: 16, y: 8)
+        .shadow(color: Color.black.opacity(0.06), radius: 16, y: 5)
         .padding(.horizontal, Theme.Spacing.screenPadding)
         .transition(.move(edge: .top).combined(with: .opacity))
         .onAppear {

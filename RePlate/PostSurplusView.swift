@@ -184,7 +184,7 @@ struct PostSurplusView: View {
                     ZStack {
                         RoundedRectangle(cornerRadius: 24)
                             .fill(.white)
-                            .shadow(color: Color.black.opacity(0.1), radius: 12, y: 6)
+                            .shadow(color: Color.black.opacity(0.06), radius: 12, y: 4)
                             .frame(width: 80, height: 80)
                         Image(systemName: hasPhoto ? "checkmark.circle.fill" : "photo.on.rectangle.angled")
                             .font(.system(size: 34, weight: .medium))
@@ -267,7 +267,7 @@ struct PostSurplusView: View {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 18)
                                     .fill(.white)
-                                    .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+                                    .shadow(color: Color.black.opacity(0.06), radius: 8, y: 3)
                                     .frame(width: 52, height: 52)
                                 Image(systemName: "minus")
                                     .font(.system(size: 18, weight: .bold))
@@ -285,7 +285,7 @@ struct PostSurplusView: View {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 18)
                                     .fill(.white)
-                                    .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+                                    .shadow(color: Color.black.opacity(0.06), radius: 8, y: 3)
                                     .frame(width: 52, height: 52)
                                 Image(systemName: "plus")
                                     .font(.system(size: 18, weight: .bold))

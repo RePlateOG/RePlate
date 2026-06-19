@@ -261,7 +261,7 @@ private struct OnboardingPageView: View {
                 .padding(.vertical, 6)
                 .background(Theme.Colors.accent)
                 .clipShape(Capsule())
-                .shadow(color: Color.black.opacity(0.1), radius: 6, y: 3)
+                .shadow(color: Color.black.opacity(0.06), radius: 8, y: 3)
                 .offset(x: 12, y: -6)
             }
             .padding(.bottom, 26)

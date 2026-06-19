@@ -185,7 +185,7 @@ struct AccountTypeCard: View {
             .padding(20)
             .background(
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(hex: "f9f9f9"))
+                    .fill(Color(.systemBackground))
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(isSelected ? Color(hex: "118b50") : Color.clear, lineWidth: 2)

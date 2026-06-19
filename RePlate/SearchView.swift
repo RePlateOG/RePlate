@@ -121,7 +121,7 @@ struct SearchView: View {
             .background(
                 RoundedRectangle(cornerRadius: 20)
                     .fill(Color(.systemBackground))
-                    .shadow(color: Color.black.opacity(0.12), radius: 14, y: 5)
+                    .shadow(color: Color.black.opacity(0.06), radius: 14, y: 4)
             )
 
             Spacer().frame(height: 52)

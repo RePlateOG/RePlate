@@ -202,7 +202,7 @@ struct RestaurantDashboardView: View {
             .background(
                 RoundedRectangle(cornerRadius: 26)
                     .fill(Color(.systemBackground))
-                    .shadow(color: Color.black.opacity(0.13), radius: 18, y: 7)
+                    .shadow(color: Color.black.opacity(0.06), radius: 18, y: 5)
             )
         }
         .buttonStyle(PlainButtonStyle())
@@ -457,7 +457,7 @@ private struct FigmaActiveListingCard: View {
                         .padding(.vertical, 6)
                         .background(Theme.Colors.primaryGradientStart)
                         .clipShape(Capsule())
-                        .shadow(color: Color.black.opacity(0.2), radius: 4, y: 2)
+                        .shadow(color: Color.black.opacity(0.07), radius: 4, y: 2)
 
                     Spacer()
 
@@ -1526,7 +1526,7 @@ struct RestaurantOrdersView: View {
                         .frame(width: 44, height: 44)
                         .background(.white)
                         .clipShape(Circle())
-                        .shadow(color: Color.black.opacity(0.1), radius: 6, y: 3)
+                        .shadow(color: Color.black.opacity(0.06), radius: 6, y: 2)
                 }
             }
             .padding(.top, 60)

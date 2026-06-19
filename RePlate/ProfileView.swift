@@ -196,7 +196,7 @@ struct ProfileView: View {
             .background(
                 RoundedRectangle(cornerRadius: 26)
                     .fill(Color(.systemBackground))
-                    .shadow(color: Color.black.opacity(0.13), radius: 18, y: 7)
+                    .shadow(color: Color.black.opacity(0.06), radius: 18, y: 5)
             )
         }
         .buttonStyle(PlainButtonStyle())
