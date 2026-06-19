@@ -8,19 +8,27 @@ screens (Home, Search, Orders, Messages, Profile) using the same brand colors
 (`Theme.swift`) and the same sample data (`MockData.swift`). It is **not** the real app and
 shares no code with it. It exists so you can see the look & feel on a Windows PC.
 
-## Run it locally
+## How to open it (with the latest changes)
 
-From this `web/` folder:
+This is ONE self-contained file (no server, no internet needed). To see the
+newest version after someone pushes changes:
 
-```powershell
-# Option A — Python (already installed)
-python -m http.server 5173
-
-# Option B — Node
-npx serve -l 5173
+```bash
+git pull          # get the latest changes
 ```
 
-Then open: **http://localhost:5173**
+Then just **double-click `web/index.html`** — it opens in your browser and
+shows the app with all the latest changes. Repeat `git pull` + reopen anytime.
+
+### Optional: run it on a local web address instead
+
+If you prefer a `http://localhost` link, run one of these from this `web/` folder:
+
+```bash
+python -m http.server 5173     # then open http://localhost:5173
+# or
+npx serve -l 5173
+```
 
 ## Keeping in sync with the real app
 
