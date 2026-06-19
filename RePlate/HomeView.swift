@@ -282,7 +282,7 @@ struct FigmaListingCard: View {
                             HStack(spacing: 3) {
                                 Image(systemName: "star.fill")
                                     .font(.system(size: 11))
-                                    .foregroundColor(.yellow)
+                                    .foregroundColor(Color(hex: "F5A623"))
                                 Text("4.8")
                                     .font(.system(size: 12, weight: .bold, design: .rounded))
                                     .foregroundColor(Theme.Colors.label)

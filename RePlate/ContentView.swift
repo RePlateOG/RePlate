@@ -165,7 +165,7 @@ struct CustomTabBar: View {
         .background(
             RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
                 .fill(.ultraThinMaterial)
-                .shadow(color: Color.black.opacity(0.1), radius: 10, y: -5)
+                .shadow(color: Color.black.opacity(0.08), radius: 18, y: -2)
         )
         .padding(.horizontal, Theme.Spacing.md)
         .padding(.bottom, Theme.Spacing.sm)
