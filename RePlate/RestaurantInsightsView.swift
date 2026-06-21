@@ -34,7 +34,7 @@ struct RestaurantInsightsView: View {
             .padding(.bottom, 100)
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Color(.systemGroupedBackground))
         .sheet(isPresented: $showAllReviews) { AllReviewsSheet() }
     }
 
@@ -593,7 +593,7 @@ private struct AllReviewsSheet: View {
                 }
                 .padding(.horizontal, 20).padding(.top, 16).padding(.bottom, 40)
             }
-            .background(Color(.systemGray6).opacity(0.3))
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("All Reviews")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

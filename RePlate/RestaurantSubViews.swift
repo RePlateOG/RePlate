@@ -193,7 +193,7 @@ struct RestaurantSettingsView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Color(.systemGroupedBackground))
         .sheet(isPresented: $showRestaurantDetails) { RestaurantDetailsEditView() }
         .sheet(isPresented: $showLocationPickup)    { LocationPickupEditView() }
         .sheet(isPresented: $showPaymentSettings)   { PaymentSettingsView() }
@@ -401,7 +401,7 @@ struct EditListingView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Color(.systemGroupedBackground))
     }
 }
 
@@ -596,7 +596,7 @@ struct RestaurantOrderDetailView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Color(.systemGroupedBackground))
         .sheet(isPresented: $showMessage) {
             MessageCustomerView(order: order)
         }
@@ -744,7 +744,7 @@ struct RestaurantDetailsEditView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Color(.systemGroupedBackground))
     }
 }
 
@@ -819,7 +819,7 @@ struct LocationPickupEditView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Color(.systemGroupedBackground))
     }
 }
 
@@ -886,7 +886,7 @@ struct PaymentSettingsView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Color(.systemGroupedBackground))
     }
 }
 
@@ -958,7 +958,7 @@ struct NotificationsPreferencesView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Color(.systemGroupedBackground))
     }
 
     private func notifToggle(icon: String, title: String, subtitle: String, isOn: Binding<Bool>) -> some View {
@@ -1146,7 +1146,7 @@ struct HelpCenterView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Color(.systemGroupedBackground))
         .sheet(isPresented: $showContact) { ContactSupportView() }
     }
 
@@ -1290,7 +1290,7 @@ struct ContactSupportView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Color(.systemGroupedBackground))
         .alert("Message Sent!", isPresented: $showConfirmation) {
             Button("Done") { dismiss() }
         } message: {
@@ -1370,7 +1370,7 @@ struct StaffAccountsView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Color(.systemGroupedBackground))
     }
 
     // MARK: Add button
@@ -1648,7 +1648,7 @@ struct MessageCustomerView: View {
             )
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Color(.systemGroupedBackground))
     }
 
     @ViewBuilder

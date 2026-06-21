@@ -681,6 +681,7 @@ struct PostSurplusView: View {
                 Button {
                     hapticFeedback(.success)
                     isPosting = true
+                    // TODO: backend — send new listing to server, then append to appState.mockListings
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                         isPosting = false
                         withAnimation { showSuccess = true }

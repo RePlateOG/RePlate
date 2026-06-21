@@ -678,6 +678,8 @@ struct SignUpView: View {
     @State private var isLoading     = false
     @State private var showError     = false
     @State private var errorMessage  = ""
+    @State private var agreedToTerms = false
+    @State private var showLegalPage: LegalPageView.LegalPage? = nil
 
     var body: some View {
         NavigationView {
@@ -717,7 +719,47 @@ struct SignUpView: View {
                         .foregroundColor(Theme.Colors.tertiaryLabel)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
-                        .padding(.bottom, 28)
+                        .padding(.bottom, 20)
+
+                    // Terms consent checkbox
+                    HStack(alignment: .top, spacing: 12) {
+                        Button {
+                            hapticFeedback(.light)
+                            agreedToTerms.toggle()
+                        } label: {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(agreedToTerms ? Theme.Colors.primaryGradientStart : Color(.systemGray6))
+                                    .frame(width: 22, height: 22)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .stroke(agreedToTerms ? Color.clear : Color(.systemGray4), lineWidth: 1.5)
+                                    )
+                                if agreedToTerms {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 12, weight: .black))
+                                        .foregroundColor(.white)
+                                }
+                            }
+                        }
+                        .buttonStyle(PlainButtonStyle())
+
+                        (Text("I have read and agree to the ")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                        + Text("Terms of Service")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(Theme.Colors.primaryGradientStart)
+                        + Text(" and ")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                        + Text("Privacy Policy")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(Theme.Colors.primaryGradientStart))
+                        .onTapGesture { showLegalPage = .termsOfService }
+                        .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.bottom, 20)
 
                     Button {
                         Task { await signUp() }
@@ -734,11 +776,11 @@ struct SignUpView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
-                        .background(Theme.Colors.primaryGradient)
+                        .background(agreedToTerms ? Theme.Colors.primaryGradient : LinearGradient(colors: [Color(.systemGray4)], startPoint: .leading, endPoint: .trailing))
                         .clipShape(RoundedRectangle(cornerRadius: 20))
-                        .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.30), radius: 12, y: 5)
+                        .shadow(color: Theme.Colors.primaryGradientStart.opacity(agreedToTerms ? 0.30 : 0), radius: 12, y: 5)
                     }
-                    .disabled(isLoading)
+                    .disabled(isLoading || !agreedToTerms)
                     .padding(.bottom, 40)
                 }
                 .padding(.horizontal, 24)
@@ -762,6 +804,9 @@ struct SignUpView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(errorMessage)
+            }
+            .sheet(item: $showLegalPage) { page in
+                NavigationView { LegalPageView(page: page) }
             }
         }
     }
@@ -822,6 +867,9 @@ struct SignUpView: View {
             name: name, email: email, password: password, accountType: accountType
         )
         if success {
+            UserDefaults.standard.set(true, forKey: "acceptedTerms")
+            UserDefaults.standard.set(Date(), forKey: "acceptedTermsAt")
+            // TODO: backend — send acceptance timestamp to server
             appState.isAuthenticated = true
             appState.currentUser = auth.currentUser
             appState.completeOnboarding()
@@ -856,6 +904,8 @@ struct RestaurantSignUpView: View {
     @State private var email    = ""
     @State private var password = ""
     @State private var showVerification = false
+    @State private var agreedToTerms = false
+    @State private var showLegalPage: LegalPageView.LegalPage? = nil
 
     // UI state
     @State private var isLoading    = false
@@ -918,6 +968,9 @@ struct RestaurantSignUpView: View {
                 Text(errorMessage)
             }
             .sheet(isPresented: $showVerification) { RestaurantVerificationView() }
+            .sheet(item: $showLegalPage) { page in
+                NavigationView { LegalPageView(page: page) }
+            }
         }
         .onChange(of: logoPhoto) { _, item in
             Task {
@@ -1195,6 +1248,45 @@ struct RestaurantSignUpView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 18))
             }
 
+            // Terms consent checkbox
+            HStack(alignment: .top, spacing: 12) {
+                Button {
+                    hapticFeedback(.light)
+                    agreedToTerms.toggle()
+                } label: {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(agreedToTerms ? Theme.Colors.primaryGradientStart : Color(.systemGray6))
+                            .frame(width: 22, height: 22)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(agreedToTerms ? Color.clear : Color(.systemGray4), lineWidth: 1.5)
+                            )
+                        if agreedToTerms {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 12, weight: .black))
+                                .foregroundColor(.white)
+                        }
+                    }
+                }
+                .buttonStyle(PlainButtonStyle())
+
+                (Text("I have read and agree to the ")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(Theme.Colors.secondaryLabel)
+                + Text("Terms of Service")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(Theme.Colors.primaryGradientStart)
+                + Text(" and ")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(Theme.Colors.secondaryLabel)
+                + Text("Privacy Policy")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(Theme.Colors.primaryGradientStart))
+                .onTapGesture { showLegalPage = .termsOfService }
+                .fixedSize(horizontal: false, vertical: true)
+            }
+
             // Back + Create Account
             HStack(spacing: 12) {
                 backButton
@@ -1217,11 +1309,11 @@ struct RestaurantSignUpView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(Theme.Colors.primaryGradient)
+                    .background(agreedToTerms ? Theme.Colors.primaryGradient : LinearGradient(colors: [Color(.systemGray4)], startPoint: .leading, endPoint: .trailing))
                     .clipShape(RoundedRectangle(cornerRadius: 20))
-                    .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.3), radius: 10, y: 5)
+                    .shadow(color: Theme.Colors.primaryGradientStart.opacity(agreedToTerms ? 0.3 : 0), radius: 10, y: 5)
                 }
-                .disabled(isLoading)
+                .disabled(isLoading || !agreedToTerms)
                 .buttonStyle(PlainButtonStyle())
             }
         }
@@ -1331,6 +1423,9 @@ struct RestaurantSignUpView: View {
             accountType: .restaurant
         )
         if success {
+            UserDefaults.standard.set(true, forKey: "acceptedTerms")
+            UserDefaults.standard.set(Date(), forKey: "acceptedTermsAt")
+            // TODO: backend — send acceptance timestamp to server
             appState.isAuthenticated = true
             appState.currentUser = auth.currentUser
             appState.completeOnboarding()

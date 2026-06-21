@@ -78,12 +78,6 @@ struct MainTabView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            // Permanent gradient backdrop — always fills the status-bar area so
-            // there is never a white gap behind the clock / battery / signal icons
-            // during page transitions or lazy-load pauses.
-            Theme.Colors.primaryGradient
-                .ignoresSafeArea()
-
             TabView(selection: $appState.selectedTab) {
                 // Home
                 if appState.currentUser?.accountType == .restaurant {

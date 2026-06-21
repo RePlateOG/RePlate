@@ -36,7 +36,7 @@ struct RestaurantDashboardView: View {
             .padding(.bottom, 100)
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Color(.systemGroupedBackground))
         .refreshable { await viewModel.refreshDashboard() }
         .task { await viewModel.loadDashboard() }
         .sheet(isPresented: $showPostListing) { PostSurplusView() }
@@ -277,9 +277,12 @@ struct RestaurantDashboardView: View {
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundColor(Theme.Colors.label)
                 Spacer()
-                Button("See All") {}
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundColor(Theme.Colors.primaryGradientStart)
+                Button("See All") {
+                    hapticFeedback(.light)
+                    appState.selectedTab = .orders
+                }
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundColor(Theme.Colors.primaryGradientStart)
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 16)
@@ -351,6 +354,7 @@ private struct FigmaStatCard: View {
 private struct FigmaOrderCard: View {
     let order: Order
     var onDetails: () -> Void = {}
+    @State private var isConfirmed = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -407,15 +411,24 @@ private struct FigmaOrderCard: View {
 
                 Button {
                     hapticFeedback(.success)
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                        isConfirmed = true
+                    }
+                    // TODO: backend — mark order as picked up on server
                 } label: {
-                    Text("Confirm Pickup")
+                    Text(isConfirmed ? "Picked Up!" : "Confirm Pickup")
                         .font(.system(size: 14, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Theme.Colors.primaryGradient)
+                        .background(
+                            isConfirmed
+                                ? LinearGradient(colors: [Color(.systemGray4)], startPoint: .leading, endPoint: .trailing)
+                                : Theme.Colors.primaryGradient
+                        )
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
+                .disabled(isConfirmed)
             }
         }
         .padding(20)
@@ -1499,7 +1512,7 @@ struct RestaurantOrdersView: View {
             .padding(.bottom, 100)
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Color(.systemGroupedBackground))
         .task { await viewModel.loadOrders() }
         .sheet(item: $selectedOrder)       { order in RestaurantOrderDetailView(order: order) }
         .sheet(item: $messageOrder)        { order in MessageCustomerView(order: order) }
@@ -1854,7 +1867,7 @@ struct RestaurantProfileView: View {
             .padding(.bottom, 100)
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Color(.systemGroupedBackground))
         .sheet(isPresented: $showRestaurantDetails) { RestaurantDetailsEditView() }
         .sheet(isPresented: $showLocationPickup)    { LocationPickupEditView() }
         .sheet(isPresented: $showPaymentSettings)   { PaymentSettingsView() }

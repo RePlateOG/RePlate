@@ -20,7 +20,15 @@ class AppState: ObservableObject {
     @Published var showError = false
     @Published var selectedTab: Tab = .home
     @Published var colorScheme: ColorSchemePreference = .system
-    
+
+    // Profile image (stored in memory; TODO: backend — sync with server)
+    @Published var profileImageData: Data?
+
+    // Legal consent
+    var hasAcceptedTerms: Bool {
+        UserDefaults.standard.bool(forKey: "acceptedTerms")
+    }
+
     // Onboarding
     @Published var hasCompletedOnboarding = false
     @Published var isOnboarding = false

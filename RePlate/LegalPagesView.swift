@@ -34,6 +34,7 @@ struct LegalPageView: View {
         }
     }
 
+    // NON-BINDING TEMPLATE — must be reviewed by a qualified legal professional before real-world use.
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
@@ -57,6 +58,23 @@ struct LegalPageView: View {
                                 .foregroundColor(Theme.Colors.secondaryLabel)
                         }
                     }
+
+                    // Non-binding disclaimer banner
+                    HStack(spacing: 10) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(Color(hex: "92400e"))
+                        Text("Non-binding template — must be reviewed by a qualified legal professional before real-world use.")
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .italic()
+                            .foregroundColor(Color(hex: "92400e"))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Color(hex: "fef3c7"))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(hex: "fde68a"), lineWidth: 1))
                 }
                 .padding(.horizontal, 24).padding(.top, 24).padding(.bottom, 20)
 

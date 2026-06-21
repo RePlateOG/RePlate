@@ -13,6 +13,7 @@ struct HomeView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = HomeViewModel()
     @State private var selectedListing: FoodListing?
+    @State private var showNotifications = false
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -23,12 +24,15 @@ struct HomeView: View {
             }
             .padding(.bottom, 100)
         }
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Color(.systemGroupedBackground))
         .ignoresSafeArea(edges: .top)
         .refreshable { await viewModel.refreshListings() }
         .task { await viewModel.loadListings() }
         .sheet(item: $selectedListing) { listing in
             ListingDetailView(listing: listing)
+        }
+        .sheet(isPresented: $showNotifications) {
+            NotificationsView()
         }
     }
 
@@ -66,20 +70,25 @@ struct HomeView: View {
                     }
                     Spacer()
                     // Notification bell
-                    ZStack(alignment: .topTrailing) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Color(.systemGray6))
-                                .frame(width: 44, height: 44)
-                            Image(systemName: "bell.fill")
-                                .font(.system(size: 18))
-                                .foregroundColor(Theme.Colors.secondaryLabel)
+                    Button {
+                        hapticFeedback(.light)
+                        showNotifications = true
+                    } label: {
+                        ZStack(alignment: .topTrailing) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color(.systemGray6))
+                                    .frame(width: 44, height: 44)
+                                Image(systemName: "bell.fill")
+                                    .font(.system(size: 18))
+                                    .foregroundColor(Theme.Colors.secondaryLabel)
+                            }
+                            Circle()
+                                .fill(Theme.Colors.primaryGradientStart)
+                                .frame(width: 10, height: 10)
+                                .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
+                                .offset(x: 2, y: -2)
                         }
-                        Circle()
-                            .fill(Theme.Colors.primaryGradientStart)
-                            .frame(width: 10, height: 10)
-                            .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
-                            .offset(x: 2, y: -2)
                     }
                 }
                 .padding(.top, 60)
@@ -131,9 +140,12 @@ struct HomeView: View {
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundColor(Theme.Colors.label)
                 Spacer()
-                Button("View All") {}
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundColor(Theme.Colors.primaryGradientStart)
+                Button("View All") {
+                    hapticFeedback(.light)
+                    appState.selectedTab = .search
+                }
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundColor(Theme.Colors.primaryGradientStart)
             }
             .padding(.horizontal, 20)
             .padding(.top, 24)
@@ -396,6 +408,47 @@ struct ListingDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Close") { dismiss() }
+                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Notifications View (placeholder)
+struct NotificationsView: View {
+    @Environment(\.dismiss) var dismiss
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                Spacer()
+                ZStack {
+                    Circle()
+                        .fill(Theme.Colors.primaryGradientStart.opacity(0.1))
+                        .frame(width: 100, height: 100)
+                    Image(systemName: "bell.slash")
+                        .font(.system(size: 44, weight: .medium))
+                        .foregroundColor(Theme.Colors.primaryGradientStart.opacity(0.5))
+                }
+                VStack(spacing: 8) {
+                    Text("No New Notifications")
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundColor(Theme.Colors.label)
+                    Text("You're all caught up! Check back later for updates on your orders and new listings nearby.")
+                        .font(.system(size: 15))
+                        .foregroundColor(Theme.Colors.secondaryLabel)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                }
+                Spacer()
+            }
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle("Notifications")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { dismiss() }
                         .foregroundColor(Theme.Colors.primaryGradientStart)
                 }
             }

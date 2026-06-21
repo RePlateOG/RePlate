@@ -38,7 +38,7 @@ struct SearchView: View {
             .padding(.bottom, 100)
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Color(.systemGroupedBackground))
         .sheet(isPresented: $viewModel.showFilters) {
             FiltersView(filters: $viewModel.filters) {
                 Task { await viewModel.applyFilters() }

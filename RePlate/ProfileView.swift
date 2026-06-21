@@ -37,7 +37,7 @@ struct ProfileView: View {
             .padding(.bottom, 100)
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Color(.systemGroupedBackground))
         .task { await viewModel.loadProfile() }
         .sheet(isPresented: $showEditProfile) { EditProfileView() }
         .sheet(isPresented: $showSettings) { SettingsView() }
@@ -49,6 +49,8 @@ struct ProfileView: View {
                 if let data = try? await newItem?.loadTransferable(type: Data.self),
                    let ui = UIImage(data: data) {
                     profileImage = Image(uiImage: ui)
+                    appState.profileImageData = data  // persist locally
+                    // TODO: backend — upload profile image to server
                 }
             }
         }
@@ -704,6 +706,22 @@ struct SettingsView: View {
                 .foregroundColor(Theme.Colors.label)
 
             VStack(spacing: 0) {
+                Button {
+                    showLegalPage = .termsOfService
+                } label: {
+                    HStack {
+                        Text("Terms of Service")
+                            .font(Theme.Typography.body)
+                            .foregroundColor(Theme.Colors.label)
+                        Spacer()
+                        Image(systemName: "arrow.up.right.square")
+                            .foregroundColor(Theme.Colors.tertiaryLabel)
+                    }
+                    .padding(Theme.Spacing.md)
+                }
+
+                Divider()
+
                 Button {
                     showLegalPage = .privacyPolicy
                 } label: {
