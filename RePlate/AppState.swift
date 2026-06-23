@@ -24,6 +24,10 @@ class AppState: ObservableObject {
     // Profile image (stored in memory; TODO: backend — sync with server)
     @Published var profileImageData: Data?
 
+    // Single source of truth for orders shared between customer and restaurant views
+    // TODO: backend — replace with real-time order subscription (WebSocket / push)
+    @Published var orders: [Order] = MockData.sampleOrders
+
     // Legal consent
     var hasAcceptedTerms: Bool {
         UserDefaults.standard.bool(forKey: "acceptedTerms")

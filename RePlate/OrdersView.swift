@@ -7,8 +7,10 @@
 //
 
 import SwiftUI
+import Combine
 
 struct OrdersView: View {
+    @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = OrdersViewModel()
     @State private var selectedOrder: Order?
 
@@ -28,9 +30,12 @@ struct OrdersView: View {
         }
         .ignoresSafeArea(edges: .top)
         .background(Color(.systemGroupedBackground))
-        .task { await viewModel.loadOrders() }
+        .task {
+            viewModel.appState = appState
+            await viewModel.loadOrders()
+        }
         .sheet(item: $selectedOrder) { order in
-            OrderDetailView(order: order)
+            OrderDetailView(order: order, viewModel: viewModel)
         }
     }
 
@@ -305,8 +310,26 @@ struct OrderDetailView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appState: AppState
     let order: Order
+    var viewModel: OrdersViewModel? = nil
     @State private var showCancelConfirmation = false
     @State private var isCancelled = false
+    @State private var now = Date()
+
+    // Tick every second for the countdown timer
+    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
+    // SECURITY: this code must be validated server-side; client display is for UX only
+    private var isCodeExpired: Bool {
+        now > order.pickupWindowEnd
+    }
+
+    private var pickupCountdown: String {
+        let remaining = order.pickupWindowEnd.timeIntervalSince(now)
+        if remaining <= 0 { return "Expired" }
+        let minutes = Int(remaining) / 60
+        let seconds = Int(remaining) % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
 
     var body: some View {
         NavigationView {
@@ -371,18 +394,41 @@ struct OrderDetailView: View {
                 .font(Theme.Typography.headline)
                 .foregroundColor(Theme.Colors.label)
 
-            Text(order.pickupCode)
-                .font(.system(size: 48, weight: .bold, design: .monospaced))
-                .foregroundStyle(Theme.Colors.primaryGradient)
+            if isCodeExpired {
+                // Code has expired — show red badge instead of code
+                Text("Code Expired")
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 10)
+                    .background(Color.red)
+                    .clipShape(Capsule())
+            } else {
+                // SECURITY: this code must be validated server-side; client display is for UX only
+                Text(order.pickupCode)
+                    .font(.system(size: 48, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Theme.Colors.primaryGradient)
 
-            Text("Show this code to the restaurant")
-                .font(Theme.Typography.caption)
-                .foregroundColor(Theme.Colors.secondaryLabel)
+                // Countdown timer until pickup window closes
+                HStack(spacing: 4) {
+                    Image(systemName: "clock.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                    Text("Expires in \(pickupCountdown)")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                }
+
+                Text("Show this code to the restaurant")
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.secondaryLabel)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(Theme.Spacing.lg)
-        .background(Theme.Colors.accent.opacity(0.2))
+        .background(isCodeExpired ? Color.red.opacity(0.1) : Theme.Colors.accent.opacity(0.2))
         .cornerRadius(Theme.CornerRadius.xl)
+        .onReceive(timer) { _ in now = Date() }
     }
 
     private var orderDetailsSection: some View {
@@ -510,7 +556,8 @@ struct OrderDetailView: View {
                     Button("Cancel Order", role: .destructive) {
                         hapticFeedback(.medium)
                         isCancelled = true
-                        // TODO: backend — update order status on server
+                        // TODO: backend — POST /orders/{id}/status { status: "cancelled" }
+                        viewModel?.cancelOrder(order)
                         dismiss()
                     }
                 } message: {

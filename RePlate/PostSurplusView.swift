@@ -300,8 +300,11 @@ struct PostSurplusView: View {
             }
 
             navRow {
+                // SECURITY: re-validate server-side — title and category are required
                 guard !title.isEmpty else { showValidationError("Please enter a title for your listing."); return }
                 guard !foodType.isEmpty else { showValidationError("Please select a food category."); return }
+                // SECURITY: re-validate server-side — quantity must be between 1 and 100
+                guard quantity >= 1 && quantity <= 100 else { showValidationError("Quantity must be between 1 and 100."); return }
                 advance()
             }
         }
@@ -493,8 +496,13 @@ struct PostSurplusView: View {
             }
 
             navRow {
+                // SECURITY: re-validate server-side — price must be > 0 unless free
                 if !isFree && originalCents == 0 {
                     showValidationError("Please enter the original retail price.")
+                    return
+                }
+                if !isFree && suggestedCents == 0 && !manualOverride {
+                    showValidationError("Discounted price must be greater than zero.")
                     return
                 }
                 advance()
@@ -570,8 +578,13 @@ struct PostSurplusView: View {
             }
 
             navRow {
+                // SECURITY: re-validate server-side — pickup window must be in the future and end > start
                 guard !pickupWindow.isEmpty else {
                     showValidationError("Please select a pickup window.")
+                    return
+                }
+                if pickupWindow == "Custom Time" && customDate < Date() {
+                    showValidationError("Custom pickup time must be in the future.")
                     return
                 }
                 advance()

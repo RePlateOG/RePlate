@@ -221,6 +221,8 @@ struct PremiumListingDetailView: View {
     @State private var showClaimSheet = false
     @State private var selectedQuantity = 1
     @State private var currentImageIndex = 0
+    @State private var showReport = false
+    @State private var showReportConfirm = false
     
     var body: some View {
         ScrollView {
@@ -267,6 +269,29 @@ struct PremiumListingDetailView: View {
             }
             .padding(Theme.Spacing.screenPadding)
             .padding(.top, Theme.Spacing.huge)
+        }
+        .overlay(alignment: .topTrailing) {
+            // Report listing menu
+            Menu {
+                Button("Report listing", role: .destructive) {
+                    // TODO: backend — POST /reports
+                    showReport = true
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(Theme.Colors.label)
+                    .frame(width: 40, height: 40)
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(Theme.CornerRadius.pill)
+            }
+            .padding(Theme.Spacing.screenPadding)
+            .padding(.top, Theme.Spacing.huge)
+            .alert("Report Submitted", isPresented: $showReport) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Thank you. Our team will review this listing.")
+            }
         }
         .overlay(alignment: .bottom) {
             // Claim Button
@@ -521,10 +546,20 @@ struct PremiumListingDetailView: View {
                     )
                     
                     if let restaurant = listing.restaurant {
+                        // SECURITY: reveal full address only after order.status == .confirmed, enforced server-side
+                        // For browse/detail view (pre-order), show only neighborhood to protect restaurant privacy
+                        let addressDisplay: String = {
+                            let parts = restaurant.address.components(separatedBy: ",")
+                            // Show city/area only (last 1-2 components) until order is confirmed
+                            if parts.count >= 2 {
+                                return parts.dropFirst().joined(separator: ",").trimmingCharacters(in: .whitespaces)
+                            }
+                            return restaurant.address
+                        }()
                         InfoRow(
                             icon: "location.fill",
-                            label: "Address",
-                            value: restaurant.address
+                            label: "Area",
+                            value: addressDisplay + " (Full address shown after ordering)"
                         )
                     }
                 }

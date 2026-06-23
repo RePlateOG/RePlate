@@ -157,14 +157,21 @@ class OrdersViewModel: ObservableObject {
     @Published var completedOrders: [Order] = []
     @Published var isLoading = false
     @Published var selectedTab = 0
-    
+
+    weak var appState: AppState?
+
+    init(appState: AppState? = nil) {
+        self.appState = appState
+    }
+
     func loadOrders() async {
         isLoading = true
         defer { isLoading = false }
-        
+
         try? await Task.sleep(nanoseconds: 1_000_000_000)
-        
-        let allOrders = MockData.sampleOrders
+
+        // Read from appState (single source of truth) if available, else fall back to MockData
+        let allOrders = appState?.orders ?? MockData.sampleOrders
         pendingOrders = allOrders.filter {
             $0.status == .pending || $0.status == .confirmed || $0.status == .ready
         }
@@ -172,13 +179,29 @@ class OrdersViewModel: ObservableObject {
             $0.status == .completed || $0.status == .cancelled
         }
     }
-    
+
+    /// Cancel an order, updating the shared appState source of truth.
+    /// TODO: backend — POST /orders/{id}/status { status: "cancelled" }
+    func cancelOrder(_ order: Order) {
+        guard let appState = appState,
+              let idx = appState.orders.firstIndex(where: { $0.id == order.id }) else { return }
+        appState.orders[idx].status = .cancelled
+        withAnimation {
+            pendingOrders.removeAll { $0.id == order.id }
+            var cancelled = appState.orders[idx]
+            cancelled.status = .cancelled
+            completedOrders.insert(cancelled, at: 0)
+        }
+        hapticFeedback(.success)
+        // TODO: backend — POST /orders/{id}/status { status: "cancelled" }
+    }
+
     func updateOrderStatus(orderId: String, status: Order.OrderStatus) async {
         // Update order status
         hapticFeedback(.success)
         await loadOrders()
     }
-    
+
     func markAsNoShow(orderId: String) async {
         await updateOrderStatus(orderId: orderId, status: .noShow)
     }
@@ -275,16 +298,16 @@ class ProfileViewModel: ObservableObject {
 class MessagesViewModel: ObservableObject {
     @Published var conversations: [Conversation] = []
     @Published var isLoading = false
-    
+
     func loadConversations() async {
+        // Only show skeleton for max 0.3 seconds; data pre-populated synchronously in view
         isLoading = true
-        defer { isLoading = false }
-        
-        try? await Task.sleep(nanoseconds: 1_000_000_000)
-        
+        // Simulate a fast refresh — 0.3 s max so the skeleton never lingers
+        try? await Task.sleep(nanoseconds: 300_000_000)
         conversations = MockData.sampleConversations
+        isLoading = false
     }
-    
+
     func markAsRead(conversationId: String) async {
         // Mark conversation as read
     }

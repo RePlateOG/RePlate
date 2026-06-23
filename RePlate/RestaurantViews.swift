@@ -182,6 +182,7 @@ struct RestaurantDashboardView: View {
     private var postSurplusButton: some View {
         Button {
             hapticFeedback(.medium)
+            // SECURITY: server must check verified flag before accepting listing
             if isVerified { showPostListing = true } else { showVerificationGate = true }
         } label: {
             HStack(spacing: 14) {
@@ -1471,26 +1472,182 @@ struct ImpactMetric: View {
 
 // MARK: - Restaurant Orders View Model
 @MainActor
-private class RestaurantOrdersViewModel: ObservableObject {
+class RestaurantOrdersViewModel: ObservableObject {
     @Published var pendingOrders: [Order] = []
     @Published var completedOrders: [Order] = []
     @Published var isLoading = false
+    @Published var showPickupConfirmed = false  // brief success toast
+    @Published var confirmedOrderId: String? = nil
+
+    weak var appState: AppState?
+
+    init(appState: AppState? = nil) {
+        self.appState = appState
+    }
 
     func loadOrders() async {
         isLoading = true
         defer { isLoading = false }
         try? await Task.sleep(nanoseconds: 600_000_000)
-        let all = MockData.sampleOrders
+        let all = appState?.orders ?? MockData.sampleOrders
         pendingOrders   = all.filter { $0.status == .pending || $0.status == .confirmed || $0.status == .ready }
         completedOrders = all.filter { $0.status == .completed || $0.status == .cancelled || $0.status == .noShow }
     }
 
     /// Move an order from pending → completed (Confirm Pickup).
+    /// TODO: backend — POST /orders/{id}/status { status: "completed" }
+    // SECURITY: server must validate the code, mark it used, and prevent reuse
     func confirmPickup(_ order: Order) {
         guard let idx = pendingOrders.firstIndex(where: { $0.id == order.id }) else { return }
-        var updated = pendingOrders.remove(at: idx)
-        updated.status = .completed
-        completedOrders.insert(updated, at: 0)
+        // Update in appState (single source of truth)
+        if let appState = appState,
+           let appIdx = appState.orders.firstIndex(where: { $0.id == order.id }) {
+            appState.orders[appIdx].status = .completed
+        }
+        withAnimation {
+            var updated = pendingOrders.remove(at: idx)
+            updated.status = .completed
+            completedOrders.insert(updated, at: 0)
+        }
+        // Show 2-second "Picked up!" toast
+        confirmedOrderId = order.id
+        showPickupConfirmed = true
+        Task {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            showPickupConfirmed = false
+            confirmedOrderId = nil
+        }
+    }
+}
+
+// MARK: - Pending Order Card (stateful, owns code-entry state)
+private struct PendingOrderCard: View {
+    let order: Order
+    let viewModel: RestaurantOrdersViewModel
+    @Binding var selectedOrder: Order?
+    @Binding var messageOrder: Order?
+    @State private var enteredCode = ""
+    @FocusState private var codeFocused: Bool
+
+    // SECURITY: server must validate the code, mark it used, and prevent reuse
+    private var codeMatches: Bool { enteredCode == order.pickupCode }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Customer row
+            HStack(alignment: .top, spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Theme.Colors.primaryGradientStart.opacity(0.12))
+                        .frame(width: 48, height: 48)
+                    Text(String(order.pickupCode.prefix(1)).uppercased())
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(order.customer?.name ?? "Customer")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundColor(Theme.Colors.label)
+                    if let listing = order.listing {
+                        Text(listing.title)
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("$\(String(format: "%.2f", order.totalAmount))")
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                    Text("Qty: \(order.quantity)")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundColor(Theme.Colors.secondaryLabel)
+                }
+            }
+            .padding(.bottom, 14)
+
+            // Pickup window banner
+            HStack(spacing: 8) {
+                Image(systemName: "clock.badge.exclamationmark.fill")
+                    .font(.system(size: 13))
+                    .foregroundColor(.orange)
+                Text("Pickup: \(order.pickupWindowStart.formatted(date: .omitted, time: .shortened)) – \(order.pickupWindowEnd.formatted(date: .omitted, time: .shortened))")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundColor(.orange)
+                Spacer()
+            }
+            .padding(12)
+            .background(Color.orange.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .padding(.bottom, 14)
+
+            // 6-digit pickup code entry
+            // SECURITY: server must validate the code, mark it used, and prevent reuse
+            VStack(alignment: .leading, spacing: 6) {
+                Text("ENTER CUSTOMER'S 6-DIGIT CODE")
+                    .font(.system(size: 9, weight: .black, design: .rounded))
+                    .foregroundColor(Theme.Colors.tertiaryLabel)
+                    .tracking(1.0)
+                TextField("e.g. ABC123", text: $enteredCode)
+                    .font(.system(size: 20, weight: .bold, design: .monospaced))
+                    .foregroundColor(codeMatches ? Theme.Colors.primaryGradientStart : Theme.Colors.label)
+                    .multilineTextAlignment(.center)
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
+                    .focused($codeFocused)
+                    .onChange(of: enteredCode) { _, v in
+                        enteredCode = String(v.prefix(6)).uppercased()
+                    }
+                    .padding(12)
+                    .background(codeMatches ? Theme.Colors.primaryGradientStart.opacity(0.08) : Color(.systemGray6))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(codeMatches ? Theme.Colors.primaryGradientStart.opacity(0.5) : Color.clear, lineWidth: 1.5)
+                    )
+            }
+            .padding(.bottom, 14)
+
+            // Action buttons
+            HStack(spacing: 10) {
+                Button("Details") { hapticFeedback(.light); selectedOrder = order }
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundColor(Theme.Colors.secondaryLabel)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color(.systemGray6))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+
+                Button { hapticFeedback(.light); messageOrder = order } label: {
+                    Image(systemName: "bubble.left")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                        .frame(width: 46, height: 42)
+                        .background(Theme.Colors.primaryGradientStart.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+
+                Button {
+                    hapticFeedback(.success)
+                    // SECURITY: server must validate the code, mark it used, and prevent reuse
+                    viewModel.confirmPickup(order)
+                } label: {
+                    Text("Confirm Pickup")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(codeMatches ? Theme.Colors.primaryGradient : LinearGradient(colors: [Color(.systemGray4)], startPoint: .leading, endPoint: .trailing))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+                .disabled(!codeMatches)
+            }
+        }
+        .padding(18)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 26))
+        .shadow(color: Color.black.opacity(0.07), radius: 12, y: 4)
     }
 }
 
@@ -1504,19 +1661,45 @@ struct RestaurantOrdersView: View {
     @State private var showRepostListing  = false
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 0) {
-                gradientHeader
-                mainContent
+        ZStack(alignment: .top) {
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    gradientHeader
+                    mainContent
+                }
+                .padding(.bottom, 100)
             }
-            .padding(.bottom, 100)
+            .ignoresSafeArea(edges: .top)
+            .background(Color(.systemGroupedBackground))
+            .task {
+                viewModel.appState = appState
+                await viewModel.loadOrders()
+            }
+            .sheet(item: $selectedOrder)       { order in RestaurantOrderDetailView(order: order) }
+            .sheet(item: $messageOrder)        { order in MessageCustomerView(order: order) }
+            .sheet(isPresented: $showRepostListing) { PostSurplusView() }
+
+            // Green "Picked up!" toast banner
+            if viewModel.showPickupConfirmed {
+                HStack(spacing: 10) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.white)
+                    Text("Picked up!")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 14)
+                .background(Theme.Colors.primaryGradient)
+                .clipShape(Capsule())
+                .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.35), radius: 12, y: 4)
+                .padding(.top, 60)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.showPickupConfirmed)
+                .zIndex(10)
+            }
         }
-        .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGroupedBackground))
-        .task { await viewModel.loadOrders() }
-        .sheet(item: $selectedOrder)       { order in RestaurantOrderDetailView(order: order) }
-        .sheet(item: $messageOrder)        { order in MessageCustomerView(order: order) }
-        .sheet(isPresented: $showRepostListing) { PostSurplusView() }
     }
 
     // MARK: Header
@@ -1599,97 +1782,10 @@ struct RestaurantOrdersView: View {
         if viewModel.pendingOrders.isEmpty {
             ordersEmptyState(icon: "tray.fill", title: "No Pending Orders", message: "New orders will appear here")
         } else {
-            ForEach(viewModel.pendingOrders) { order in pendingCard(order) }
-        }
-    }
-
-    private func pendingCard(_ order: Order) -> some View {
-        VStack(spacing: 0) {
-            // Customer row
-            HStack(alignment: .top, spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Theme.Colors.primaryGradientStart.opacity(0.12))
-                        .frame(width: 48, height: 48)
-                    Text(String(order.pickupCode.prefix(1)).uppercased())
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                        .foregroundColor(Theme.Colors.primaryGradientStart)
-                }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(order.customer?.name ?? "Customer")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .foregroundColor(Theme.Colors.label)
-                    if let listing = order.listing {
-                        Text(listing.title)
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
-                            .foregroundColor(Theme.Colors.secondaryLabel)
-                            .lineLimit(1)
-                    }
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text("$\(String(format: "%.2f", order.totalAmount))")
-                        .font(.system(size: 17, weight: .bold, design: .rounded))
-                        .foregroundColor(Theme.Colors.primaryGradientStart)
-                    Text("Qty: \(order.quantity)")
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundColor(Theme.Colors.secondaryLabel)
-                }
-            }
-            .padding(.bottom, 14)
-
-            // Pickup window banner
-            HStack(spacing: 8) {
-                Image(systemName: "clock.badge.exclamationmark.fill")
-                    .font(.system(size: 13))
-                    .foregroundColor(.orange)
-                Text("Pickup: \(order.pickupWindowStart.formatted(date: .omitted, time: .shortened)) – \(order.pickupWindowEnd.formatted(date: .omitted, time: .shortened))")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundColor(.orange)
-                Spacer()
-            }
-            .padding(12)
-            .background(Color.orange.opacity(0.08))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .padding(.bottom, 14)
-
-            // Action buttons
-            HStack(spacing: 10) {
-                Button("Details") { hapticFeedback(.light); selectedOrder = order }
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundColor(Theme.Colors.secondaryLabel)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Color(.systemGray6))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-
-                Button { hapticFeedback(.light); messageOrder = order } label: {
-                    Image(systemName: "bubble.left")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(Theme.Colors.primaryGradientStart)
-                        .frame(width: 46, height: 42)
-                        .background(Theme.Colors.primaryGradientStart.opacity(0.1))
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                }
-
-                Button {
-                    hapticFeedback(.success)
-                    viewModel.confirmPickup(order)
-                } label: {
-                    Text("Confirm Pickup")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Theme.Colors.primaryGradient)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                }
+            ForEach(viewModel.pendingOrders) { order in
+                PendingOrderCard(order: order, viewModel: viewModel, selectedOrder: $selectedOrder, messageOrder: $messageOrder)
             }
         }
-        .padding(18)
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 26))
-        .shadow(color: Color.black.opacity(0.07), radius: 12, y: 4)
     }
 
     // MARK: Completed (Picked Up)

@@ -78,6 +78,10 @@ struct MainTabView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
+            // Base background fills entire screen including safe areas, eliminating white bands
+            Color(.systemGroupedBackground)
+                .ignoresSafeArea()
+
             TabView(selection: $appState.selectedTab) {
                 // Home
                 if appState.currentUser?.accountType == .restaurant {
@@ -120,6 +124,7 @@ struct MainTabView: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
+            .background(Color(.systemGroupedBackground))
 
             // Custom Tab Bar
             CustomTabBar(selectedTab: $appState.selectedTab)

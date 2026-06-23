@@ -824,6 +824,8 @@ struct LocationPickupEditView: View {
 }
 
 // MARK: - Payment Settings
+// SECURITY: never store raw card data client-side. Use Stripe or similar PCI-compliant SDK server-side.
+// TODO: backend — payment must be processed server-side; client total is untrusted.
 struct PaymentSettingsView: View {
     @Environment(\.dismiss) var dismiss
     @State private var bankName = ""
@@ -843,11 +845,12 @@ struct PaymentSettingsView: View {
 
                 VStack(spacing: 24) {
                     // Security info banner
+                    // SECURITY: never store raw card data client-side. Use Stripe or similar PCI-compliant SDK server-side.
                     HStack(spacing: 12) {
                         Image(systemName: "lock.shield.fill")
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(Theme.Colors.primaryGradientStart)
-                        Text("Your payment information is encrypted and stored securely.")
+                        Text("Your payment information is encrypted and processed securely via our payment provider. Card data is never stored on-device.")
                             .font(.system(size: 13, weight: .medium, design: .rounded))
                             .foregroundColor(Theme.Colors.secondaryLabel)
                             .fixedSize(horizontal: false, vertical: true)
