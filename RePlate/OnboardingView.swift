@@ -895,9 +895,9 @@ struct RestaurantSignUpView: View {
     @State private var logoImage: Image?
 
     // Step 2 — Location & contact
-    @State private var address       = ""
-    @State private var rawPhone      = ""
-    @State private var businessHours = ""
+    @State private var address         = ""
+    @State private var rawPhone        = ""
+    @State private var schedule        = DaySchedule.defaultSchedule()
     @State private var locationGranted = false
 
     // Step 3 — Account credentials
@@ -1130,9 +1130,22 @@ struct RestaurantSignUpView: View {
                     .background(Color(.systemGray6))
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
-                AuthLabeledField(label: "Business Hours",
-                                 placeholder: "e.g., Mon–Fri 9AM–9PM",
-                                 text: $businessHours)
+                // Per-day hours table
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("BUSINESS HOURS")
+                        .font(.system(size: 10, weight: .black, design: .rounded))
+                        .foregroundColor(Theme.Colors.tertiaryLabel)
+                        .tracking(1.2)
+                    OperatingHoursTable(schedule: $schedule)
+                    HStack(spacing: 6) {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 11))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                        Text("Tap a day's times to set open and close hours.")
+                            .font(.system(size: 11))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                    }
+                }
             }
 
             // Use current location — requests CoreLocation permission

@@ -779,6 +779,25 @@ private struct HoursRow: View {
     }
 }
 
+// MARK: - Operating Hours Table (reusable — used in sign-up and settings)
+struct OperatingHoursTable: View {
+    @Binding var schedule: [DaySchedule]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach($schedule) { $entry in
+                HoursRow(entry: $entry)
+                if entry.day != schedule.last?.day {
+                    Divider().padding(.leading, 16)
+                }
+            }
+        }
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .shadow(color: Color.black.opacity(0.05), radius: 10, y: 3)
+    }
+}
+
 // MARK: - Restaurant Details Edit
 struct RestaurantDetailsEditView: View {
     @Environment(\.dismiss) var dismiss
@@ -850,19 +869,7 @@ struct RestaurantDetailsEditView: View {
                     // Per-day hours table
                     VStack(alignment: .leading, spacing: 12) {
                         sectionLabel("Operating Hours")
-                        VStack(spacing: 0) {
-                            ForEach($schedule) { $entry in
-                                HoursRow(entry: $entry)
-                                if entry.day != schedule.last?.day {
-                                    Divider().padding(.leading, 16)
-                                }
-                            }
-                        }
-                        .background(Color(.systemBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 18))
-                        .shadow(color: Color.black.opacity(0.05), radius: 10, y: 3)
-
-                        // Helper hint
+                        OperatingHoursTable(schedule: $schedule)
                         HStack(spacing: 6) {
                             Image(systemName: "info.circle")
                                 .font(.system(size: 12))
