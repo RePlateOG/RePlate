@@ -13,6 +13,7 @@ struct ProfileView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = ProfileViewModel()
     @State private var showSettings        = false
+    @State private var showNotifications   = false
     @State private var showEditProfile     = false
     @State private var showPaymentMethods  = false
     @State private var showLegalPage: LegalPageView.LegalPage? = nil
@@ -41,6 +42,7 @@ struct ProfileView: View {
         .background(Color(.systemGroupedBackground))
         .task { await viewModel.loadProfile() }
         .sheet(isPresented: $showEditProfile) { EditProfileView() }
+        .sheet(isPresented: $showNotifications) { NotificationsView() }
         .sheet(isPresented: $showSettings) { SettingsView() }
         .sheet(isPresented: $showPaymentMethods) { PaymentMethodsView().environmentObject(appState) }
         .sheet(item: $showLegalPage) { page in
@@ -293,7 +295,7 @@ struct ProfileView: View {
                 }
                 Divider().padding(.leading, 60)
                 MenuButton(icon: "bell", title: "Notifications") {
-                    showSettings = true
+                    showNotifications = true
                 }
                 Divider().padding(.leading, 60)
                 MenuButton(icon: "creditcard", title: "Payment Methods") {

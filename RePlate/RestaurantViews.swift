@@ -306,6 +306,11 @@ struct RestaurantDashboardView: View {
                     ForEach(viewModel.activeListings.prefix(3)) { listing in
                         FigmaActiveListingCard(listing: listing, onEdit: {
                             selectedListing = listing
+                        }, onCancel: {
+                            withAnimation {
+                                viewModel.activeListings.removeAll { $0.id == listing.id }
+                            }
+                            // TODO: backend — DELETE /listings/{id}
                         })
                     }
                 }
