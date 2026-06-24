@@ -36,7 +36,7 @@ struct RestaurantDashboardView: View {
             .padding(.bottom, 100)
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGroupedBackground))
+        .background(Theme.Colors.pageBackground)
         .refreshable { await viewModel.refreshDashboard() }
         .task { await viewModel.loadDashboard() }
         .sheet(isPresented: $showPostListing) { PostSurplusView() }
@@ -1675,7 +1675,7 @@ struct RestaurantOrdersView: View {
                 .padding(.bottom, 100)
             }
             .ignoresSafeArea(edges: .top)
-            .background(Color(.systemGroupedBackground))
+            .background(Theme.Colors.pageBackground)
             .task {
                 viewModel.appState = appState
                 await viewModel.loadOrders()
@@ -1968,7 +1968,7 @@ struct RestaurantProfileView: View {
             .padding(.bottom, 100)
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGroupedBackground))
+        .background(Theme.Colors.pageBackground)
         .sheet(isPresented: $showRestaurantDetails) { RestaurantDetailsEditView() }
         .sheet(isPresented: $showLocationPickup)    { LocationPickupEditView() }
         .sheet(isPresented: $showPaymentSettings)   { PaymentSettingsView() }

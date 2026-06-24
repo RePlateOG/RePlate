@@ -193,7 +193,7 @@ struct RestaurantSettingsView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGroupedBackground))
+        .background(Theme.Colors.pageBackground)
         .sheet(isPresented: $showRestaurantDetails) { RestaurantDetailsEditView() }
         .sheet(isPresented: $showLocationPickup)    { LocationPickupEditView() }
         .sheet(isPresented: $showPaymentSettings)   { PaymentSettingsView() }
@@ -401,7 +401,7 @@ struct EditListingView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGroupedBackground))
+        .background(Theme.Colors.pageBackground)
     }
 }
 
@@ -596,7 +596,7 @@ struct RestaurantOrderDetailView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGroupedBackground))
+        .background(Theme.Colors.pageBackground)
         .sheet(isPresented: $showMessage) {
             MessageCustomerView(order: order)
         }
@@ -889,7 +889,7 @@ struct RestaurantDetailsEditView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGroupedBackground))
+        .background(Theme.Colors.pageBackground)
     }
 }
 
@@ -964,7 +964,7 @@ struct LocationPickupEditView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGroupedBackground))
+        .background(Theme.Colors.pageBackground)
     }
 }
 
@@ -1034,7 +1034,7 @@ struct PaymentSettingsView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGroupedBackground))
+        .background(Theme.Colors.pageBackground)
     }
 }
 
@@ -1106,7 +1106,7 @@ struct NotificationsPreferencesView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGroupedBackground))
+        .background(Theme.Colors.pageBackground)
     }
 
     private func notifToggle(icon: String, title: String, subtitle: String, isOn: Binding<Bool>) -> some View {
@@ -1294,7 +1294,7 @@ struct HelpCenterView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGroupedBackground))
+        .background(Theme.Colors.pageBackground)
         .sheet(isPresented: $showContact) { ContactSupportView() }
     }
 
@@ -1438,7 +1438,7 @@ struct ContactSupportView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGroupedBackground))
+        .background(Theme.Colors.pageBackground)
         .alert("Message Sent!", isPresented: $showConfirmation) {
             Button("Done") { dismiss() }
         } message: {
@@ -1518,7 +1518,7 @@ struct StaffAccountsView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGroupedBackground))
+        .background(Theme.Colors.pageBackground)
     }
 
     // MARK: Add button
@@ -1796,7 +1796,7 @@ struct MessageCustomerView: View {
             )
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGroupedBackground))
+        .background(Theme.Colors.pageBackground)
     }
 
     @ViewBuilder

@@ -29,7 +29,7 @@ struct OrdersView: View {
             .tabViewStyle(.page(indexDisplayMode: .never))
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGroupedBackground))
+        .background(Theme.Colors.pageBackground)
         .task {
             viewModel.appState = appState
             await viewModel.loadOrders()

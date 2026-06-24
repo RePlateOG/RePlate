@@ -39,7 +39,7 @@ struct ProfileView: View {
             .padding(.bottom, 100)
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGroupedBackground))
+        .background(Theme.Colors.pageBackground)
         .task { await viewModel.loadProfile() }
         .sheet(isPresented: $showEditProfile) { EditProfileView() }
         .sheet(isPresented: $showNotifications) { NotificationsView() }

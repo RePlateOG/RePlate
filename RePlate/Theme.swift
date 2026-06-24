@@ -60,6 +60,17 @@ struct Theme {
             endPoint: .bottomTrailing
         )
         
+        // Page background: subtle green-to-white diagonal used on every screen
+        static let pageBackground = LinearGradient(
+            colors: [
+                primaryGradientStart.opacity(0.10),
+                primaryGradientEnd.opacity(0.04),
+                Color(.systemBackground)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+
         // Surface Colors - Enhanced Hierarchy
         static let background = Color(.systemBackground)
         static let secondaryBackground = Color(.secondarySystemBackground)

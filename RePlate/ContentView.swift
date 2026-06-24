@@ -79,7 +79,7 @@ struct MainTabView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             // Base background fills entire screen including safe areas, eliminating white bands
-            Color(.systemGroupedBackground)
+            Theme.Colors.pageBackground
                 .ignoresSafeArea()
 
             TabView(selection: $appState.selectedTab) {
@@ -127,7 +127,7 @@ struct MainTabView: View {
             // Extend TabView edge-to-edge so its frame doesn't leave grey strips
             // at the top (status bar) or bottom (home indicator) safe-area margins.
             .ignoresSafeArea()
-            .background(Color(.systemGroupedBackground))
+            .background(Theme.Colors.pageBackground)
 
             // Custom Tab Bar
             CustomTabBar(selectedTab: $appState.selectedTab)

@@ -28,7 +28,7 @@ struct MessagesView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGroupedBackground))
+        .background(Theme.Colors.pageBackground)
         .task {
             // Pre-populate synchronously from MockData, then do async refresh
             if viewModel.conversations.isEmpty {
@@ -222,12 +222,12 @@ struct ConversationView: View {
                     }
                     .padding(Theme.Spacing.md)
                 }
-                .background(Color(.systemGroupedBackground))
+                .background(Theme.Colors.pageBackground)
 
                 // Input Bar
                 messageInputBar
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Theme.Colors.pageBackground)
             .navigationTitle(conversation.order?.restaurant?.name ?? "Chat")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showOrderInfo) { OrderInfoSheet(order: conversation.order) }
@@ -356,7 +356,7 @@ private struct OrderInfoSheet: View {
                 }
                 .padding(24)
             }
-            .background(Color(.systemBackground))
+            .background(Theme.Colors.pageBackground)
             .navigationTitle("Order Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -126,7 +126,7 @@ struct VerificationGateView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 48)
         }
-        .background(Color(.systemBackground))
+        .background(Theme.Colors.pageBackground)
         .sheet(isPresented: $showVerification) { RestaurantVerificationView() }
     }
 }

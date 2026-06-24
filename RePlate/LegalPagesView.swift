@@ -94,7 +94,7 @@ struct LegalPageView: View {
                 .padding(.horizontal, 24).padding(.top, 20).padding(.bottom, 60)
             }
         }
-        .background(Color(.systemBackground))
+        .background(Theme.Colors.pageBackground)
         .navigationTitle(page.rawValue)
         .navigationBarTitleDisplayMode(.inline)
     }

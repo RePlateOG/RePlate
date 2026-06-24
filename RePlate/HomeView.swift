@@ -24,7 +24,7 @@ struct HomeView: View {
             }
             .padding(.bottom, 100)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Theme.Colors.pageBackground)
         .ignoresSafeArea(edges: .top)
         .refreshable { await viewModel.refreshListings() }
         .task { await viewModel.loadListings() }
@@ -458,7 +458,7 @@ struct NotificationsView: View {
                 }
                 Spacer()
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Theme.Colors.pageBackground)
             .navigationTitle("Notifications")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -27,7 +27,7 @@ struct PaymentMethodsView: View {
                     methodsList
                 }
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Theme.Colors.pageBackground)
             .navigationTitle("Payment Methods")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

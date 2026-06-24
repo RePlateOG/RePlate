@@ -849,7 +849,7 @@ struct ClaimListingSheet: View {
                 }
                 .padding(20)
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Theme.Colors.pageBackground)
             .navigationTitle(listing.isFree ? "Claim Food" : "Checkout")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
