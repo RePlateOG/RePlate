@@ -16,6 +16,7 @@ struct RestaurantDashboardView: View {
     @State private var showPostListing      = false
     @State private var showVerificationGate = false
     @State private var showSettings         = false
+    @State private var showNotifications    = false
     @State private var selectedOrder: Order? = nil
     @State private var selectedListing: FoodListing? = nil
 
@@ -43,6 +44,9 @@ struct RestaurantDashboardView: View {
         .sheet(isPresented: $showVerificationGate) { VerificationGateView() }
         .sheet(isPresented: $showSettings) {
             RestaurantSettingsView()
+        }
+        .sheet(isPresented: $showNotifications) {
+            NotificationsView()
         }
         .sheet(item: $selectedOrder) { order in
             RestaurantOrderDetailView(order: order)
@@ -91,25 +95,30 @@ struct RestaurantDashboardView: View {
                     }
                 }
                 // Bell with badge
-                ZStack(alignment: .topTrailing) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(.white.opacity(0.2))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .stroke(.white.opacity(0.3), lineWidth: 1)
-                            )
-                            .frame(width: 48, height: 48)
-                        Image(systemName: "bell.fill")
-                            .font(.system(size: 20))
-                            .foregroundColor(.white)
-                    }
-                    if viewModel.hasUnreadNotifications {
-                        Circle()
-                            .fill(Color.red.opacity(0.9))
-                            .frame(width: 12, height: 12)
-                            .overlay(Circle().stroke(Theme.Colors.primaryGradientStart, lineWidth: 2))
-                            .offset(x: 2, y: -2)
+                Button {
+                    hapticFeedback(.light)
+                    showNotifications = true
+                } label: {
+                    ZStack(alignment: .topTrailing) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(.white.opacity(0.2))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(.white.opacity(0.3), lineWidth: 1)
+                                )
+                                .frame(width: 48, height: 48)
+                            Image(systemName: "bell.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(.white)
+                        }
+                        if viewModel.hasUnreadNotifications {
+                            Circle()
+                                .fill(Color.red.opacity(0.9))
+                                .frame(width: 12, height: 12)
+                                .overlay(Circle().stroke(Theme.Colors.primaryGradientStart, lineWidth: 2))
+                                .offset(x: 2, y: -2)
+                        }
                     }
                 }
                 } // end HStack (gear + bell)

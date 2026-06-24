@@ -21,12 +21,17 @@ struct ContentView: View {
                 Group {
                     if !appState.hasCompletedOnboarding {
                         OnboardingView()
+                            .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
                     } else if !appState.isAuthenticated {
                         AuthenticationView()
+                            .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
                     } else {
                         MainTabView()
+                            .transition(.opacity.combined(with: .scale(scale: 0.97)))
                     }
                 }
+                .animation(.easeInOut(duration: 0.35), value: appState.isAuthenticated)
+                .animation(.easeInOut(duration: 0.35), value: appState.hasCompletedOnboarding)
             }
         }
         .preferredColorScheme(appState.colorScheme.colorScheme)
@@ -144,14 +149,18 @@ struct CustomTabBar: View {
         HStack(spacing: 0) {
             ForEach(AppState.Tab.allCases, id: \.self) { tab in
                 Button {
-                    selectedTab = tab
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        selectedTab = tab
+                    }
                     hapticFeedback(.light)
                 } label: {
                     VStack(spacing: 4) {
                         Image(systemName: selectedTab == tab ? tab.iconFilled : tab.icon)
                             .font(.system(size: 22))
                             .foregroundColor(selectedTab == tab ? Theme.Colors.primaryGradientStart : Theme.Colors.secondaryLabel)
-                        
+                            .scaleEffect(selectedTab == tab ? 1.1 : 1.0)
+                            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: selectedTab)
+
                         Text(tab.rawValue)
                             .font(Theme.Typography.caption2)
                             .foregroundColor(selectedTab == tab ? Theme.Colors.primaryGradientStart : Theme.Colors.secondaryLabel)

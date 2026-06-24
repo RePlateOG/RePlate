@@ -259,7 +259,10 @@ struct ConversationView: View {
             TextField("Type a message...", text: $messageText)
                 .font(Theme.Typography.body)
                 .padding(Theme.Spacing.md)
-                .background(Color(.systemGray6))
+                .background(
+                    RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
+                        .fill(Theme.Colors.primaryGradientStart.opacity(0.07))
+                )
                 .cornerRadius(Theme.CornerRadius.xl)
 
             Button {
@@ -273,7 +276,10 @@ struct ConversationView: View {
             .opacity(messageText.isEmpty ? 0.5 : 1)
         }
         .padding(Theme.Spacing.md)
-        .background(Color(.systemBackground))
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .top) {
+            Divider().opacity(0.4)
+        }
     }
 
     func sendMessage() {
