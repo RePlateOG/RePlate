@@ -655,14 +655,130 @@ struct RestaurantOrderDetailView: View {
     }
 }
 
+// MARK: - Day Schedule Model
+struct DaySchedule: Identifiable {
+    let id = UUID()
+    var day: String
+    var isOpen: Bool
+    var openTime: Date
+    var closeTime: Date
+    var isExpanded: Bool = false
+
+    static func defaultSchedule() -> [DaySchedule] {
+        let open  = Calendar.current.date(from: DateComponents(hour: 9,  minute: 0)) ?? Date()
+        let close = Calendar.current.date(from: DateComponents(hour: 22, minute: 0)) ?? Date()
+        let days  = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        return days.map { day in
+            // Weekends closed by default; Mon–Fri open
+            let isWeekend = day == "Saturday" || day == "Sunday"
+            return DaySchedule(day: day, isOpen: !isWeekend, openTime: open, closeTime: close)
+        }
+    }
+}
+
+// MARK: - Hours Row
+private struct HoursRow: View {
+    @Binding var entry: DaySchedule
+    private let timeFormatter: DateFormatter = {
+        let f = DateFormatter(); f.timeStyle = .short; return f
+    }()
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Collapsed row (always visible)
+            Button {
+                if entry.isOpen {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        entry.isExpanded.toggle()
+                    }
+                }
+            } label: {
+                HStack(spacing: 12) {
+                    // Day name
+                    Text(entry.day)
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundColor(Theme.Colors.label)
+                        .frame(width: 90, alignment: .leading)
+
+                    Spacer()
+
+                    // Time summary (or Closed badge) — tappable area
+                    if entry.isOpen {
+                        Text("\(timeFormatter.string(from: entry.openTime)) – \(timeFormatter.string(from: entry.closeTime))")
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundColor(Theme.Colors.primaryGradientStart)
+                    } else {
+                        Text("Closed")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color(.systemGray5))
+                            .clipShape(Capsule())
+                    }
+
+                    // Chevron when open (shows expand state)
+                    if entry.isOpen {
+                        Image(systemName: entry.isExpanded ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                            .frame(width: 16)
+                    }
+
+                    // Open / Closed toggle
+                    Toggle("", isOn: $entry.isOpen)
+                        .labelsHidden()
+                        .tint(Theme.Colors.primaryGradientStart)
+                        .onChange(of: entry.isOpen) { _, open in
+                            if !open { withAnimation { entry.isExpanded = false } }
+                        }
+                }
+                .padding(.vertical, 14)
+                .padding(.horizontal, 16)
+            }
+            .buttonStyle(.plain)
+
+            // Expanded time pickers (dropdown)
+            if entry.isOpen && entry.isExpanded {
+                VStack(spacing: 0) {
+                    Divider().padding(.leading, 16)
+                    VStack(spacing: 2) {
+                        DatePicker(
+                            "Opens",
+                            selection: $entry.openTime,
+                            displayedComponents: .hourAndMinute
+                        )
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+
+                        Divider().padding(.leading, 16)
+
+                        DatePicker(
+                            "Closes",
+                            selection: $entry.closeTime,
+                            in: entry.openTime...,
+                            displayedComponents: .hourAndMinute
+                        )
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                    }
+                    .background(Theme.Colors.primaryGradientStart.opacity(0.04))
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Restaurant Details Edit
 struct RestaurantDetailsEditView: View {
     @Environment(\.dismiss) var dismiss
     @State private var restaurantName = "Verde Bistro"
     @State private var cuisine = "Mediterranean"
     @State private var phone = "+1 (555) 234-5678"
-    @State private var openTime  = Calendar.current.date(from: DateComponents(hour: 9,  minute: 0)) ?? Date()
-    @State private var closeTime = Calendar.current.date(from: DateComponents(hour: 22, minute: 0)) ?? Date()
+    @State private var schedule: [DaySchedule] = DaySchedule.defaultSchedule()
     @State private var isSaving = false
 
     var body: some View {
@@ -724,16 +840,31 @@ struct RestaurantDetailsEditView: View {
                         }
                     }
 
+                    // Per-day hours table
                     VStack(alignment: .leading, spacing: 12) {
                         sectionLabel("Operating Hours")
-                        FormCard {
-                            VStack(spacing: 14) {
-                                DatePicker("Opens", selection: $openTime, displayedComponents: .hourAndMinute)
-                                    .font(.system(size: 15, weight: .medium, design: .rounded))
-                                DatePicker("Closes", selection: $closeTime, in: openTime..., displayedComponents: .hourAndMinute)
-                                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                        VStack(spacing: 0) {
+                            ForEach($schedule) { $entry in
+                                HoursRow(entry: $entry)
+                                if entry.day != schedule.last?.day {
+                                    Divider().padding(.leading, 16)
+                                }
                             }
                         }
+                        .background(Color(.systemBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 18))
+                        .shadow(color: Color.black.opacity(0.05), radius: 10, y: 3)
+
+                        // Helper hint
+                        HStack(spacing: 6) {
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 12))
+                                .foregroundColor(Theme.Colors.secondaryLabel)
+                            Text("Tap a day's times to set open and close hours.")
+                                .font(.system(size: 12))
+                                .foregroundColor(Theme.Colors.secondaryLabel)
+                        }
+                        .padding(.horizontal, 4)
                     }
 
                     SaveButton(isSaving: $isSaving) { dismiss() }
