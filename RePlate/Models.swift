@@ -378,8 +378,9 @@ struct PaymentMethod: Identifiable, Codable {
         case card
         case applePay
         case googlePay
+        case paypal
     }
-    
+
     var displayName: String {
         switch type {
         case .card:
@@ -388,6 +389,8 @@ struct PaymentMethod: Identifiable, Codable {
             return "Apple Pay"
         case .googlePay:
             return "Google Pay"
+        case .paypal:
+            return "PayPal (\(last4))"
         }
     }
 

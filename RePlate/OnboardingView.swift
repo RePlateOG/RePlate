@@ -517,7 +517,7 @@ struct SignInView: View {
                     signInFields
                     signInButton
                     orDivider
-                    appleButton
+                    socialSignInButtons
                     demoHint
                 }
                 .padding(.horizontal, 24)
@@ -606,32 +606,108 @@ struct SignInView: View {
         .padding(.vertical, 20)
     }
 
-    private var appleButton: some View {
-        Button {
-            hapticFeedback(.medium)
-            Task {
-                isLoading = true
-                defer { isLoading = false }
-                let auth: RePlateAuthService = RePlateAuthService.shared
-                let ok = await auth.signInWithApple()
-                if ok {
-                    appState.isAuthenticated = true
-                    appState.currentUser = auth.currentUser
-                    appState.completeOnboarding()
-                    dismiss()
+    private var socialSignInButtons: some View {
+        VStack(spacing: 12) {
+            socialButton(
+                label: "Continue with Google",
+                icon: nil, googleLogo: true,
+                background: Color(.systemBackground),
+                border: Color(.systemGray4),
+                foreground: Color.primary
+            ) {
+                Task {
+                    isLoading = true
+                    defer { isLoading = false }
+                    let auth = RePlateAuthService.shared
+                    if await auth.signInWithGoogle() {
+                        appState.isAuthenticated = true
+                        appState.currentUser = auth.currentUser
+                        appState.completeOnboarding()
+                        dismiss()
+                    }
                 }
             }
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: "apple.logo").font(.system(size: 18, weight: .medium))
-                Text("Sign in with Apple").font(.system(size: 16, weight: .semibold, design: .rounded))
+
+            socialButton(
+                label: "Continue with Yahoo",
+                icon: "y.circle.fill",
+                googleLogo: false,
+                background: Color(hex: "720E9E"),
+                border: Color.clear,
+                foreground: .white
+            ) {
+                Task {
+                    isLoading = true
+                    defer { isLoading = false }
+                    let auth = RePlateAuthService.shared
+                    if await auth.signInWithYahoo() {
+                        appState.isAuthenticated = true
+                        appState.currentUser = auth.currentUser
+                        appState.completeOnboarding()
+                        dismiss()
+                    }
+                }
             }
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity).frame(height: 56)
-            .background(Color.black)
-            .clipShape(RoundedRectangle(cornerRadius: 20))
+
+            socialButton(
+                label: "Continue with Apple",
+                icon: "apple.logo",
+                googleLogo: false,
+                background: Color.black,
+                border: Color.clear,
+                foreground: .white
+            ) {
+                Task {
+                    isLoading = true
+                    defer { isLoading = false }
+                    let auth = RePlateAuthService.shared
+                    if await auth.signInWithApple() {
+                        appState.isAuthenticated = true
+                        appState.currentUser = auth.currentUser
+                        appState.completeOnboarding()
+                        dismiss()
+                    }
+                }
+            }
         }
         .disabled(isLoading)
+    }
+
+    @ViewBuilder
+    private func socialButton(
+        label: String,
+        icon: String?,
+        googleLogo: Bool,
+        background: Color,
+        border: Color,
+        foreground: Color,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: { hapticFeedback(.medium); action() }) {
+            HStack(spacing: 10) {
+                if googleLogo {
+                    // Google "G" rendered with brand colours using two half-circles
+                    GoogleLogoMark()
+                        .frame(width: 20, height: 20)
+                } else if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(foreground)
+                }
+                Text(label)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundColor(foreground)
+            }
+            .frame(maxWidth: .infinity).frame(height: 56)
+            .background(background)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(border, lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(background == Color(.systemBackground) ? 0.06 : 0),
+                    radius: 6, y: 2)
+        }
     }
 
     private var demoHint: some View {
@@ -1530,6 +1606,36 @@ struct AccountTypeButton: View {
                     )
             )
         }
+    }
+}
+
+// Renders the Google "G" logo using brand colours without requiring an asset.
+struct GoogleLogoMark: View {
+    var body: some View {
+        ZStack {
+            // Blue arc (right side)
+            Circle()
+                .trim(from: 0.08, to: 0.5)
+                .stroke(Color(hex: "4285F4"), lineWidth: 4)
+            // Red arc (top)
+            Circle()
+                .trim(from: 0.5, to: 0.75)
+                .stroke(Color(hex: "EA4335"), lineWidth: 4)
+            // Yellow arc (bottom-left)
+            Circle()
+                .trim(from: 0.75, to: 1.0)
+                .stroke(Color(hex: "FBBC04"), lineWidth: 4)
+            // Green arc (bottom-right)
+            Circle()
+                .trim(from: 0.0, to: 0.08)
+                .stroke(Color(hex: "34A853"), lineWidth: 4)
+            // Horizontal bar for the G cutout
+            Rectangle()
+                .fill(Color(hex: "4285F4"))
+                .frame(width: 7, height: 4)
+                .offset(x: 3, y: 0)
+        }
+        .rotationEffect(.degrees(-45))
     }
 }
 
