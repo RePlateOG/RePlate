@@ -8,6 +8,7 @@
 
 import SwiftUI
 import MapKit
+import UserNotifications
 
 struct HomeView: View {
     @EnvironmentObject var appState: AppState
@@ -356,6 +357,18 @@ struct FigmaListingCard: View {
             }
         }
         .buttonStyle(PlainButtonStyle())
+        // §1.2: Long-press context menu for reporting inappropriate listings
+        .contextMenu {
+            Button(role: .destructive) {
+                // TODO: backend — POST report to Supabase moderation queue
+                // For now sends an email so our support team is notified
+                if let url = URL(string: "mailto:support@replate.app?subject=Report%20Listing&body=Listing%20ID%3A%20\(listing.id)") {
+                    UIApplication.shared.open(url)
+                }
+            } label: {
+                Label("Report Listing", systemImage: "exclamationmark.triangle")
+            }
+        }
     }
 }
 
@@ -431,32 +444,33 @@ struct ListingDetailView: View {
 }
 
 // MARK: - Notifications View (placeholder)
+// §4.5.4: Push notification preferences — explicit opt-in required;
+// users must always be able to opt out of marketing notifications.
 struct NotificationsView: View {
     @Environment(\.dismiss) var dismiss
 
+    @State private var permissionStatus: UNAuthorizationStatus = .notDetermined
+    @State private var orderUpdates    = true
+    @State private var newListingsNearby = true
+    @State private var marketingOffers  = false  // off by default — §4.5.4 requires opt-in
+    @State private var reminders        = true
+
     var body: some View {
         NavigationView {
-            VStack(spacing: 24) {
-                Spacer()
-                ZStack {
-                    Circle()
-                        .fill(Theme.Colors.primaryGradientStart.opacity(0.1))
-                        .frame(width: 100, height: 100)
-                    Image(systemName: "bell.slash")
-                        .font(.system(size: 44, weight: .medium))
-                        .foregroundColor(Theme.Colors.primaryGradientStart.opacity(0.5))
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 24) {
+                    // System permission card
+                    permissionCard
+                        .padding(.top, 16)
+
+                    if permissionStatus == .authorized || permissionStatus == .provisional {
+                        preferencesSection
+                    }
+
+                    Spacer(minLength: 40)
                 }
-                VStack(spacing: 8) {
-                    Text("No New Notifications")
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundColor(Theme.Colors.label)
-                    Text("You're all caught up! Check back later for updates on your orders and new listings nearby.")
-                        .font(.system(size: 15))
-                        .foregroundColor(Theme.Colors.secondaryLabel)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
-                }
-                Spacer()
+                .padding(.horizontal, 20)
+                .padding(.bottom, 40)
             }
             .background(Theme.Colors.pageBackground)
             .navigationTitle("Notifications")
@@ -467,6 +481,172 @@ struct NotificationsView: View {
                         .foregroundColor(Theme.Colors.primaryGradientStart)
                 }
             }
+            .task { await refreshPermissionStatus() }
+        }
+    }
+
+    // MARK: - System Permission Card
+
+    private var permissionCard: some View {
+        VStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(permissionStatus == .authorized
+                          ? Theme.Colors.primaryGradientStart.opacity(0.12)
+                          : Color(.systemGray5))
+                    .frame(width: 72, height: 72)
+                Image(systemName: permissionStatus == .authorized ? "bell.fill" : "bell.slash.fill")
+                    .font(.system(size: 30))
+                    .foregroundColor(permissionStatus == .authorized
+                                     ? Theme.Colors.primaryGradientStart
+                                     : Theme.Colors.secondaryLabel)
+            }
+
+            VStack(spacing: 6) {
+                Text(permissionStatus == .authorized ? "Notifications are on" : "Turn on notifications")
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .foregroundColor(Theme.Colors.label)
+                Text(permissionStatus == .authorized
+                     ? "You'll be notified about order updates and listings near you."
+                     : "Stay updated when your order is ready and new deals drop nearby. You can customise or turn off at any time.")
+                    .font(.system(size: 14))
+                    .foregroundColor(Theme.Colors.secondaryLabel)
+                    .multilineTextAlignment(.center)
+            }
+
+            if permissionStatus == .notDetermined {
+                // §4.5.4: First-time explicit opt-in request
+                Button {
+                    Task { await requestPermission() }
+                } label: {
+                    Text("Enable Notifications")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity).frame(height: 52)
+                        .background(Theme.Colors.primaryGradient)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                }
+            } else if permissionStatus == .denied {
+                Button {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    Text("Open Settings")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                        .frame(maxWidth: .infinity).frame(height: 52)
+                        .background(Theme.Colors.primaryGradientStart.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                }
+            }
+        }
+        .padding(20)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .shadow(color: Color.black.opacity(0.06), radius: 10, y: 3)
+    }
+
+    // MARK: - Notification Preferences
+
+    private var preferencesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("What to notify me about")
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundColor(Theme.Colors.secondaryLabel)
+                .tracking(0.5)
+                .padding(.horizontal, 4)
+
+            VStack(spacing: 0) {
+                notifRow(
+                    icon: "bag.fill",
+                    iconColor: Theme.Colors.primaryGradientStart,
+                    title: "Order Updates",
+                    subtitle: "Ready for pickup, confirmed, changes",
+                    value: $orderUpdates
+                )
+                Divider().padding(.leading, 64)
+                notifRow(
+                    icon: "location.fill",
+                    iconColor: Color(hex: "FF6B35"),
+                    title: "Nearby Listings",
+                    subtitle: "New surplus food posted close to you",
+                    value: $newListingsNearby
+                )
+                Divider().padding(.leading, 64)
+                notifRow(
+                    icon: "clock.fill",
+                    iconColor: Color(hex: "5856D6"),
+                    title: "Pickup Reminders",
+                    subtitle: "Reminded before your pickup window closes",
+                    value: $reminders
+                )
+                Divider().padding(.leading, 64)
+                // §4.5.4: Marketing must be opt-in, with clear description of what will be sent
+                notifRow(
+                    icon: "tag.fill",
+                    iconColor: Color(hex: "FF9500"),
+                    title: "Deals & Promotions",
+                    subtitle: "Special offers from restaurants you follow",
+                    value: $marketingOffers
+                )
+            }
+            .background(Color(.systemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .shadow(color: Color.black.opacity(0.06), radius: 10, y: 3)
+
+            Text("You can always manage these in your iPhone's Settings → Notifications → RePlate.")
+                .font(.system(size: 12))
+                .foregroundColor(Theme.Colors.tertiaryLabel)
+                .padding(.horizontal, 4)
+        }
+    }
+
+    private func notifRow(
+        icon: String, iconColor: Color,
+        title: String, subtitle: String,
+        value: Binding<Bool>
+    ) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(iconColor.opacity(0.12))
+                    .frame(width: 40, height: 40)
+                Image(systemName: icon)
+                    .font(.system(size: 17))
+                    .foregroundColor(iconColor)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .foregroundColor(Theme.Colors.label)
+                Text(subtitle)
+                    .font(.system(size: 12))
+                    .foregroundColor(Theme.Colors.secondaryLabel)
+            }
+            Spacer()
+            Toggle("", isOn: value)
+                .labelsHidden()
+                .tint(Theme.Colors.primaryGradientStart)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+    }
+
+    // MARK: - Permission Helpers
+
+    private func refreshPermissionStatus() async {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        permissionStatus = settings.authorizationStatus
+    }
+
+    private func requestPermission() async {
+        do {
+            let granted = try await UNUserNotificationCenter.current()
+                .requestAuthorization(options: [.alert, .sound, .badge])
+            permissionStatus = granted ? .authorized : .denied
+        } catch {
+            permissionStatus = .denied
         }
     }
 }

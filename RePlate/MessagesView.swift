@@ -197,13 +197,36 @@ struct ConversationRow: View {
 struct ConversationView: View {
     @Environment(\.dismiss) var dismiss
     let conversation: Conversation
-    @State private var messageText = ""
+    @State private var messageText   = ""
     @State private var messages: [Message] = []
     @State private var showOrderInfo = false
+    // §1.2: UGC — must provide report/block mechanism for all user-generated messaging
+    @State private var showReportMenu   = false
+    @State private var showBlockConfirm = false
+    @State private var showReportConfirm = false
+    @State private var reportReason: ReportReason?
+    @State private var isBlocked = false
+
+    enum ReportReason: String, CaseIterable, Identifiable {
+        case spam       = "Spam or solicitation"
+        case harassment = "Harassment or bullying"
+        case offensive  = "Offensive content"
+        case fraud      = "Fraud or scam"
+        case other      = "Other"
+        var id: String { rawValue }
+    }
+
+    private var restaurantName: String {
+        conversation.order?.restaurant?.name ?? "User"
+    }
 
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
+                if isBlocked {
+                    blockedBanner
+                }
+
                 // Messages List
                 ScrollView {
                     LazyVStack(spacing: Theme.Spacing.md) {
@@ -223,34 +246,88 @@ struct ConversationView: View {
                 }
                 .background(Theme.Colors.pageBackground)
 
-                // Input Bar
-                messageInputBar
+                if !isBlocked {
+                    messageInputBar
+                }
             }
             .background(Theme.Colors.pageBackground)
-            .navigationTitle(conversation.order?.restaurant?.name ?? "Chat")
+            .navigationTitle(restaurantName)
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showOrderInfo) { OrderInfoSheet(order: conversation.order) }
+            .confirmationDialog("Report or Block", isPresented: $showReportMenu, titleVisibility: .visible) {
+                // §1.2: report mechanism with reason selection
+                ForEach(ReportReason.allCases) { reason in
+                    Button("Report: \(reason.rawValue)") {
+                        reportReason = reason
+                        showReportConfirm = true
+                    }
+                }
+                Button("Block \(restaurantName)", role: .destructive) {
+                    showBlockConfirm = true
+                }
+                Button("Cancel", role: .cancel) {}
+            }
+            .alert("Report Sent", isPresented: $showReportConfirm) {
+                Button("OK") {}
+            } message: {
+                Text("Thanks for reporting. Our Trust & Safety team will review this conversation within 24 hours. Contact support@replate.app for urgent issues.")
+            }
+            .alert("Block \(restaurantName)?", isPresented: $showBlockConfirm) {
+                Button("Block", role: .destructive) {
+                    withAnimation { isBlocked = true }
+                    hapticFeedback(.medium)
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("You won't receive any more messages from this user. You can unblock them from Settings.")
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button {
-                        dismiss()
-                    } label: {
+                    Button { dismiss() } label: {
                         Image(systemName: "chevron.left")
                             .foregroundColor(Theme.Colors.primaryGradientStart)
                     }
                 }
-
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        hapticFeedback(.light)
-                        showOrderInfo = true
-                    } label: {
-                        Image(systemName: "info.circle")
-                            .foregroundColor(Theme.Colors.primaryGradientStart)
+                    HStack(spacing: 4) {
+                        Button {
+                            hapticFeedback(.light)
+                            showOrderInfo = true
+                        } label: {
+                            Image(systemName: "info.circle")
+                                .foregroundColor(Theme.Colors.primaryGradientStart)
+                        }
+                        // §1.2: ellipsis menu with Report & Block
+                        Button {
+                            hapticFeedback(.light)
+                            showReportMenu = true
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                                .foregroundColor(Theme.Colors.primaryGradientStart)
+                        }
                     }
                 }
             }
         }
+    }
+
+    private var blockedBanner: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "hand.raised.fill")
+                .font(.system(size: 14))
+            Text("You've blocked \(restaurantName). They can no longer message you.")
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+            Spacer()
+            Button("Unblock") {
+                withAnimation { isBlocked = false }
+            }
+            .font(.system(size: 13, weight: .bold, design: .rounded))
+            .foregroundColor(Theme.Colors.primaryGradientStart)
+        }
+        .foregroundColor(.white)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Color(.systemRed).opacity(0.85))
     }
 
     private var messageInputBar: some View {

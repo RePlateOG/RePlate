@@ -265,6 +265,9 @@
 				DEVELOPMENT_TEAM = UBP8JR5HB5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "RePlate uses your camera to scan restaurant menus and automatically import food items into your listings.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "RePlate uses your location to show surplus food and restaurants near you.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "RePlate accesses your photo library so you can select menu images to scan and import food items.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -296,6 +299,9 @@
 				DEVELOPMENT_TEAM = UBP8JR5HB5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "RePlate uses your camera to scan restaurant menus and automatically import food items into your listings.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "RePlate uses your location to show surplus food and restaurants near you.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "RePlate accesses your photo library so you can select menu images to scan and import food items.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

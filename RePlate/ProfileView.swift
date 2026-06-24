@@ -166,6 +166,9 @@ struct ProfileView: View {
             accountMenuSection
                 .padding(.top, 28)
 
+            helpSupportSection
+                .padding(.top, 12)
+
             aboutMenuSection
                 .padding(.top, 12)
 
@@ -313,6 +316,45 @@ struct ProfileView: View {
         }
     }
 
+    // MARK: - Help & Support (§1.5 — developer must provide easy contact method)
+    private var helpSupportSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Help & Support")
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundColor(Theme.Colors.label)
+                .padding(.horizontal, 20)
+
+            VStack(spacing: 0) {
+                // §1.5: Easy contact method required
+                MenuButton(icon: "envelope", title: "Contact Support") {
+                    if let url = URL(string: "mailto:support@replate.app?subject=RePlate%20Support") {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                Divider().padding(.leading, 60)
+                // §1.2: Report mechanism for user-generated content
+                MenuButton(icon: "exclamationmark.bubble", title: "Report a Problem") {
+                    if let url = URL(string: "mailto:support@replate.app?subject=RePlate%20Problem%20Report") {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                Divider().padding(.leading, 60)
+                MenuButton(icon: "questionmark.circle", title: "FAQs") {
+                    showLegalPage = .termsOfService
+                }
+                Divider().padding(.leading, 60)
+                // §4.5.4: Users can always find the notification opt-out
+                MenuButton(icon: "bell.badge", title: "Notification Preferences") {
+                    showNotifications = true
+                }
+            }
+            .background(Color(.systemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 24))
+            .shadow(color: Color.black.opacity(0.06), radius: 12, y: 4)
+            .padding(.horizontal, 20)
+        }
+    }
+
     // MARK: - About Menu
     private var aboutMenuSection: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -322,7 +364,7 @@ struct ProfileView: View {
                 .padding(.horizontal, 20)
 
             VStack(spacing: 0) {
-                MenuButton(icon: "info.circle", title: "About RePlate") {
+                MenuButton(icon: "person.3.fill", title: "Community Guidelines") {
                     showLegalPage = .communityGuidelines
                 }
                 Divider().padding(.leading, 60)
@@ -338,7 +380,7 @@ struct ProfileView: View {
                     showLegalPage = .foodSafetyPolicy
                 }
                 Divider().padding(.leading, 60)
-                MenuButton(icon: "arrow.down.doc", title: "Export Data") {
+                MenuButton(icon: "arrow.down.doc", title: "Export My Data") {
                     Task { await viewModel.exportData() }
                 }
             }
