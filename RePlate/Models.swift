@@ -128,23 +128,53 @@ struct FoodListing: Identifiable, Codable {
     }
     
     enum FoodCategory: String, Codable, CaseIterable {
-        case meals = "Meals"
-        case bakery = "Bakery"
-        case produce = "Produce"
-        case beverages = "Beverages"
-        case desserts = "Desserts"
-        case snacks = "Snacks"
-        case other = "Other"
-        
+        // Meal times
+        case breakfast   = "Breakfast"
+        case lunch       = "Lunch"
+        case dinner      = "Dinner"
+        case snacks      = "Snacks"
+        // Food types
+        case meals       = "Meals"
+        case bakery      = "Bakery"
+        case desserts    = "Desserts"
+        case produce     = "Produce"
+        case beverages   = "Beverages"
+        // Cuisines
+        case indian      = "Indian"
+        case italian     = "Italian"
+        case mexican     = "Mexican"
+        case chinese     = "Chinese"
+        case japanese    = "Japanese"
+        case korean      = "Korean"
+        case thai        = "Thai"
+        case american    = "American"
+        case mediterranean = "Mediterranean"
+        case asian       = "Asian"
+        // Catch-all
+        case other       = "Other"
+
         var icon: String {
             switch self {
-            case .meals: return "fork.knife"
-            case .bakery: return "birthday.cake"
-            case .produce: return "carrot"
-            case .beverages: return "cup.and.saucer"
-            case .desserts: return "birthday.cake.fill"
-            case .snacks: return "takeoutbag.and.cup.and.straw"
-            case .other: return "bag"
+            case .breakfast:     return "sunrise.fill"
+            case .lunch:         return "sun.max.fill"
+            case .dinner:        return "moon.stars.fill"
+            case .snacks:        return "takeoutbag.and.cup.and.straw"
+            case .meals:         return "fork.knife"
+            case .bakery:        return "birthday.cake"
+            case .desserts:      return "birthday.cake.fill"
+            case .produce:       return "carrot"
+            case .beverages:     return "cup.and.saucer"
+            case .indian:        return "flame.fill"
+            case .italian:       return "fork.knife.circle.fill"
+            case .mexican:       return "leaf.arrow.circlepath"
+            case .chinese:       return "cup.and.saucer.fill"
+            case .japanese:      return "fish.fill"
+            case .korean:        return "flame.circle.fill"
+            case .thai:          return "leaf.circle.fill"
+            case .american:      return "takeoutbag.and.cup.and.straw.fill"
+            case .mediterranean: return "sun.horizon.fill"
+            case .asian:         return "bowl.fill"
+            case .other:         return "bag"
             }
         }
     }

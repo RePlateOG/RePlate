@@ -61,12 +61,29 @@ struct PostSurplusView: View {
     }
 
     private let categories: [FoodCategory] = [
-        .init(name: "Meals",   icon: "fork.knife"),
-        .init(name: "Bakery",  icon: "birthday.cake"),
-        .init(name: "Veggie",  icon: "leaf.fill"),
-        .init(name: "Drinks",  icon: "cup.and.saucer.fill"),
-        .init(name: "Mixed",   icon: "bag.fill"),
-        .init(name: "Produce", icon: "carrot.fill"),
+        // Cuisines
+        .init(name: "Indian",        icon: "flame.fill"),
+        .init(name: "Italian",       icon: "fork.knife.circle.fill"),
+        .init(name: "Mexican",       icon: "leaf.arrow.circlepath"),
+        .init(name: "Japanese",      icon: "fish.fill"),
+        .init(name: "Asian",         icon: "bowl.fill"),
+        .init(name: "Korean",        icon: "flame.circle.fill"),
+        .init(name: "Chinese",       icon: "cup.and.saucer.fill"),
+        .init(name: "Thai",          icon: "leaf.circle.fill"),
+        .init(name: "Mediterranean", icon: "sun.horizon.fill"),
+        .init(name: "American",      icon: "takeoutbag.and.cup.and.straw.fill"),
+        // Meal times
+        .init(name: "Breakfast",     icon: "sunrise.fill"),
+        .init(name: "Lunch",         icon: "sun.max.fill"),
+        .init(name: "Dinner",        icon: "moon.stars.fill"),
+        .init(name: "Snacks",        icon: "takeoutbag.and.cup.and.straw"),
+        // Food types
+        .init(name: "Desserts",      icon: "birthday.cake.fill"),
+        .init(name: "Bakery",        icon: "birthday.cake"),
+        .init(name: "Produce",       icon: "carrot.fill"),
+        .init(name: "Beverages",     icon: "cup.and.saucer"),
+        .init(name: "Meals",         icon: "fork.knife"),
+        .init(name: "Other",         icon: "bag.fill"),
     ]
 
     private let pickupOptions = [

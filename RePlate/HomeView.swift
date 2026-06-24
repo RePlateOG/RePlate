@@ -208,12 +208,27 @@ struct HomeView: View {
 
     // MARK: - Data
     private let foodCategories: [(icon: String, label: String, color: Color)] = [
-        ("birthday.cake",                "Bakery",  Theme.Colors.primaryGradientStart.opacity(0.10)),
-        ("leaf.fill",                    "Healthy", Theme.Colors.primaryGradientStart.opacity(0.10)),
-        ("fish",                         "Sushi",   Theme.Colors.primaryGradientStart.opacity(0.10)),
-        ("fork.knife",                   "Pizza",   Theme.Colors.primaryGradientStart.opacity(0.10)),
-        ("takeoutbag.and.cup.and.straw", "Pasta",   Theme.Colors.primaryGradientStart.opacity(0.10)),
-        ("cup.and.saucer",               "Drinks",  Theme.Colors.primaryGradientStart.opacity(0.10)),
+        // Cuisines
+        ("flame.fill",                        "Indian",        Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("fork.knife.circle.fill",            "Italian",       Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("leaf.arrow.circlepath",             "Mexican",       Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("fish.fill",                         "Japanese",      Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("bowl.fill",                         "Asian",         Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("flame.circle.fill",                 "Korean",        Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("cup.and.saucer.fill",               "Chinese",       Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("leaf.circle.fill",                  "Thai",          Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("sun.horizon.fill",                  "Mediterranean", Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("takeoutbag.and.cup.and.straw.fill", "American",      Theme.Colors.primaryGradientStart.opacity(0.10)),
+        // Meal times
+        ("sunrise.fill",                      "Breakfast",     Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("sun.max.fill",                      "Lunch",         Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("moon.stars.fill",                   "Dinner",        Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("takeoutbag.and.cup.and.straw",      "Snacks",        Theme.Colors.primaryGradientStart.opacity(0.10)),
+        // Food types
+        ("birthday.cake.fill",                "Desserts",      Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("birthday.cake",                     "Bakery",        Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("carrot",                            "Produce",       Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("cup.and.saucer",                    "Beverages",     Theme.Colors.primaryGradientStart.opacity(0.10)),
     ]
 }
 
