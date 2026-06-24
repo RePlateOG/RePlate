@@ -17,6 +17,7 @@ struct RestaurantDashboardView: View {
     @State private var showVerificationGate = false
     @State private var showSettings         = false
     @State private var showNotifications    = false
+    @State private var showMenuScanner      = false
     @State private var selectedOrder: Order? = nil
     @State private var selectedListing: FoodListing? = nil
 
@@ -47,6 +48,40 @@ struct RestaurantDashboardView: View {
         }
         .sheet(isPresented: $showNotifications) {
             NotificationsView()
+        }
+        .sheet(isPresented: $showMenuScanner) {
+            MenuScannerView { scannedItems in
+                let now = Date()
+                let pickup5pm = Calendar.current.date(bySettingHour: 17, minute: 0, second: 0, of: now) ?? now.addingTimeInterval(3600)
+                let pickup9pm = Calendar.current.date(bySettingHour: 21, minute: 0, second: 0, of: now) ?? now.addingTimeInterval(7200)
+                let restaurantId = appState.currentUser?.id ?? "restaurant"
+
+                let newListings: [FoodListing] = scannedItems.compactMap { item in
+                    guard let originalPrice = Double(item.price.replacingOccurrences(of: ",", with: ".")) else { return nil }
+                    return FoodListing(
+                        id: UUID().uuidString,
+                        restaurantId: restaurantId,
+                        restaurant: nil,
+                        title: item.name,
+                        description: item.description.isEmpty ? "Freshly rescued from today's menu" : item.description,
+                        category: item.category,
+                        imageURLs: [],
+                        originalPrice: originalPrice,
+                        discountedPrice: round(originalPrice * 0.6 * 100) / 100,
+                        isFree: false,
+                        quantity: 5,
+                        availableQuantity: 5,
+                        pickupStartTime: pickup5pm,
+                        pickupEndTime: pickup9pm,
+                        status: .active,
+                        createdAt: now,
+                        expiresAt: pickup9pm,
+                        tags: [],
+                        dietaryInfo: []
+                    )
+                }
+                withAnimation { viewModel.activeListings.append(contentsOf: newListings) }
+            }
         }
         .sheet(item: $selectedOrder) { order in
             RestaurantOrderDetailView(order: order)
@@ -171,11 +206,14 @@ struct RestaurantDashboardView: View {
     // MARK: - Main Content
     private var mainContent: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Post button floats up over the header
-            postSurplusButton
-                .padding(.horizontal, 20)
-                .offset(y: -28)
-                .padding(.bottom, 8) // net padding = -28 + 8 = -20 consumed by offset
+            // Quick actions float up over the header
+            HStack(spacing: 12) {
+                postSurplusButton
+                scanMenuButton
+            }
+            .padding(.horizontal, 20)
+            .offset(y: -28)
+            .padding(.bottom, 8)
 
             // Today's Pickups
             todaysPickupsSection
@@ -187,32 +225,62 @@ struct RestaurantDashboardView: View {
         }
     }
 
-    // MARK: - Post Surplus Food Button
+    // MARK: - Quick Action Buttons
+
     private var postSurplusButton: some View {
         Button {
             hapticFeedback(.medium)
             // SECURITY: server must check verified flag before accepting listing
             if isVerified { showPostListing = true } else { showVerificationGate = true }
         } label: {
-            HStack(spacing: 14) {
+            VStack(spacing: 10) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: 14)
                         .fill(Theme.Colors.primaryGradient)
-                        .frame(width: 40, height: 40)
+                        .frame(width: 44, height: 44)
                     Image(systemName: "plus")
-                        .font(.system(size: 17, weight: .bold))
+                        .font(.system(size: 18, weight: .bold))
                         .foregroundColor(.white)
                 }
-                Text("Post Surplus Food")
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                Text("Post Surplus")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
                     .foregroundColor(Theme.Colors.primaryGradientStart)
-                Spacer()
             }
-            .padding(20)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 18)
             .background(
-                RoundedRectangle(cornerRadius: 26)
+                RoundedRectangle(cornerRadius: 22)
                     .fill(Color(.systemBackground))
-                    .shadow(color: Color.black.opacity(0.06), radius: 18, y: 5)
+                    .shadow(color: Color.black.opacity(0.06), radius: 14, y: 5)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    private var scanMenuButton: some View {
+        Button {
+            hapticFeedback(.medium)
+            if isVerified { showMenuScanner = true } else { showVerificationGate = true }
+        } label: {
+            VStack(spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(Theme.Colors.primaryGradientStart.opacity(0.12))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: "doc.viewfinder")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                }
+                Text("Scan Menu")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundColor(Theme.Colors.primaryGradientStart)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 18)
+            .background(
+                RoundedRectangle(cornerRadius: 22)
+                    .fill(Color(.systemBackground))
+                    .shadow(color: Color.black.opacity(0.06), radius: 14, y: 5)
             )
         }
         .buttonStyle(PlainButtonStyle())
