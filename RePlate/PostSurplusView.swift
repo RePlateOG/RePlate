@@ -317,10 +317,10 @@ struct PostSurplusView: View {
             }
 
             navRow {
-                // SECURITY: re-validate server-side — title and category are required
+                // OWASP A03: validate and sanitize inputs before advancing to the submit step
                 guard !title.isEmpty else { showValidationError("Please enter a title for your listing."); return }
+                guard title.count <= 200 else { showValidationError("Title cannot exceed 200 characters."); return }
                 guard !foodType.isEmpty else { showValidationError("Please select a food category."); return }
-                // SECURITY: re-validate server-side — quantity must be between 1 and 100
                 guard quantity >= 1 && quantity <= 100 else { showValidationError("Quantity must be between 1 and 100."); return }
                 advance()
             }

@@ -71,6 +71,11 @@ class StripePaymentService: ObservableObject {
 
     // MARK: - Fetch PaymentIntent from Edge Function
     private func fetchPaymentIntent(orderId: String, supabaseToken: String) async throws -> (clientSecret: String, amountCents: Int) {
+        // OWASP A03: validate orderId format before touching the network
+        guard Validators.isUUID(orderId) else {
+            throw PaymentError.serverError("Invalid order identifier.")
+        }
+
         guard let url = URL(string: StripeConfig.createPaymentIntentURL) else {
             throw PaymentError.invalidURL
         }
@@ -78,9 +83,10 @@ class StripePaymentService: ObservableObject {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        // Pass the Supabase JWT so the Edge Function can verify the caller
         request.setValue("Bearer \(supabaseToken)", forHTTPHeaderField: "Authorization")
         request.setValue(SupabaseConfig.publishableKey, forHTTPHeaderField: "apikey")
+        // OWASP A05: 30-second timeout prevents indefinite hangs on slow/malicious endpoints
+        request.timeoutInterval = 30
         request.httpBody = try JSONSerialization.data(withJSONObject: ["orderId": orderId])
 
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -96,9 +102,14 @@ class StripePaymentService: ObservableObject {
             throw PaymentError.listingIsFree
         }
 
+        // Surface rate-limit errors so the UI can show a helpful message
+        if httpResponse.statusCode == 429 {
+            throw PaymentError.serverError("Too many requests. Please try again in a moment.")
+        }
+
         guard httpResponse.statusCode == 200,
               let clientSecret = json["clientSecret"] as? String,
-              let amountCents = json["amountCents"] as? Int else {
+              let amountCents  = json["amountCents"]  as? Int else {
             let msg = json["error"] as? String ?? "Unknown error"
             throw PaymentError.serverError(msg)
         }

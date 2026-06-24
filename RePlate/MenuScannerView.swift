@@ -168,6 +168,7 @@ struct MenuScannerView: View {
     @State private var capturedImage: UIImage?
     @State private var showCamera = false
     @State private var showSuccess = false
+    @State private var priceValidationError: String?
 
     private var selectedCount: Int { scanner.items.filter(\.isSelected).count }
 
@@ -387,10 +388,31 @@ struct MenuScannerView: View {
     // MARK: Import CTA
 
     private var importCTA: some View {
+        VStack(spacing: 8) {
+            // OWASP A03: show inline price error above the CTA so the user can fix it
+            if let priceError = priceValidationError {
+                Text(priceError)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundColor(.red)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
+            }
         Button {
             guard selectedCount > 0 else { return }
+            // OWASP A03: validate every selected item's price before importing
+            let selected = scanner.items.filter(\.isSelected)
+            for item in selected {
+                do {
+                    try Validators.price(item.price)
+                } catch let e as InputValidationError {
+                    priceValidationError = "\"\(item.name)\": \(e.errorDescription ?? "invalid price")"
+                    hapticFeedback(.medium)
+                    return
+                } catch {}
+            }
+            priceValidationError = nil
             hapticFeedback(.medium)
-            onImport(scanner.items.filter(\.isSelected))
+            onImport(selected)
             withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { showSuccess = true }
         } label: {
             HStack(spacing: 10) {
@@ -416,6 +438,7 @@ struct MenuScannerView: View {
         .padding(.top, 12)
         .background(.ultraThinMaterial)
         .animation(.easeInOut(duration: 0.2), value: selectedCount)
+        } // end VStack
     }
 
     // MARK: States

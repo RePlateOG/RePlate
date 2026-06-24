@@ -644,11 +644,15 @@ struct SignInView: View {
     }
 
     func signIn() async {
-        guard !email.isEmpty && !password.isEmpty else {
-            errorMessage = "Please fill in all fields"
+        // OWASP A03: validate email format and password length before hitting the network
+        do {
+            let _ = try Validators.email(email)
+            let _ = try Validators.password(password)
+        } catch let e as InputValidationError {
+            errorMessage = e.errorDescription ?? "Invalid input."
             showError = true
             return
-        }
+        } catch {}
         isLoading = true
         defer { isLoading = false }
 
@@ -849,16 +853,16 @@ struct SignUpView: View {
     }
 
     func signUp() async {
-        guard !name.isEmpty, !email.isEmpty, !password.isEmpty else {
-            errorMessage = "Please fill in all fields"
+        // OWASP A03: validate and sanitize all fields before sending to Supabase
+        do {
+            let _ = try Validators.name(name, field: "Name")
+            let _ = try Validators.email(email)
+            let _ = try Validators.password(password)
+        } catch let e as InputValidationError {
+            errorMessage = e.errorDescription ?? "Invalid input."
             showError = true
             return
-        }
-        guard password.count >= 8 else {
-            errorMessage = "Password must be at least 8 characters"
-            showError = true
-            return
-        }
+        } catch {}
         isLoading = true
         defer { isLoading = false }
 
@@ -1415,16 +1419,16 @@ struct RestaurantSignUpView: View {
     }
 
     private func createAccount() async {
-        guard !email.isEmpty, !password.isEmpty else {
-            errorMessage = "Please fill in all fields"
+        // OWASP A03: validate restaurant name, email, and password before network call
+        do {
+            let _ = try Validators.name(restaurantName, field: "Restaurant name")
+            let _ = try Validators.email(email)
+            let _ = try Validators.password(password)
+        } catch let e as InputValidationError {
+            errorMessage = e.errorDescription ?? "Invalid input."
             showError = true
             return
-        }
-        guard password.count >= 8 else {
-            errorMessage = "Password must be at least 8 characters"
-            showError = true
-            return
-        }
+        } catch {}
         isLoading = true
         defer { isLoading = false }
 
