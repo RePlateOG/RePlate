@@ -24,6 +24,10 @@ class AppState: ObservableObject {
     // Profile image (stored in memory; TODO: backend — sync with server)
     @Published var profileImageData: Data?
 
+    // Saved payment methods (display-only: brand + last4 from Stripe — no raw card data)
+    // SECURITY: never store raw card data; this is populated from the Supabase payment_methods table
+    @Published var savedPaymentMethods: [PaymentMethod] = []
+
     // Single source of truth for orders shared between customer and restaurant views
     // TODO: backend — replace with real-time order subscription (WebSocket / push)
     @Published var orders: [Order] = MockData.sampleOrders

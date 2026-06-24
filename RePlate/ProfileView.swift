@@ -12,8 +12,9 @@ import PhotosUI
 struct ProfileView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = ProfileViewModel()
-    @State private var showSettings     = false
-    @State private var showEditProfile  = false
+    @State private var showSettings        = false
+    @State private var showEditProfile     = false
+    @State private var showPaymentMethods  = false
     @State private var showLegalPage: LegalPageView.LegalPage? = nil
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var profileImage: Image?
@@ -41,6 +42,7 @@ struct ProfileView: View {
         .task { await viewModel.loadProfile() }
         .sheet(isPresented: $showEditProfile) { EditProfileView() }
         .sheet(isPresented: $showSettings) { SettingsView() }
+        .sheet(isPresented: $showPaymentMethods) { PaymentMethodsView().environmentObject(appState) }
         .sheet(item: $showLegalPage) { page in
             NavigationView { LegalPageView(page: page) }
         }
@@ -294,7 +296,9 @@ struct ProfileView: View {
                     showSettings = true
                 }
                 Divider().padding(.leading, 60)
-                MenuButton(icon: "creditcard", title: "Payment Methods") {}
+                MenuButton(icon: "creditcard", title: "Payment Methods") {
+                    showPaymentMethods = true
+                }
                 Divider().padding(.leading, 60)
                 MenuButton(icon: "gearshape", title: "Settings") {
                     showSettings = true

@@ -40,6 +40,9 @@ class RePlateAppDelegate: NSObject, UIApplicationDelegate {
             self?.installStatusBarContainer()
         }
 
+        // TODO: Uncomment after adding Stripe Swift package (StripePaymentSheet) in Xcode:
+        // STPAPIClient.shared.publishableKey = StripeConfig.publishableKey
+
         // Global UIKit appearance config
         configureAppearance()
         return true

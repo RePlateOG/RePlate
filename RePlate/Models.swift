@@ -353,11 +353,18 @@ struct PaymentMethod: Identifiable, Codable {
     var displayName: String {
         switch type {
         case .card:
-            return "\(brand ?? "Card") •••• \(last4)"
+            return "\(brand ?? "Card") \u{2022}\u{2022}\u{2022}\u{2022} \(last4)"
         case .applePay:
             return "Apple Pay"
         case .googlePay:
             return "Google Pay"
         }
+    }
+
+    // Display-only expiry string (MM/YY). Nil when expiry fields are absent.
+    // SECURITY: expiry is display metadata only — raw card data is never stored here.
+    var expiryDisplay: String? {
+        guard let month = expiryMonth, let year = expiryYear else { return nil }
+        return String(format: "%02d/%02d", month, year % 100)
     }
 }
