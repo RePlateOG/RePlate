@@ -685,64 +685,71 @@ private struct HoursRow: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Collapsed row (always visible)
-            Button {
-                if entry.isOpen {
+            // Top row: day name | time/closed | chevron | toggle
+            // Toggle is a SIBLING of the tap area — NOT inside the Button —
+            // so their touch targets don't conflict.
+            HStack(spacing: 0) {
+                // Left: tappable expand area (only active when open)
+                Button {
+                    guard entry.isOpen else { return }
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                         entry.isExpanded.toggle()
                     }
-                }
-            } label: {
-                HStack(spacing: 12) {
-                    // Day name
-                    Text(entry.day)
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .foregroundColor(Theme.Colors.label)
-                        .frame(width: 90, alignment: .leading)
+                } label: {
+                    HStack(spacing: 10) {
+                        Text(entry.day)
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                            .foregroundColor(Theme.Colors.label)
+                            .frame(width: 92, alignment: .leading)
 
-                    Spacer()
+                        Spacer()
 
-                    // Time summary (or Closed badge) — tappable area
-                    if entry.isOpen {
-                        Text("\(timeFormatter.string(from: entry.openTime)) – \(timeFormatter.string(from: entry.closeTime))")
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
-                            .foregroundColor(Theme.Colors.primaryGradientStart)
-                    } else {
-                        Text("Closed")
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .foregroundColor(Theme.Colors.secondaryLabel)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(Color(.systemGray5))
-                            .clipShape(Capsule())
-                    }
+                        if entry.isOpen {
+                            Text("\(timeFormatter.string(from: entry.openTime)) – \(timeFormatter.string(from: entry.closeTime))")
+                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                                .foregroundColor(Theme.Colors.primaryGradientStart)
+                                .lineLimit(1)
 
-                    // Chevron when open (shows expand state)
-                    if entry.isOpen {
-                        Image(systemName: entry.isExpanded ? "chevron.up" : "chevron.down")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(Theme.Colors.secondaryLabel)
-                            .frame(width: 16)
-                    }
-
-                    // Open / Closed toggle
-                    Toggle("", isOn: $entry.isOpen)
-                        .labelsHidden()
-                        .tint(Theme.Colors.primaryGradientStart)
-                        .onChange(of: entry.isOpen) { _, open in
-                            if !open { withAnimation { entry.isExpanded = false } }
+                            Image(systemName: entry.isExpanded ? "chevron.up" : "chevron.down")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(Theme.Colors.secondaryLabel)
+                                .frame(width: 14)
+                        } else {
+                            Text("Closed")
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .foregroundColor(Theme.Colors.secondaryLabel)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(Color(.systemGray5))
+                                .clipShape(Capsule())
                         }
+                    }
+                    .padding(.vertical, 14)
+                    .padding(.leading, 16)
+                    .padding(.trailing, 10)
+                    .contentShape(Rectangle())
                 }
-                .padding(.vertical, 14)
-                .padding(.horizontal, 16)
-            }
-            .buttonStyle(.plain)
+                .buttonStyle(.plain)
 
-            // Expanded time pickers (dropdown)
+                // Right: toggle lives outside the button to avoid tap-target conflict
+                Toggle("", isOn: $entry.isOpen)
+                    .labelsHidden()
+                    .tint(Theme.Colors.primaryGradientStart)
+                    .padding(.trailing, 16)
+                    .onChange(of: entry.isOpen) { _, open in
+                        if !open {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                entry.isExpanded = false
+                            }
+                        }
+                    }
+            }
+
+            // Dropdown: time pickers, shown when row is open + expanded
             if entry.isOpen && entry.isExpanded {
                 VStack(spacing: 0) {
                     Divider().padding(.leading, 16)
-                    VStack(spacing: 2) {
+                    VStack(spacing: 0) {
                         DatePicker(
                             "Opens",
                             selection: $entry.openTime,
@@ -750,7 +757,7 @@ private struct HoursRow: View {
                         )
                         .font(.system(size: 14, weight: .medium, design: .rounded))
                         .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
+                        .padding(.vertical, 12)
 
                         Divider().padding(.leading, 16)
 
@@ -762,11 +769,11 @@ private struct HoursRow: View {
                         )
                         .font(.system(size: 14, weight: .medium, design: .rounded))
                         .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
+                        .padding(.vertical, 12)
                     }
                     .background(Theme.Colors.primaryGradientStart.opacity(0.04))
-                    .transition(.move(edge: .top).combined(with: .opacity))
                 }
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
     }
