@@ -124,6 +124,9 @@ struct MainTabView: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
+            // Extend TabView edge-to-edge so its frame doesn't leave grey strips
+            // at the top (status bar) or bottom (home indicator) safe-area margins.
+            .ignoresSafeArea()
             .background(Color(.systemGroupedBackground))
 
             // Custom Tab Bar

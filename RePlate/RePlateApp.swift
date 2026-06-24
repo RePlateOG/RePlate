@@ -79,10 +79,24 @@ class RePlateAppDelegate: NSObject, UIApplicationDelegate {
         navAppearance.largeTitleTextAttributes = [
             .foregroundColor: UIColor.white
         ]
-        UINavigationBar.appearance().standardAppearance  = navAppearance
+        UINavigationBar.appearance().standardAppearance   = navAppearance
         UINavigationBar.appearance().scrollEdgeAppearance = navAppearance
-        UINavigationBar.appearance().compactAppearance   = navAppearance
-        UINavigationBar.appearance().tintColor           = UIColor(Color(hex: "5db996"))
+        UINavigationBar.appearance().compactAppearance    = navAppearance
+        UINavigationBar.appearance().tintColor            = UIColor(Color(hex: "5db996"))
+
+        // Tab bar: we use a custom floating CustomTabBar so the system UITabBar
+        // must be fully hidden. .page TabView style suppresses the bar's UI but on
+        // iOS 26 its background layer can still paint a grey strip at the bottom.
+        let tabAppearance = UITabBarAppearance()
+        tabAppearance.configureWithTransparentBackground()
+        tabAppearance.backgroundEffect = nil
+        tabAppearance.backgroundColor  = .clear
+        tabAppearance.shadowColor      = .clear
+        UITabBar.appearance().standardAppearance = tabAppearance
+        if #available(iOS 15, *) {
+            UITabBar.appearance().scrollEdgeAppearance = tabAppearance
+        }
+        UITabBar.appearance().isHidden = true
     }
 }
 
