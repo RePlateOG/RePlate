@@ -19,10 +19,17 @@ import Combine
 struct ScannedMenuItem: Identifiable {
     let id = UUID()
     var name: String
-    var price: String
+    var price: String         // original detected price
+    var discountedPrice: String  // pre-filled at 60% off, editable
     var description: String
     var category: FoodListing.FoodCategory
     var isSelected: Bool = true
+}
+
+private func computeDiscount(from rawPrice: String, pct: Double = 0.60) -> String {
+    guard let val = Double(rawPrice.replacingOccurrences(of: ",", with: ".")) else { return "" }
+    let discounted = (val * pct * 100).rounded() / 100
+    return String(format: "%.2f", discounted)
 }
 
 // MARK: - OCR Engine (no actor isolation — runs on background threads)
@@ -84,6 +91,7 @@ private enum MenuScannerEngine {
                     }
                 }
                 items.append(ScannedMenuItem(name: name, price: rawPrice,
+                                             discountedPrice: computeDiscount(from: rawPrice),
                                              description: desc, category: inferCategory(from: name)))
             }
             i += 1
@@ -399,11 +407,12 @@ struct MenuScannerView: View {
             }
         Button {
             guard selectedCount > 0 else { return }
-            // OWASP A03: validate every selected item's price before importing
+            // OWASP A03: validate every selected item's sale price before importing
             let selected = scanner.items.filter(\.isSelected)
             for item in selected {
                 do {
-                    try Validators.price(item.price)
+                    let priceToValidate = item.discountedPrice.isEmpty ? item.price : item.discountedPrice
+                    try Validators.price(priceToValidate)
                 } catch let e as InputValidationError {
                     priceValidationError = "\"\(item.name)\": \(e.errorDescription ?? "invalid price")"
                     hapticFeedback(.medium)
@@ -553,16 +562,43 @@ struct ScannedItemCard: View {
                     .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundColor(item.isSelected ? Theme.Colors.label : Theme.Colors.secondaryLabel)
 
-                // Price + category row
+                // Original price + discounted price row
                 HStack(spacing: 6) {
-                    Text("$")
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                        .foregroundColor(Theme.Colors.primaryGradientStart)
-                    TextField("0.00", text: $item.price)
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                        .foregroundColor(Theme.Colors.primaryGradientStart)
-                        .keyboardType(.decimalPad)
-                        .frame(width: 72)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("ORIG PRICE")
+                            .font(.system(size: 9, weight: .black, design: .rounded))
+                            .foregroundColor(Theme.Colors.tertiaryLabel)
+                            .tracking(0.6)
+                        HStack(spacing: 2) {
+                            Text("$")
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .foregroundColor(Theme.Colors.secondaryLabel)
+                            TextField("0.00", text: $item.price)
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .foregroundColor(Theme.Colors.secondaryLabel)
+                                .strikethrough(true, color: Theme.Colors.secondaryLabel)
+                                .keyboardType(.decimalPad)
+                                .frame(width: 60)
+                        }
+                    }
+                    Text("→")
+                        .foregroundColor(Theme.Colors.tertiaryLabel)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("SALE PRICE")
+                            .font(.system(size: 9, weight: .black, design: .rounded))
+                            .foregroundColor(Color(hex: "118b50"))
+                            .tracking(0.6)
+                        HStack(spacing: 2) {
+                            Text("$")
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .foregroundColor(Theme.Colors.primaryGradientStart)
+                            TextField("0.00", text: $item.discountedPrice)
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .foregroundColor(Theme.Colors.primaryGradientStart)
+                                .keyboardType(.decimalPad)
+                                .frame(width: 72)
+                        }
+                    }
 
                     Spacer()
 

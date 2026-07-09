@@ -1005,8 +1005,10 @@ struct RestaurantSignUpView: View {
     }
 
     private let cuisineTypes = [
-        "Italian", "Asian", "Mexican", "American",
-        "Mediterranean", "Bakery", "Cafe", "Other",
+        "Italian", "Indian", "Mexican", "American",
+        "Mediterranean", "Chinese", "Japanese", "Korean",
+        "Thai", "Asian Fusion", "Bakery & Café", "Desserts",
+        "Breakfast", "Lunch", "Dinner", "Snacks", "Other",
     ]
 
     var body: some View {
@@ -1140,7 +1142,7 @@ struct RestaurantSignUpView: View {
                     .tracking(1.2)
 
                 LazyVGrid(
-                    columns: Array(repeating: GridItem(.flexible()), count: 4),
+                    columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 2),
                     spacing: 10
                 ) {
                     ForEach(cuisineTypes, id: \.self) { type in
@@ -1149,10 +1151,12 @@ struct RestaurantSignUpView: View {
                             cuisineType = type
                         } label: {
                             Text(type)
-                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
                                 .foregroundColor(cuisineType == type ? .white : Theme.Colors.label)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 10)
+                                .multilineTextAlignment(.center)
+                                .lineLimit(2)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 12)
                                 .frame(maxWidth: .infinity)
                                 .background(
                                     cuisineType == type

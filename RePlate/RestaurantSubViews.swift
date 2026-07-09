@@ -804,6 +804,8 @@ struct RestaurantDetailsEditView: View {
     @State private var restaurantName = "Verde Bistro"
     @State private var cuisine = "Mediterranean"
     @State private var phone = "+1 (555) 234-5678"
+    @State private var instagramHandle = ""
+    @State private var websiteURL = ""
     @State private var schedule: [DaySchedule] = DaySchedule.defaultSchedule()
     @State private var isSaving = false
 
@@ -862,6 +864,42 @@ struct RestaurantDetailsEditView: View {
                                     text: $phone,
                                     keyboardType: .phonePad
                                 )
+                            }
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        sectionLabel("Social & Web")
+                        FormCard {
+                            VStack(spacing: 16) {
+                                HStack(spacing: 10) {
+                                    Image(systemName: "camera.on.rectangle.fill")
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundColor(Color(hex: "C13584"))
+                                        .frame(width: 22)
+                                    TextField("Instagram handle (e.g. @yourbistro)", text: $instagramHandle)
+                                        .font(.system(size: 15, weight: .medium, design: .rounded))
+                                        .textInputAutocapitalization(.never)
+                                        .autocorrectionDisabled()
+                                }
+                                .padding(Theme.Spacing.md)
+                                .background(Theme.Colors.secondaryBackground)
+                                .cornerRadius(Theme.CornerRadius.md)
+
+                                HStack(spacing: 10) {
+                                    Image(systemName: "globe")
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                                        .frame(width: 22)
+                                    TextField("Website URL (optional)", text: $websiteURL)
+                                        .font(.system(size: 15, weight: .medium, design: .rounded))
+                                        .textInputAutocapitalization(.never)
+                                        .autocorrectionDisabled()
+                                        .keyboardType(.URL)
+                                }
+                                .padding(Theme.Spacing.md)
+                                .background(Theme.Colors.secondaryBackground)
+                                .cornerRadius(Theme.CornerRadius.md)
                             }
                         }
                     }

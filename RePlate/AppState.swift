@@ -30,7 +30,7 @@ class AppState: ObservableObject {
 
     // Single source of truth for orders shared between customer and restaurant views
     // TODO: backend — replace with real-time order subscription (WebSocket / push)
-    @Published var orders: [Order] = MockData.sampleOrders
+    @Published var orders: [Order] = []
 
     // Legal consent
     var hasAcceptedTerms: Bool {

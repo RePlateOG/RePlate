@@ -25,10 +25,10 @@ class HomeViewModel: ObservableObject {
         // Simulate API call
         try? await Task.sleep(nanoseconds: 1_000_000_000)
         
-        // Mock data
-        listings = MockData.sampleListings
-        featuredListings = Array(listings.prefix(3))
-        impactStats = MockData.sampleImpactStats
+        // TODO: backend — fetch real listings from Supabase
+        listings = []
+        featuredListings = []
+        impactStats = ImpactStats.empty
     }
     
     func refreshListings() async {
@@ -274,10 +274,8 @@ class ProfileViewModel: ObservableObject {
     func updateProfile(name: String, email: String, phoneNumber: String?) async {
         isLoading = true
         defer { isLoading = false }
-        
-        try? await Task.sleep(nanoseconds: 1_000_000_000)
-        
-        // Update profile
+        // TODO: backend — sync with Supabase
+        RePlateAuthService.shared.updateCurrentUser(name: name, email: email, phoneNumber: phoneNumber)
         hapticFeedback(.success)
         await loadProfile()
     }
@@ -300,11 +298,10 @@ class MessagesViewModel: ObservableObject {
     @Published var isLoading = false
 
     func loadConversations() async {
-        // Only show skeleton for max 0.3 seconds; data pre-populated synchronously in view
         isLoading = true
-        // Simulate a fast refresh — 0.3 s max so the skeleton never lingers
         try? await Task.sleep(nanoseconds: 300_000_000)
-        conversations = MockData.sampleConversations
+        // TODO: backend — fetch real conversations from Supabase
+        conversations = []
         isLoading = false
     }
 

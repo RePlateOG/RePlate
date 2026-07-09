@@ -19,6 +19,8 @@ struct ProfileView: View {
     @State private var showLegalPage: LegalPageView.LegalPage? = nil
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var profileImage: Image?
+    @State private var showExportShare     = false
+    @State private var exportURL: URL?
 
     private var displayName: String {
         viewModel.user?.name ?? appState.currentUser?.name ?? "User"
@@ -47,6 +49,11 @@ struct ProfileView: View {
         .sheet(isPresented: $showPaymentMethods) { PaymentMethodsView().environmentObject(appState) }
         .sheet(item: $showLegalPage) { page in
             NavigationView { LegalPageView(page: page) }
+        }
+        .sheet(isPresented: $showExportShare, onDismiss: { exportURL = nil }) {
+            if let url = exportURL {
+                ShareSheet(items: [url])
+            }
         }
         .onChange(of: selectedPhoto) { _, newItem in
             Task {
@@ -104,6 +111,7 @@ struct ProfileView: View {
                         Text(displayName.prefix(1).uppercased())
                             .font(.system(size: 42, weight: .black, design: .rounded))
                             .foregroundColor(.white)
+                            .frame(width: 96, height: 96)
                     }
                     // Camera badge
                     Image(systemName: "camera.fill")
@@ -340,7 +348,7 @@ struct ProfileView: View {
                 }
                 Divider().padding(.leading, 60)
                 MenuButton(icon: "questionmark.circle", title: "FAQs") {
-                    showLegalPage = .termsOfService
+                    showLegalPage = .faq
                 }
                 Divider().padding(.leading, 60)
                 // §4.5.4: Users can always find the notification opt-out
@@ -381,7 +389,20 @@ struct ProfileView: View {
                 }
                 Divider().padding(.leading, 60)
                 MenuButton(icon: "arrow.down.doc", title: "Export My Data") {
-                    Task { await viewModel.exportData() }
+                    Task {
+                        let user = viewModel.user ?? appState.currentUser
+                        var csv = "RePlate Data Export\nGenerated,\(Date().formatted(date: .abbreviated, time: .shortened))\n\n"
+                        csv += "ACCOUNT\n"
+                        csv += "Name,\(user?.name ?? "")\n"
+                        csv += "Email,\(user?.email ?? "")\n"
+                        csv += "Account Type,\(user?.accountType.displayName ?? "")\n\n"
+                        let tmp = FileManager.default.temporaryDirectory
+                            .appendingPathComponent("replate_data_export.csv")
+                        try? csv.write(to: tmp, atomically: true, encoding: .utf8)
+                        exportURL = tmp
+                        showExportShare = true
+                        hapticFeedback(.success)
+                    }
                 }
             }
             .background(Color(.systemBackground))
@@ -452,6 +473,15 @@ private struct ProfileStatCard: View {
                 .shadow(color: Color.black.opacity(0.06), radius: 10, y: 4)
         )
     }
+}
+
+// MARK: - Share Sheet
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+    func updateUIViewController(_ vc: UIActivityViewController, context: Context) {}
 }
 
 // MARK: - Menu Button

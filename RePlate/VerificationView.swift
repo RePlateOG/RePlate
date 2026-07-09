@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 // MARK: - Verification Status (extend User model usage)
 enum RestaurantVerificationStatus: String, Codable {
@@ -261,54 +262,17 @@ struct RestaurantVerificationView: View {
                 subtitle: "Upload all required documents. Accepted formats: PDF, JPG, PNG."
             )
 
-            uploadRow("Business License",           "doc.text.fill",   $uploadedLicense)
-            uploadRow("Food Service Permit",        "cross.fill",      $uploadedFoodPermit)
-            uploadRow("Health Inspection Report",   "heart.text.square.fill", $uploadedHealth)
-            uploadRow("Tax Documentation (EIN)",    "building.columns.fill",  $uploadedTax)
-            uploadRow("Government-Issued ID",       "person.text.rectangle.fill", $uploadedID)
+            UploadRow(label: "Business License",         icon: "doc.text.fill",            uploaded: $uploadedLicense)
+            UploadRow(label: "Food Service Permit",      icon: "cross.fill",               uploaded: $uploadedFoodPermit)
+            UploadRow(label: "Health Inspection Report", icon: "heart.text.square.fill",   uploaded: $uploadedHealth)
+            UploadRow(label: "Tax Documentation (EIN)",  icon: "building.columns.fill",    uploaded: $uploadedTax)
+            UploadRow(label: "Government-Issued ID",     icon: "person.text.rectangle.fill", uploaded: $uploadedID)
 
             legalNote("All documents are encrypted and stored securely. They are only used for verification purposes and are not shared with customers.")
         }
     }
 
-    private func uploadRow(_ label: String, _ icon: String, _ uploaded: Binding<Bool>) -> some View {
-        HStack(spacing: 16) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(uploaded.wrappedValue ? Color(hex: "118b50").opacity(0.12) : Color(.systemGray6))
-                    .frame(width: 44, height: 44)
-                Image(systemName: icon)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(uploaded.wrappedValue ? Color(hex: "118b50") : Theme.Colors.secondaryLabel)
-            }
-            VStack(alignment: .leading, spacing: 3) {
-                Text(label)
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .foregroundColor(Theme.Colors.label)
-                Text(uploaded.wrappedValue ? "Uploaded" : "Required")
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .foregroundColor(uploaded.wrappedValue ? Color(hex: "118b50") : .orange)
-            }
-            Spacer()
-            Button {
-                hapticFeedback(.light)
-                uploaded.wrappedValue = true
-            } label: {
-                Text(uploaded.wrappedValue ? "Replace" : "Upload")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundColor(uploaded.wrappedValue ? Theme.Colors.secondaryLabel : .white)
-                    .padding(.horizontal, 16).padding(.vertical, 8)
-                    .background(uploaded.wrappedValue
-                        ? AnyShapeStyle(Color(.systemGray5))
-                        : AnyShapeStyle(Theme.Colors.primaryGradient))
-                    .clipShape(Capsule())
-            }
-        }
-        .padding(16)
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 18))
-        .shadow(color: Color.black.opacity(0.05), radius: 8, y: 3)
-    }
+    // uploadRow replaced by UploadRow struct below
 
     // MARK: Section 1 — Business Info
     private var businessInfoSection: some View {
@@ -534,5 +498,72 @@ struct RestaurantVerificationView: View {
         .padding(14)
         .background(Color(.systemGray6))
         .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+}
+
+// MARK: - Upload Row
+private struct UploadRow: View {
+    let label: String
+    let icon: String
+    @Binding var uploaded: Bool
+    @State private var showPicker = false
+    @State private var fileName: String?
+
+    private static let allowedTypes: [UTType] = [.pdf, .jpeg, .png, .image]
+
+    var body: some View {
+        HStack(spacing: 16) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(uploaded ? Color(hex: "118b50").opacity(0.12) : Color(.systemGray6))
+                    .frame(width: 44, height: 44)
+                Image(systemName: icon)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(uploaded ? Color(hex: "118b50") : Theme.Colors.secondaryLabel)
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                Text(label)
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundColor(Theme.Colors.label)
+                Text(uploaded ? (fileName ?? "Uploaded") : "Required")
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundColor(uploaded ? Color(hex: "118b50") : .orange)
+                    .lineLimit(1)
+            }
+            Spacer()
+            Button {
+                hapticFeedback(.light)
+                showPicker = true
+            } label: {
+                Text(uploaded ? "Replace" : "Upload")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundColor(uploaded ? Theme.Colors.secondaryLabel : .white)
+                    .padding(.horizontal, 16).padding(.vertical, 8)
+                    .background(uploaded
+                        ? AnyShapeStyle(Color(.systemGray5))
+                        : AnyShapeStyle(Theme.Colors.primaryGradient))
+                    .clipShape(Capsule())
+            }
+        }
+        .padding(16)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .shadow(color: Color.black.opacity(0.05), radius: 8, y: 3)
+        .fileImporter(
+            isPresented: $showPicker,
+            allowedContentTypes: Self.allowedTypes,
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                _ = url.startAccessingSecurityScopedResource()
+                fileName = url.lastPathComponent
+                uploaded = true
+                hapticFeedback(.success)
+            case .failure:
+                break
+            }
+        }
     }
 }

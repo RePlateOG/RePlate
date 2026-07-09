@@ -192,6 +192,16 @@ class RePlateAuthService: ObservableObject {
         return true
     }
     
+    // MARK: - Profile Update
+    func updateCurrentUser(name: String, email: String, phoneNumber: String?) {
+        guard var user = currentUser else { return }
+        user.name = name
+        user.email = email
+        user.phoneNumber = phoneNumber
+        currentUser = user
+        saveUser()
+    }
+
     // MARK: - Persistence
     private func saveUser() {
         if let encoded = try? JSONEncoder().encode(currentUser) {

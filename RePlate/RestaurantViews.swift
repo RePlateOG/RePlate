@@ -2179,6 +2179,16 @@ struct RestaurantProfileView: View {
             profileInfoRow(icon: "clock.fill",         value: "Open: 9:00 AM – 10:00 PM")
             Divider().padding(.leading, 54)
             profileInfoRow(icon: "phone.fill",         value: "+1 (555) 234-5678")
+            Divider().padding(.leading, 54)
+            Button {
+                if let url = URL(string: "https://instagram.com/yourbistro") {
+                    UIApplication.shared.open(url)
+                }
+            } label: {
+                profileInfoRow(icon: "camera.on.rectangle.fill", value: "@yourbistro on Instagram")
+                    .foregroundColor(Color(hex: "C13584"))
+            }
+            .buttonStyle(PlainButtonStyle())
         }
         .padding(18)
         .background(Color(.systemBackground))

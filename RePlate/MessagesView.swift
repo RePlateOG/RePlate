@@ -7,6 +7,14 @@
 
 import SwiftUI
 
+// In-memory message store keyed by conversation ID — survives sheet dismissal within the session
+private final class MessageStore {
+    static let shared = MessageStore()
+    private var store: [String: [Message]] = [:]
+    func messages(for id: String) -> [Message] { store[id, default: []] }
+    func append(_ message: Message, to id: String) { store[id, default: []].append(message) }
+}
+
 struct MessagesView: View {
     @StateObject private var viewModel = MessagesViewModel()
     @State private var selectedConversation: Conversation?
@@ -30,10 +38,6 @@ struct MessagesView: View {
         .ignoresSafeArea(edges: .top)
         .background(Theme.Colors.pageBackground)
         .task {
-            // Pre-populate synchronously from MockData, then do async refresh
-            if viewModel.conversations.isEmpty {
-                viewModel.conversations = MockData.sampleConversations
-            }
             await viewModel.loadConversations()
         }
         .refreshable {
@@ -200,6 +204,7 @@ struct ConversationView: View {
     @State private var messageText   = ""
     @State private var messages: [Message] = []
     @State private var showOrderInfo = false
+    private var conversationKey: String { conversation.id }
     // §1.2: UGC — must provide report/block mechanism for all user-generated messaging
     @State private var showReportMenu   = false
     @State private var showBlockConfirm = false
@@ -253,6 +258,7 @@ struct ConversationView: View {
             .background(Theme.Colors.pageBackground)
             .navigationTitle(restaurantName)
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear { messages = MessageStore.shared.messages(for: conversationKey) }
             .sheet(isPresented: $showOrderInfo) { OrderInfoSheet(order: conversation.order) }
             .confirmationDialog("Report or Block", isPresented: $showReportMenu, titleVisibility: .visible) {
                 // §1.2: report mechanism with reason selection
@@ -370,6 +376,7 @@ struct ConversationView: View {
             read: false,
             messageType: .text
         )
+        MessageStore.shared.append(newMessage, to: conversationKey)
         withAnimation { messages.append(newMessage) }
         hapticFeedback(.light)
         messageText = ""

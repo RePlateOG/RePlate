@@ -173,7 +173,7 @@ struct FoodListing: Identifiable, Codable {
             case .thai:          return "leaf.circle.fill"
             case .american:      return "takeoutbag.and.cup.and.straw.fill"
             case .mediterranean: return "sun.horizon.fill"
-            case .asian:         return "bowl.fill"
+            case .asian:         return "globe.asia.australia.fill"
             case .other:         return "bag"
             }
         }
