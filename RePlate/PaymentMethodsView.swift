@@ -633,7 +633,6 @@ struct AddCardView: View {
     }
 
     private func addCard() {
-        // Basic client-side validation before tokenising with Stripe
         let digits = cardNumber.filter(\.isNumber)
         guard !cardName.trimmingCharacters(in: .whitespaces).isEmpty else {
             cardError = "Please enter the cardholder name."; return
@@ -642,7 +641,7 @@ struct AddCardView: View {
             cardError = "Please enter a valid card number."; return
         }
         guard expiry.count == 5 else {
-            cardError = "Please enter a valid expiry date (MM/YY)."; return
+            cardError = "Please enter a valid expiry (MM/YY)."; return
         }
         guard cvv.count >= 3 else {
             cardError = "Please enter a valid CVV."; return
@@ -650,32 +649,43 @@ struct AddCardView: View {
         cardError = nil
         isProcessing = true
 
+        let expiryParts = expiry.split(separator: "/")
+        let month = expiryParts.count == 2 ? Int(expiryParts[0]) : nil
+        let year  = expiryParts.count == 2 ? Int("20" + (expiryParts[1])) : nil
+
         Task {
-            // TODO: Replace this stub with Stripe's card tokenization:
-            // let tokenParams = STPCardParams(); ...
-            // STPAPIClient.shared.createToken(withCard: tokenParams) { token, error in ... }
-            // Then save token.last4 + brand to Supabase via StripePaymentService.savePaymentMethod
-            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            do {
+                // Tokenize with Stripe — app never stores raw card data.
+                // When stripeSDKInstalled = true in StripePaymentService.swift,
+                // this calls STPAPIClient.createPaymentMethod() and returns pm_xxx.
+                let (pmId, last4, brand) = try await StripePaymentService.shared.tokenizeCard(
+                    number: digits,
+                    expMonth: month ?? 0,
+                    expYear:  year  ?? 0,
+                    cvc: cvv,
+                    name: cardName.trimmingCharacters(in: .whitespaces)
+                )
 
-            let expiryParts = expiry.split(separator: "/")
-            let month = expiryParts.count == 2 ? Int(expiryParts[0]) : nil
-            let year  = expiryParts.count == 2 ? Int("20" + (expiryParts[1])) : nil
-            let last4 = String(digits.suffix(4))
+                let method = PaymentMethod(
+                    id: pmId,
+                    type: .card,
+                    last4: last4,
+                    brand: brand,
+                    expiryMonth: month,
+                    expiryYear: year,
+                    isDefault: true
+                )
 
-            let method = PaymentMethod(
-                id: UUID().uuidString,
-                type: .card,
-                last4: last4,
-                brand: detectedBrand,
-                expiryMonth: month,
-                expiryYear: year,
-                isDefault: true
-            )
-
-            await MainActor.run {
-                isProcessing = false
-                onAdd(method)
-                dismiss()
+                await MainActor.run {
+                    isProcessing = false
+                    onAdd(method)
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    isProcessing = false
+                    cardError = error.localizedDescription
+                }
             }
         }
     }

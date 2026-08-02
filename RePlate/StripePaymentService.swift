@@ -2,19 +2,30 @@
 //  StripePaymentService.swift
 //  RePlate
 //
-//  To activate real Stripe payments:
-//  1. Add https://github.com/stripe/stripe-ios (product: StripePaymentSheet) in Xcode.
-//  2. Uncomment the `import StripePaymentSheet` line below.
-//  3. In RePlateApp.swift, uncomment STPAPIClient.shared.publishableKey = StripeConfig.publishableKey
-//  4. Deploy the Edge Functions (see STRIPE_SETUP.md).
+//  ─── HOW TO ACTIVATE REAL STRIPE PAYMENTS ──────────────────────────────────
+//  Step 1  Xcode → File → Add Package Dependencies
+//          URL: https://github.com/stripe/stripe-ios
+//          Add product: StripePaymentSheet
 //
+//  Step 2  Uncomment the `import StripePaymentSheet` line below.
+//
+//  Step 3  In RePlateApp.swift, uncomment:
+//            STPAPIClient.shared.publishableKey = StripeConfig.publishableKey
+//
+//  Step 4  Set stripeSDKInstalled = true (search for that constant below).
+//
+//  Step 5  Supabase Edge Functions already deployed — nothing else needed on server.
+//  ───────────────────────────────────────────────────────────────────────────
 
 import SwiftUI
 import Foundation
 import Combine
 
-// Uncomment after adding the Stripe Swift package in Xcode:
+// Uncomment after adding the Stripe Swift package in Xcode (Step 2):
 // import StripePaymentSheet
+
+// Set to true after completing the 5 steps above (Step 4):
+private let stripeSDKInstalled = false
 
 // MARK: - Payment Result
 enum PaymentResult {
@@ -145,6 +156,69 @@ class StripePaymentService: ObservableObject {
         }
     }
     */
+
+    // MARK: - Card Tokenization
+    // Converts card fields into a Stripe PaymentMethod ID (pm_xxx).
+    // The app ONLY ever sees pm_xxx — no raw card numbers leave the device.
+    func tokenizeCard(
+        number: String,
+        expMonth: Int,
+        expYear: Int,
+        cvc: String,
+        name: String
+    ) async throws -> (paymentMethodId: String, last4: String, brand: String) {
+
+        if stripeSDKInstalled {
+            // ── REAL IMPLEMENTATION ───────────────────────────────────────────
+            // Uncomment this entire block after completing all 5 setup steps:
+            /*
+            let cardParams = STPPaymentMethodCardParams()
+            cardParams.number = number
+            cardParams.expMonth = NSNumber(value: expMonth)
+            cardParams.expYear  = NSNumber(value: expYear)
+            cardParams.cvc      = cvc
+
+            let billing = STPPaymentMethodBillingDetails()
+            billing.name = name
+
+            let pmParams = STPPaymentMethodParams(
+                card: cardParams,
+                billingDetails: billing,
+                metadata: nil
+            )
+
+            return try await withCheckedThrowingContinuation { continuation in
+                STPAPIClient.shared.createPaymentMethod(with: pmParams) { paymentMethod, error in
+                    if let error {
+                        continuation.resume(throwing: error)
+                        return
+                    }
+                    guard let pm = paymentMethod else {
+                        continuation.resume(throwing: PaymentError.networkError)
+                        return
+                    }
+                    let brand = pm.card?.brand.stringValue ?? "Card"
+                    let last4 = pm.card?.last4 ?? String(number.filter(\.isNumber).suffix(4))
+                    continuation.resume(returning: (pm.stripeId, last4, brand))
+                }
+            }
+            */
+            throw PaymentError.serverError("Stripe SDK not yet imported — check setup steps.")
+        }
+
+        // ── STUB (active until stripeSDKInstalled = true) ─────────────────
+        // Simulates a 1.2-second network round-trip for UI testing.
+        try? await Task.sleep(nanoseconds: 1_200_000_000)
+        let rawDigits = number.filter(\.isNumber)
+        let last4 = String(rawDigits.suffix(4))
+        let brand: String
+        if rawDigits.hasPrefix("4")                           { brand = "Visa" }
+        else if rawDigits.hasPrefix("5") || rawDigits.hasPrefix("2") { brand = "Mastercard" }
+        else if rawDigits.hasPrefix("34") || rawDigits.hasPrefix("37") { brand = "Amex" }
+        else if rawDigits.hasPrefix("6")                      { brand = "Discover" }
+        else                                                  { brand = "Card" }
+        return ("pm_stub_\(UUID().uuidString.prefix(8))", last4, brand)
+    }
 
     // MARK: - Save Payment Method (display-only, no raw card data)
     // Call after a successful payment to save brand + last4 for display in Profile.
