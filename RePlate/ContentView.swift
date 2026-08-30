@@ -7,6 +7,7 @@
 
 import SwiftUI
 import UIKit
+import AudioToolbox
 
 struct ContentView: View {
     @EnvironmentObject var appState: AppState
@@ -45,35 +46,145 @@ struct ContentView: View {
 
 // MARK: - Splash Screen
 struct SplashScreenView: View {
-    @State private var scale: CGFloat = 0.7
-    @State private var opacity: Double = 0
+    @State private var logoScale: CGFloat = 0.3
+    @State private var logoOpacity: Double = 0
+    @State private var titleOffset: CGFloat = 24
+    @State private var titleOpacity: Double = 0
+    @State private var taglineOpacity: Double = 0
+    @State private var triggerDing: Bool = false
+    @State private var showRays: Bool = false
 
     var body: some View {
         ZStack {
-            Theme.Colors.primaryGradient.ignoresSafeArea()
+            SplashBlobBackground()
 
-            VStack(spacing: 20) {
-                RePlateIconView(size: 110)
-                    .scaleEffect(scale)
-                    .opacity(opacity)
+            VStack(spacing: 22) {
+                ZStack {
+                    if showRays { DingRays() }
+
+                    RePlateIconView(size: 180)
+                        .colorMultiply(Color(hex: "1a5c35"))
+                        .scaleEffect(logoScale)
+                        .opacity(logoOpacity)
+                        .keyframeAnimator(
+                            initialValue: 0.0,
+                            trigger: triggerDing
+                        ) { content, angle in
+                            content.rotationEffect(.degrees(angle))
+                        } keyframes: { _ in
+                            CubicKeyframe(0,   duration: 0.05)
+                            CubicKeyframe(-8,  duration: 0.10)
+                            CubicKeyframe(6,   duration: 0.10)
+                            CubicKeyframe(-4,  duration: 0.09)
+                            CubicKeyframe(2.5, duration: 0.09)
+                            CubicKeyframe(0,   duration: 0.12)
+                        }
+                }
 
                 Text("RePlate")
                     .font(.system(size: 40, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
-                    .opacity(opacity)
+                    .foregroundColor(Color(hex: "1a5c35"))
+                    .offset(y: titleOffset)
+                    .opacity(titleOpacity)
 
                 Text("Rescue food. Save the planet.")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.white.opacity(0.85))
+                    .foregroundColor(Color(hex: "2d7d50"))
+                    .opacity(taglineOpacity)
+            }
+        }
+        .onAppear {
+            // Logo springs in
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.58)) {
+                logoScale = 1.0
+                logoOpacity = 1.0
+            }
+            // Ding wobble + rays after logo lands
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.38) {
+                triggerDing = true
+                showRays   = true
+            }
+            // Title slides up
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.75).delay(0.52)) {
+                titleOffset = 0
+                titleOpacity = 1.0
+            }
+            // Tagline fades last
+            withAnimation(.easeIn(duration: 0.4).delay(0.78)) {
+                taglineOpacity = 1.0
+            }
+        }
+    }
+}
+
+// MARK: - Ding Rays
+private struct DingRays: View {
+    @State private var radius: CGFloat = 18
+    @State private var opacity: Double = 1.0
+    @State private var length: CGFloat = 12
+
+    var body: some View {
+        ZStack {
+            ForEach(0..<8) { i in
+                Capsule()
+                    .fill(Color(hex: "2d7d50"))
+                    .frame(width: 2.5, height: length)
+                    .offset(y: -radius)
+                    .rotationEffect(.degrees(Double(i) * 45))
                     .opacity(opacity)
             }
         }
         .onAppear {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
-                scale = 1.0
-                opacity = 1.0
+            withAnimation(.easeOut(duration: 0.55)) {
+                radius  = 90
+                opacity = 0
+                length  = 22
             }
         }
+    }
+}
+
+// MARK: - Animated Blob Background
+private struct SplashBlobBackground: View {
+    @State private var phase = false
+
+    var body: some View {
+        ZStack {
+            Color(hex: "c8eeda").ignoresSafeArea() // pastel mint base
+
+            // Blob 1 — soft sage
+            Circle()
+                .fill(Color(hex: "a0d9b8").opacity(0.85))
+                .frame(width: 380)
+                .blur(radius: 75)
+                .offset(x: phase ? -55 : 70, y: phase ? -200 : -100)
+                .animation(.easeInOut(duration: 8).repeatForever(autoreverses: true), value: phase)
+
+            // Blob 2 — pale green
+            Circle()
+                .fill(Color(hex: "b8eacc").opacity(0.8))
+                .frame(width: 300)
+                .blur(radius: 70)
+                .offset(x: phase ? 110 : -80, y: phase ? 140 : 230)
+                .animation(.easeInOut(duration: 10).repeatForever(autoreverses: true), value: phase)
+
+            // Blob 3 — light mint
+            Circle()
+                .fill(Color(hex: "d4f4e4").opacity(0.7))
+                .frame(width: 260)
+                .blur(radius: 65)
+                .offset(x: phase ? -110 : 90, y: phase ? 50 : -130)
+                .animation(.easeInOut(duration: 7).repeatForever(autoreverses: true).delay(1), value: phase)
+
+            // Blob 4 — medium pastel green
+            Circle()
+                .fill(Color(hex: "8ecfaa").opacity(0.75))
+                .frame(width: 220)
+                .blur(radius: 60)
+                .offset(x: phase ? 130 : -50, y: phase ? -80 : 160)
+                .animation(.easeInOut(duration: 9).repeatForever(autoreverses: true).delay(0.5), value: phase)
+        }
+        .onAppear { phase = true }
     }
 }
 

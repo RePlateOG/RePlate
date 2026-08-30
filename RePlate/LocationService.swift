@@ -105,19 +105,17 @@ final class LocationService: ObservableObject {
 
     // MARK: - Reverse Geocoding (iOS 26+: MKReverseGeocodingRequest)
     // Uses MKAddressRepresentations.cityWithContext (e.g. "San Francisco, CA") —
-    // MKMapItem.placemark is deprecated in iOS 26; use addressRepresentations instead.
     private func reverseGeocode(_ location: CLLocation) {
         isLoading = true
-        Task { @MainActor [weak self] in
-            defer { self?.isLoading = false }
-            do {
-                guard let request = MKReverseGeocodingRequest(location: location) else { return }
-                let mapItems = try await request.mapItems
-                if let cityWithContext = mapItems.first?.addressRepresentations?.cityWithContext {
-                    self?.locationString = cityWithContext   // e.g. "San Francisco, CA"
+        let geocoder = CLGeocoder()
+        geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, _ in
+            Task { @MainActor [weak self] in
+                defer { self?.isLoading = false }
+                if let pm = placemarks?.first {
+                    let city = pm.locality ?? pm.administrativeArea ?? ""
+                    let state = pm.administrativeArea ?? ""
+                    self?.locationString = city.isEmpty ? state : "\(city), \(state)"
                 }
-            } catch {
-                print("Reverse geocoding error: \(error.localizedDescription)")
             }
         }
     }

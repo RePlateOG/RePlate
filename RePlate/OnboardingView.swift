@@ -20,19 +20,10 @@ struct RePlateIconView: View {
     var size: CGFloat = 80
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: size * 0.22)
-                .fill(Theme.Colors.primaryGradient)
-                .frame(width: size, height: size)
-                .shadow(
-                    color: Theme.Colors.primaryGradientStart.opacity(0.35),
-                    radius: size * 0.15,
-                    y: size * 0.07
-                )
-            Image(systemName: "fork.knife")
-                .font(.system(size: size * 0.42, weight: .medium))
-                .foregroundColor(.white)
-        }
+        Image("RePlateLogo")
+            .resizable()
+            .scaledToFit()
+            .frame(width: size, height: size)
     }
 }
 
@@ -244,9 +235,11 @@ private struct OnboardingPageView: View {
                         ))
                         .frame(width: 176, height: 176)
                         .shadow(color: page.iconColors[0].opacity(0.35), radius: 24, y: 8)
-                    Image(systemName: page.icon)
-                        .font(.system(size: 66, weight: .medium))
-                        .foregroundColor(.white.opacity(0.9))
+                    Image("RePlateLogo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 142, height: 142)
+                        .offset(x: -6, y: -8)
                 }
                 .overlay(Circle().stroke(Theme.Colors.accent, lineWidth: 3))
 
@@ -629,27 +622,6 @@ struct SignInView: View {
             }
 
             socialButton(
-                label: "Continue with Yahoo",
-                icon: "y.circle.fill",
-                googleLogo: false,
-                background: Color(hex: "720E9E"),
-                border: Color.clear,
-                foreground: .white
-            ) {
-                Task {
-                    isLoading = true
-                    defer { isLoading = false }
-                    let auth = RePlateAuthService.shared
-                    if await auth.signInWithYahoo() {
-                        appState.isAuthenticated = true
-                        appState.currentUser = auth.currentUser
-                        appState.completeOnboarding()
-                        dismiss()
-                    }
-                }
-            }
-
-            socialButton(
                 label: "Continue with Apple",
                 icon: "apple.logo",
                 googleLogo: false,
@@ -711,7 +683,7 @@ struct SignInView: View {
     }
 
     private var demoHint: some View {
-        Text("Demo: use any email/password\n(use \"restaurant@…\" for a restaurant account)")
+        Text("Don't have an account? Go back and sign up.")
             .font(.system(size: 12, weight: .medium))
             .foregroundColor(Theme.Colors.tertiaryLabel)
             .multilineTextAlignment(.center)
@@ -760,6 +732,9 @@ struct SignUpView: View {
     @State private var errorMessage  = ""
     @State private var agreedToTerms = false
     @State private var showLegalPage: LegalPageView.LegalPage? = nil
+    @State private var avatarPhoto: PhotosPickerItem?
+    @State private var avatarImage: Image?
+    @State private var locationGranted = false
 
     var body: some View {
         NavigationView {
@@ -824,18 +799,9 @@ struct SignUpView: View {
                         }
                         .buttonStyle(PlainButtonStyle())
 
-                        (Text("I have read and agree to the ")
+                        Text("I have read and agree to the \(Text("Terms of Service").bold().foregroundColor(Theme.Colors.primaryGradientStart)) and \(Text("Privacy Policy").bold().foregroundColor(Theme.Colors.primaryGradientStart))")
                             .font(.system(size: 13, weight: .medium))
                             .foregroundColor(Theme.Colors.secondaryLabel)
-                        + Text("Terms of Service")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundColor(Theme.Colors.primaryGradientStart)
-                        + Text(" and ")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(Theme.Colors.secondaryLabel)
-                        + Text("Privacy Policy")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundColor(Theme.Colors.primaryGradientStart))
                         .onTapGesture { showLegalPage = .termsOfService }
                         .fixedSize(horizontal: false, vertical: true)
                     }
@@ -892,40 +858,84 @@ struct SignUpView: View {
     }
 
     private var customerPhotoUpload: some View {
-        VStack(spacing: 8) {
-            ZStack {
-                Circle().fill(Color(.systemGray6)).frame(width: 96, height: 96)
-                Circle()
-                    .strokeBorder(Color(.systemGray4), style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
-                    .frame(width: 96, height: 96)
-                Image(systemName: "camera.fill")
-                    .font(.system(size: 28, weight: .medium))
-                    .foregroundColor(Theme.Colors.tertiaryLabel)
+        PhotosPicker(selection: $avatarPhoto, matching: .images) {
+            VStack(spacing: 8) {
+                ZStack {
+                    Circle()
+                        .fill(Color(.systemGray6))
+                        .frame(width: 96, height: 96)
+                    if let avatarImage {
+                        avatarImage
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 96, height: 96)
+                            .clipShape(Circle())
+                    } else {
+                        Circle()
+                            .strokeBorder(Color(.systemGray4),
+                                          style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
+                            .frame(width: 96, height: 96)
+                        Image(systemName: "camera.fill")
+                            .font(.system(size: 28, weight: .medium))
+                            .foregroundColor(Theme.Colors.tertiaryLabel)
+                    }
+                    // Camera badge overlay
+                    ZStack {
+                        Circle()
+                            .fill(Theme.Colors.primaryGradientStart)
+                            .frame(width: 28, height: 28)
+                        Image(systemName: "camera.fill")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                    .offset(x: 32, y: 32)
+                }
+                Text(avatarImage == nil ? "Add Photo" : "Change Photo")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(Theme.Colors.secondaryLabel)
             }
-            Text("Add Photo")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(Theme.Colors.secondaryLabel)
         }
         .frame(maxWidth: .infinity)
+        .onChange(of: avatarPhoto) { _, item in
+            Task {
+                if let data = try? await item?.loadTransferable(type: Data.self),
+                   let ui = UIImage(data: data) {
+                    avatarImage = Image(uiImage: ui)
+                }
+            }
+        }
     }
 
     private var locationPermissionButton: some View {
         Button {
             hapticFeedback(.light)
-            CLLocationManager().requestWhenInUseAuthorization()
+            LocationService.shared.requestPermission()
+            locationGranted = true
         } label: {
             HStack(spacing: 10) {
-                Image(systemName: "location.fill")
+                Image(systemName: locationGranted ? "location.fill" : "location")
                     .font(.system(size: 15, weight: .semibold))
-                Text("Allow Location Access")
+                Text(locationGranted ? "Location Access Enabled" : "Allow Location Access")
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
             }
-            .foregroundColor(Theme.Colors.label)
+            .foregroundColor(locationGranted ? Theme.Colors.primaryGradientStart : Theme.Colors.label)
             .frame(maxWidth: .infinity)
             .frame(height: 52)
-            .background(Color(.systemGray6))
+            .background(
+                locationGranted
+                    ? Theme.Colors.primaryGradientStart.opacity(0.12)
+                    : Color(.systemGray6)
+            )
             .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(
+                        locationGranted ? Theme.Colors.primaryGradientStart.opacity(0.4) : Color.clear,
+                        lineWidth: 1.5
+                    )
+            )
         }
+        .disabled(locationGranted)
     }
 
     func signUp() async {
@@ -974,8 +984,12 @@ struct RestaurantSignUpView: View {
     @State private var logoPhoto: PhotosPickerItem?
     @State private var logoImage: Image?
 
-    // Step 2 — Location & contact
-    @State private var address         = ""
+    // Step 2 — Location & contact (split address fields)
+    @State private var streetLine1     = ""
+    @State private var streetLine2     = ""
+    @State private var city            = ""
+    @State private var addressState    = ""
+    @State private var zipCode         = ""
     @State private var rawPhone        = ""
     @State private var schedule        = DaySchedule.defaultSchedule()
     @State private var locationGranted = false
@@ -991,6 +1005,7 @@ struct RestaurantSignUpView: View {
     @State private var isLoading    = false
     @State private var showError    = false
     @State private var errorMessage = ""
+    @State private var showSignIn   = false
 
     private var formattedPhone: String {
         let d = rawPhone.filter { $0.isNumber }
@@ -1026,7 +1041,18 @@ struct RestaurantSignUpView: View {
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 28)
-                    .padding(.bottom, 60)
+                    .padding(.bottom, 20)
+
+                    // Already have an account
+                    Button {
+                        hapticFeedback(.light)
+                        showSignIn = true
+                    } label: {
+                        Text("Already have an account?  \(Text("Sign In").foregroundColor(Theme.Colors.primaryGradientStart).bold())")
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                    }
+                    .padding(.bottom, 40)
                 }
                 .animation(.spring(response: 0.35, dampingFraction: 0.85), value: step)
             }
@@ -1052,6 +1078,9 @@ struct RestaurantSignUpView: View {
             .sheet(isPresented: $showVerification) { RestaurantVerificationView() }
             .sheet(item: $showLegalPage) { page in
                 NavigationView { LegalPageView(page: page) }
+            }
+            .sheet(isPresented: $showSignIn) {
+                SignInView().environmentObject(appState)
             }
         }
         .onChange(of: logoPhoto) { _, item in
@@ -1182,6 +1211,16 @@ struct RestaurantSignUpView: View {
         }
     }
 
+    // Computed full address used for storage / validation
+    private var address: String {
+        var parts = [streetLine1]
+        if !streetLine2.isEmpty { parts.append(streetLine2) }
+        if !city.isEmpty { parts.append(city) }
+        let stateZip = [addressState, zipCode].filter { !$0.isEmpty }.joined(separator: " ")
+        if !stateZip.isEmpty { parts.append(stateZip) }
+        return parts.joined(separator: ", ")
+    }
+
     // MARK: Step 2 — Location & Contact
     private var step2LocationContact: some View {
         VStack(alignment: .leading, spacing: 28) {
@@ -1189,9 +1228,38 @@ struct RestaurantSignUpView: View {
                         subtitle: "Customers use this to find you.")
 
             VStack(spacing: 18) {
-                AuthLabeledField(label: "Address",
-                                 placeholder: "123 Main St, City, State",
-                                 text: $address)
+                // Multi-box address section
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("ADDRESS")
+                        .font(.system(size: 10, weight: .black, design: .rounded))
+                        .foregroundColor(Theme.Colors.tertiaryLabel)
+                        .tracking(1.2)
+
+                    VStack(spacing: 2) {
+                        // Street line 1
+                        addressBox(placeholder: "Street address", text: $streetLine1)
+                        Divider().background(Color(.systemGray4))
+                        // Street line 2
+                        addressBox(placeholder: "Apt, suite, floor (optional)", text: $streetLine2)
+                        Divider().background(Color(.systemGray4))
+                        // City / State / ZIP row
+                        HStack(spacing: 0) {
+                            addressBox(placeholder: "City", text: $city)
+                                .frame(maxWidth: .infinity)
+                            Divider().background(Color(.systemGray4)).frame(height: 48)
+                            addressBox(placeholder: "State", text: $addressState)
+                                .frame(width: 72)
+                            Divider().background(Color(.systemGray4)).frame(height: 48)
+                            addressBox(placeholder: "ZIP", text: $zipCode, keyboard: .numberPad)
+                                .frame(width: 80)
+                        }
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color(.systemGray4), lineWidth: 1)
+                    )
+                }
                 // Auto-formatted phone
                 VStack(alignment: .leading, spacing: 6) {
                     Text("PHONE NUMBER")
@@ -1236,8 +1304,14 @@ struct RestaurantSignUpView: View {
             Button {
                 hapticFeedback(.light)
                 locationGranted = true
-                address = "123 Main St, San Francisco, CA 94105"
-                CLLocationManager().requestWhenInUseAuthorization()
+                LocationService.shared.requestPermission()
+                // Pre-fill from device location string when available
+                let locStr = LocationService.shared.locationString
+                if !locStr.isEmpty && locStr != "San Francisco, CA" {
+                    let parts = locStr.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+                    city = parts.first ?? ""
+                    addressState = parts.dropFirst().first ?? ""
+                }
             } label: {
                 HStack(spacing: 14) {
                     ZStack {
@@ -1267,8 +1341,8 @@ struct RestaurantSignUpView: View {
             }
 
             backNextRow {
-                guard !address.isEmpty else {
-                    errorMessage = "Please enter your address"
+                guard !streetLine1.isEmpty, !city.isEmpty else {
+                    errorMessage = "Please enter your street address and city"
                     showError = true
                     return
                 }
@@ -1368,18 +1442,9 @@ struct RestaurantSignUpView: View {
                 }
                 .buttonStyle(PlainButtonStyle())
 
-                (Text("I have read and agree to the ")
+                Text("I have read and agree to the \(Text("Terms of Service").bold().foregroundColor(Theme.Colors.primaryGradientStart)) and \(Text("Privacy Policy").bold().foregroundColor(Theme.Colors.primaryGradientStart))")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(Theme.Colors.secondaryLabel)
-                + Text("Terms of Service")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(Theme.Colors.primaryGradientStart)
-                + Text(" and ")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(Theme.Colors.secondaryLabel)
-                + Text("Privacy Policy")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(Theme.Colors.primaryGradientStart))
                 .onTapGesture { showLegalPage = .termsOfService }
                 .fixedSize(horizontal: false, vertical: true)
             }
@@ -1417,6 +1482,19 @@ struct RestaurantSignUpView: View {
     }
 
     // MARK: Reusable sub-views
+    // Reusable single cell inside the grouped address block
+    @ViewBuilder
+    private func addressBox(placeholder: String,
+                            text: Binding<String>,
+                            keyboard: UIKeyboardType = .default) -> some View {
+        TextField(placeholder, text: text)
+            .keyboardType(keyboard)
+            .font(.system(size: 15, design: .rounded))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 14)
+            .background(Color(.systemGray6))
+    }
+
     private func stepHeading(title: String, subtitle: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)

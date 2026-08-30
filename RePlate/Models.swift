@@ -19,7 +19,11 @@ struct User: Identifiable, Codable {
     var accountType: AccountType
     var createdAt: Date
     var verifiedRestaurant: Bool
-    
+
+    // Stripe Connect — set after calling create-connect-account Edge Function.
+    // TODO: Load from your database on sign-in instead of storing only in memory.
+    var stripeAccountId: String?
+
     // Stats
     var mealsSaved: Int
     var co2Reduced: Double // in kg
@@ -187,7 +191,8 @@ struct FoodListing: Identifiable, Codable {
         case nutFree = "Nut-Free"
         case halal = "Halal"
         case kosher = "Kosher"
-        
+        case jain = "Jain"
+
         var icon: String {
             switch self {
             case .vegetarian: return "leaf"
@@ -197,6 +202,7 @@ struct FoodListing: Identifiable, Codable {
             case .nutFree: return "n.circle"
             case .halal: return "h.circle"
             case .kosher: return "k.circle"
+            case .jain: return "j.circle"
             }
         }
     }

@@ -13,11 +13,12 @@ import Combine
 struct RestaurantDashboardView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = RestaurantDashboardViewModel()
-    @State private var showPostListing      = false
-    @State private var showVerificationGate = false
-    @State private var showSettings         = false
-    @State private var showNotifications    = false
-    @State private var showMenuScanner      = false
+    @State private var showPostListing        = false
+    @State private var showVerificationGate  = false
+    @State private var showSettings          = false
+    @State private var showNotifications     = false
+    @State private var showMenuScanner       = false
+    @State private var showConnectOnboarding = false
     @State private var selectedOrder: Order? = nil
     @State private var selectedListing: FoodListing? = nil
 
@@ -43,12 +44,9 @@ struct RestaurantDashboardView: View {
         .task { await viewModel.loadDashboard() }
         .sheet(isPresented: $showPostListing) { PostSurplusView() }
         .sheet(isPresented: $showVerificationGate) { VerificationGateView() }
-        .sheet(isPresented: $showSettings) {
-            RestaurantSettingsView()
-        }
-        .sheet(isPresented: $showNotifications) {
-            NotificationsView()
-        }
+        .sheet(isPresented: $showSettings) { RestaurantSettingsView() }
+        .sheet(isPresented: $showNotifications) { NotificationsView() }
+        .sheet(isPresented: $showConnectOnboarding) { ConnectOnboardingView() }
         .sheet(isPresented: $showMenuScanner) {
             MenuScannerView { scannedItems in
                 let now = Date()
@@ -215,6 +213,13 @@ struct RestaurantDashboardView: View {
             .offset(y: -28)
             .padding(.bottom, 8)
 
+            // Stripe Connect setup prompt — shown until the restaurant finishes onboarding
+            if appState.currentUser?.stripeAccountId == nil {
+                stripeSetupBanner
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
+            }
+
             // Today's Pickups
             todaysPickupsSection
                 .padding(.top, 12)
@@ -282,6 +287,43 @@ struct RestaurantDashboardView: View {
                     .fill(Color(.systemBackground))
                     .shadow(color: Color.black.opacity(0.06), radius: 14, y: 5)
             )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    // MARK: - Stripe Connect Setup Banner
+
+    private var stripeSetupBanner: some View {
+        Button {
+            hapticFeedback(.medium)
+            showConnectOnboarding = true
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(.white.opacity(0.22))
+                        .frame(width: 46, height: 46)
+                    Image(systemName: "creditcard.and.123")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.white)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Set up payments")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                    Text("Connect Stripe to receive payouts")
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundColor(.white.opacity(0.82))
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.7))
+            }
+            .padding(16)
+            .background(Theme.Colors.primaryGradient)
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+            .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.28), radius: 10, y: 4)
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -1571,7 +1613,7 @@ class RestaurantOrdersViewModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         try? await Task.sleep(nanoseconds: 600_000_000)
-        let all = appState?.orders ?? MockData.sampleOrders
+        let all = appState?.orders ?? []
         pendingOrders   = all.filter { $0.status == .pending || $0.status == .confirmed || $0.status == .ready }
         completedOrders = all.filter { $0.status == .completed || $0.status == .cancelled || $0.status == .noShow }
     }
@@ -2025,14 +2067,14 @@ struct RestaurantOrdersView: View {
 // MARK: - Restaurant Profile View
 struct RestaurantProfileView: View {
     @EnvironmentObject var appState: AppState
-    @State private var showRestaurantDetails = false
-    @State private var showLocationPickup    = false
-    @State private var showPaymentSettings   = false
-    @State private var showNotifications     = false
-    @State private var showStaffAccounts     = false
-    @State private var showHelpCenter        = false
-    @State private var showContactSupport    = false
-    @State private var showSignOutConfirm    = false
+    @State private var showRestaurantDetails  = false
+    @State private var showLocationPickup     = false
+    @State private var showConnectOnboarding  = false
+    @State private var showNotifications      = false
+    @State private var showStaffAccounts      = false
+    @State private var showHelpCenter         = false
+    @State private var showContactSupport     = false
+    @State private var showSignOutConfirm     = false
 
     private var restaurantName: String { appState.currentUser?.name ?? "Verde Bistro" }
 
@@ -2046,13 +2088,13 @@ struct RestaurantProfileView: View {
         }
         .ignoresSafeArea(edges: .top)
         .background(Theme.Colors.pageBackground)
-        .sheet(isPresented: $showRestaurantDetails) { RestaurantDetailsEditView() }
-        .sheet(isPresented: $showLocationPickup)    { LocationPickupEditView() }
-        .sheet(isPresented: $showPaymentSettings)   { PaymentSettingsView() }
-        .sheet(isPresented: $showNotifications)     { NotificationsPreferencesView() }
-        .sheet(isPresented: $showStaffAccounts)     { StaffAccountsView() }
-        .sheet(isPresented: $showHelpCenter)        { HelpCenterView() }
-        .sheet(isPresented: $showContactSupport)    { ContactSupportView() }
+        .sheet(isPresented: $showRestaurantDetails)  { RestaurantDetailsEditView() }
+        .sheet(isPresented: $showLocationPickup)     { LocationPickupEditView() }
+        .sheet(isPresented: $showConnectOnboarding)  { ConnectOnboardingView() }
+        .sheet(isPresented: $showNotifications)      { NotificationsPreferencesView() }
+        .sheet(isPresented: $showStaffAccounts)      { StaffAccountsView() }
+        .sheet(isPresented: $showHelpCenter)         { HelpCenterView() }
+        .sheet(isPresented: $showContactSupport)     { ContactSupportView() }
         .alert("Sign Out?", isPresented: $showSignOutConfirm) {
             Button("Cancel", role: .cancel) {}
             Button("Sign Out", role: .destructive) { appState.signOut() }
@@ -2122,7 +2164,7 @@ struct RestaurantProfileView: View {
                 rows: [
                     ("storefront.fill",  "Restaurant Details", "Name, cuisine & hours",      { showRestaurantDetails = true }),
                     ("location.fill",    "Location & Pickup",  "Address and instructions",   { showLocationPickup = true }),
-                    ("banknote.fill",    "Payment Settings",   "Bank and payout details",    { showPaymentSettings = true }),
+                    ("banknote.fill",    "Payouts & Stripe",   "Connect to accept payments",  { showConnectOnboarding = true }),
                 ]
             )
             .padding(.horizontal, 20)

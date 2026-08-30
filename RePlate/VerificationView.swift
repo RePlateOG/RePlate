@@ -128,7 +128,7 @@ struct VerificationGateView: View {
             .padding(.bottom, 48)
         }
         .background(Theme.Colors.pageBackground)
-        .sheet(isPresented: $showVerification) { RestaurantVerificationView() }
+        .fullScreenCover(isPresented: $showVerification) { RestaurantVerificationView() }
     }
 }
 
@@ -203,16 +203,7 @@ struct RestaurantVerificationView: View {
                         }
                     }
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        if canSubmit {
-                            Button {
-                                hapticFeedback(.medium)
-                                showSubmitConfirm = true
-                            } label: {
-                                Text("Submit")
-                                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                                    .foregroundColor(Color(hex: "118b50"))
-                            }
-                        }
+                        EmptyView()
                     }
                 }
                 .alert("Submit Verification", isPresented: $showSubmitConfirm) {
@@ -315,7 +306,7 @@ struct RestaurantVerificationView: View {
         VStack(alignment: .leading, spacing: 20) {
             sectionHeader(
                 title: "Compliance Agreements",
-                subtitle: "You must acknowledge all agreements to complete verification."
+                subtitle: "Acknowledge all agreements, then submit for official verification."
             )
 
             agreementRow(
@@ -349,26 +340,64 @@ struct RestaurantVerificationView: View {
                 binding: $agreeAccurate
             )
 
-            if canSubmit {
-                Button {
-                    hapticFeedback(.medium)
-                    showSubmitConfirm = true
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: "checkmark.seal.fill")
-                        Text("Submit for Review")
-                            .font(.system(size: 17, weight: .bold, design: .rounded))
-                    }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity).frame(height: 56)
-                    .background(Theme.Colors.primaryGradient)
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
-                    .shadow(color: Color(hex: "118b50").opacity(0.35), radius: 12, y: 5)
-                }
-                .padding(.top, 8)
+            // Requirements checklist — shows remaining blockers when not ready
+            if !canSubmit {
+                submissionRequirementsCard
             }
 
-            legalNote("Submitting false information may result in permanent account termination and legal action. All agreements are legally binding.")
+            // Submit button — always visible; disabled until all requirements met
+            Button {
+                guard canSubmit else { return }
+                hapticFeedback(.medium)
+                showSubmitConfirm = true
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: canSubmit ? "checkmark.seal.fill" : "lock.fill")
+                        .font(.system(size: 16, weight: .bold))
+                    Text(canSubmit ? "Submit for Official Verification" : "Complete All Requirements to Submit")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity).frame(height: 58)
+                .background(
+                    canSubmit
+                        ? AnyShapeStyle(Theme.Colors.primaryGradient)
+                        : AnyShapeStyle(Color(.systemGray4))
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+                .shadow(color: canSubmit ? Color(hex: "118b50").opacity(0.35) : Color.clear, radius: 12, y: 5)
+            }
+            .padding(.top, 8)
+
+            legalNote("Submitting false information may result in permanent account termination and legal action. All submitted documents are reviewed by the RePlate team within 1–2 business days.")
+        }
+    }
+
+    private var submissionRequirementsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("REQUIRED TO SUBMIT")
+                .font(.system(size: 10, weight: .black, design: .rounded))
+                .foregroundColor(Theme.Colors.tertiaryLabel)
+                .tracking(1.0)
+
+            requirementRow(met: allDocsUploaded,   label: "All 5 documents uploaded")
+            requirementRow(met: infoComplete,       label: "Business information complete")
+            requirementRow(met: allAgreements,      label: "All 6 agreements acknowledged")
+        }
+        .padding(16)
+        .background(Color(.systemGray6))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func requirementRow(met: Bool, label: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: met ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(met ? Color(hex: "118b50") : Color(.systemGray3))
+            Text(label)
+                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .foregroundColor(met ? Theme.Colors.label : Theme.Colors.secondaryLabel)
+            Spacer()
         }
     }
 

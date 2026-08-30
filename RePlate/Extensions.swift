@@ -380,3 +380,20 @@ class ImageCache {
         cache.removeAllObjects()
     }
 }
+
+// MARK: - Sign in with Apple nonce helpers
+
+import CryptoKit
+
+func randomNonceString(length: Int = 32) -> String {
+    var randomBytes = [UInt8](repeating: 0, count: length)
+    _ = SecRandomCopyBytes(kSecRandomDefault, randomBytes.count, &randomBytes)
+    let charset = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+    return String(randomBytes.map { charset[Int($0) % charset.count] })
+}
+
+func sha256(_ input: String) -> String {
+    let inputData = Data(input.utf8)
+    let hashed = SHA256.hash(data: inputData)
+    return hashed.compactMap { String(format: "%02x", $0) }.joined()
+}

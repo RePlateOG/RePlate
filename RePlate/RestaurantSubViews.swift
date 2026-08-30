@@ -9,6 +9,7 @@
 //
 
 import SwiftUI
+import Supabase
 
 // MARK: - Shared: Section label
 private func sectionLabel(_ title: String) -> some View {
@@ -76,15 +77,15 @@ private struct FormCard<Content: View>: View {
 // MARK: - Shared: Save button
 private struct SaveButton: View {
     @Binding var isSaving: Bool
-    let onSave: () -> Void
+    let onSave: () async -> Void
 
     var body: some View {
         Button {
             hapticFeedback(.success)
             isSaving = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            Task {
+                await onSave()
                 isSaving = false
-                onSave()
             }
         } label: {
             HStack(spacing: 8) {
@@ -106,12 +107,12 @@ private struct SaveButton: View {
 // MARK: - Restaurant Settings Hub
 struct RestaurantSettingsView: View {
     @Environment(\.dismiss) var dismiss
-    @State private var showRestaurantDetails = false
-    @State private var showLocationPickup = false
-    @State private var showPaymentSettings = false
-    @State private var showNotifications = false
-    @State private var showHelpCenter = false
-    @State private var showContactSupport = false
+    @State private var showRestaurantDetails  = false
+    @State private var showLocationPickup     = false
+    @State private var showConnectOnboarding  = false
+    @State private var showNotifications      = false
+    @State private var showHelpCenter         = false
+    @State private var showContactSupport     = false
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -149,9 +150,9 @@ struct RestaurantSettingsView: View {
                         FormCard {
                             settingsRow(
                                 icon: "banknote.fill",
-                                title: "Payment Settings",
-                                subtitle: "Bank and payout details"
-                            ) { showPaymentSettings = true }
+                                title: "Payouts & Stripe",
+                                subtitle: "Connect to accept payments"
+                            ) { showConnectOnboarding = true }
                         }
                     }
 
@@ -194,12 +195,12 @@ struct RestaurantSettingsView: View {
         }
         .ignoresSafeArea(edges: .top)
         .background(Theme.Colors.pageBackground)
-        .sheet(isPresented: $showRestaurantDetails) { RestaurantDetailsEditView() }
-        .sheet(isPresented: $showLocationPickup)    { LocationPickupEditView() }
-        .sheet(isPresented: $showPaymentSettings)   { PaymentSettingsView() }
-        .sheet(isPresented: $showNotifications)     { NotificationsPreferencesView() }
-        .sheet(isPresented: $showHelpCenter)        { HelpCenterView() }
-        .sheet(isPresented: $showContactSupport)    { ContactSupportView() }
+        .sheet(isPresented: $showRestaurantDetails)  { RestaurantDetailsEditView() }
+        .sheet(isPresented: $showLocationPickup)     { LocationPickupEditView() }
+        .sheet(isPresented: $showConnectOnboarding)  { ConnectOnboardingView() }
+        .sheet(isPresented: $showNotifications)      { NotificationsPreferencesView() }
+        .sheet(isPresented: $showHelpCenter)         { HelpCenterView() }
+        .sheet(isPresented: $showContactSupport)     { ContactSupportView() }
     }
 
     private func settingsRow(
@@ -801,13 +802,16 @@ struct OperatingHoursTable: View {
 // MARK: - Restaurant Details Edit
 struct RestaurantDetailsEditView: View {
     @Environment(\.dismiss) var dismiss
-    @State private var restaurantName = "Verde Bistro"
-    @State private var cuisine = "Mediterranean"
-    @State private var phone = "+1 (555) 234-5678"
+    @EnvironmentObject var appState: AppState
+    @State private var restaurantId: String? = nil
+    @State private var restaurantName = ""
+    @State private var cuisine = ""
+    @State private var phone = ""
     @State private var instagramHandle = ""
     @State private var websiteURL = ""
     @State private var schedule: [DaySchedule] = DaySchedule.defaultSchedule()
     @State private var isSaving = false
+    @State private var saveError: String? = nil
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -919,7 +923,14 @@ struct RestaurantDetailsEditView: View {
                         .padding(.horizontal, 4)
                     }
 
-                    SaveButton(isSaving: $isSaving) { dismiss() }
+                    if let error = saveError {
+                        Text(error)
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
+                    }
+
+                    SaveButton(isSaving: $isSaving) { await saveRestaurant() }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 28)
@@ -928,18 +939,95 @@ struct RestaurantDetailsEditView: View {
         }
         .ignoresSafeArea(edges: .top)
         .background(Theme.Colors.pageBackground)
+        .task { await loadRestaurant() }
+    }
+
+    private func loadRestaurant() async {
+        guard let userId = appState.currentUser?.id else { return }
+        struct Row: Decodable {
+            let id: String; let name: String; let phoneNumber: String?; let cuisine: [String]
+            enum CodingKeys: String, CodingKey {
+                case id, name, cuisine; case phoneNumber = "phone_number"
+            }
+        }
+        do {
+            let row: Row = try await supabase
+                .from("restaurants")
+                .select("id, name, phone_number, cuisine")
+                .eq("owner_id", value: userId)
+                .single()
+                .execute()
+                .value
+            restaurantId = row.id
+            restaurantName = row.name
+            cuisine = row.cuisine.joined(separator: ", ")
+            phone = row.phoneNumber ?? ""
+        } catch {
+            // No restaurant row yet — fields stay empty, created on first save
+        }
+    }
+
+    private func saveRestaurant() async {
+        guard let userId = appState.currentUser?.id else { return }
+        saveError = nil
+        let cuisineList = cuisine.split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+
+        struct UpdatePayload: Encodable {
+            let name: String; let phoneNumber: String; let cuisine: [String]
+            enum CodingKeys: String, CodingKey {
+                case name, cuisine; case phoneNumber = "phone_number"
+            }
+        }
+        struct InsertPayload: Encodable {
+            let ownerId: String; let name: String; let phoneNumber: String
+            let cuisine: [String]; let email: String
+            enum CodingKeys: String, CodingKey {
+                case name, cuisine, email
+                case ownerId = "owner_id"; case phoneNumber = "phone_number"
+            }
+        }
+        struct IDRow: Decodable { let id: String }
+
+        do {
+            if let id = restaurantId {
+                try await supabase.from("restaurants")
+                    .update(UpdatePayload(name: restaurantName, phoneNumber: phone, cuisine: cuisineList))
+                    .eq("id", value: id)
+                    .execute()
+            } else {
+                let idRow: IDRow = try await supabase.from("restaurants")
+                    .insert(InsertPayload(
+                        ownerId: userId, name: restaurantName, phoneNumber: phone,
+                        cuisine: cuisineList, email: appState.currentUser?.email ?? ""
+                    ))
+                    .select("id").single().execute().value
+                restaurantId = idRow.id
+            }
+            RePlateAuthService.shared.updateCurrentUser(
+                name: restaurantName.isEmpty ? (appState.currentUser?.name ?? "") : restaurantName,
+                email: appState.currentUser?.email ?? "",
+                phoneNumber: phone.isEmpty ? nil : phone
+            )
+            dismiss()
+        } catch {
+            saveError = "Save failed. Please try again."
+        }
     }
 }
 
 // MARK: - Location & Pickup Edit
 struct LocationPickupEditView: View {
     @Environment(\.dismiss) var dismiss
-    @State private var street = "742 Evergreen Terrace"
-    @State private var city = "Springfield"
-    @State private var stateName = "CA"
-    @State private var zip = "90210"
-    @State private var pickupInstructions = "Enter through the side door. Ring bell for assistance."
+    @EnvironmentObject var appState: AppState
+    @State private var restaurantId: String? = nil
+    @State private var street = ""
+    @State private var city = ""
+    @State private var stateName = ""
+    @State private var zip = ""
+    @State private var pickupInstructions = ""
     @State private var isSaving = false
+    @State private var saveError: String? = nil
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -994,7 +1082,14 @@ struct LocationPickupEditView: View {
                         }
                     }
 
-                    SaveButton(isSaving: $isSaving) { dismiss() }
+                    if let error = saveError {
+                        Text(error)
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
+                    }
+
+                    SaveButton(isSaving: $isSaving) { await saveAddress() }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 28)
@@ -1003,6 +1098,77 @@ struct LocationPickupEditView: View {
         }
         .ignoresSafeArea(edges: .top)
         .background(Theme.Colors.pageBackground)
+        .task { await loadAddress() }
+    }
+
+    private func loadAddress() async {
+        guard let userId = appState.currentUser?.id else { return }
+        struct Row: Decodable {
+            let id: String; let address: String?
+            enum CodingKeys: String, CodingKey { case id, address }
+        }
+        do {
+            let row: Row = try await supabase
+                .from("restaurants")
+                .select("id, address")
+                .eq("owner_id", value: userId)
+                .single()
+                .execute()
+                .value
+            restaurantId = row.id
+            if let addr = row.address, !addr.isEmpty {
+                let parts = addr.components(separatedBy: ", ")
+                street = parts.count > 0 ? parts[0] : ""
+                city   = parts.count > 1 ? parts[1] : ""
+                if parts.count > 2 {
+                    let stateZip = parts[2].components(separatedBy: " ")
+                    stateName = stateZip.count > 0 ? stateZip[0] : ""
+                    zip       = stateZip.count > 1 ? stateZip[1] : ""
+                }
+            }
+        } catch {
+            // No restaurant row yet
+        }
+    }
+
+    private func saveAddress() async {
+        guard let userId = appState.currentUser?.id else { return }
+        saveError = nil
+        let fullAddress = [street, city, "\(stateName) \(zip)".trimmingCharacters(in: .whitespaces)]
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+            .joined(separator: ", ")
+
+        struct AddressPayload: Encodable { let address: String }
+        struct InsertPayload: Encodable {
+            let ownerId: String; let name: String; let address: String; let email: String
+            enum CodingKeys: String, CodingKey {
+                case name, address, email; case ownerId = "owner_id"
+            }
+        }
+        struct IDRow: Decodable { let id: String }
+
+        do {
+            if let id = restaurantId {
+                try await supabase.from("restaurants")
+                    .update(AddressPayload(address: fullAddress))
+                    .eq("id", value: id)
+                    .execute()
+            } else {
+                let idRow: IDRow = try await supabase.from("restaurants")
+                    .insert(InsertPayload(
+                        ownerId: userId,
+                        name: appState.currentUser?.name ?? "My Restaurant",
+                        address: fullAddress,
+                        email: appState.currentUser?.email ?? ""
+                    ))
+                    .select("id").single().execute().value
+                restaurantId = idRow.id
+            }
+            dismiss()
+        } catch {
+            saveError = "Save failed. Please try again."
+        }
     }
 }
 

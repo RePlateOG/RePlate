@@ -26,7 +26,7 @@ struct ScannedMenuItem: Identifiable {
     var isSelected: Bool = true
 }
 
-private func computeDiscount(from rawPrice: String, pct: Double = 0.60) -> String {
+private nonisolated func computeDiscount(from rawPrice: String, pct: Double = 0.60) -> String {
     guard let val = Double(rawPrice.replacingOccurrences(of: ",", with: ".")) else { return "" }
     let discounted = (val * pct * 100).rounded() / 100
     return String(format: "%.2f", discounted)
@@ -35,7 +35,7 @@ private func computeDiscount(from rawPrice: String, pct: Double = 0.60) -> Strin
 // MARK: - OCR Engine (no actor isolation — runs on background threads)
 
 private enum MenuScannerEngine {
-    static func recognizeText(in image: UIImage) throws -> [String] {
+    nonisolated static func recognizeText(in image: UIImage) throws -> [String] {
         guard let cg = image.cgImage else {
             throw NSError(domain: "MenuScanner", code: 1,
                           userInfo: [NSLocalizedDescriptionKey: "Could not read image data"])
@@ -48,7 +48,7 @@ private enum MenuScannerEngine {
         return (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }
     }
 
-    static func parseMenu(from lines: [String]) -> [ScannedMenuItem] {
+    nonisolated static func parseMenu(from lines: [String]) -> [ScannedMenuItem] {
         let pricePattern = try? NSRegularExpression(
             pattern: #"[\$£€]?\s*\d{1,3}[.,]\d{2}|\d{1,3}\s*[\$£€]"#
         )
@@ -99,7 +99,7 @@ private enum MenuScannerEngine {
         return items
     }
 
-    static func inferCategory(from name: String) -> FoodListing.FoodCategory {
+    nonisolated static func inferCategory(from name: String) -> FoodListing.FoodCategory {
         let s = name.lowercased()
         if s.contains("cake") || s.contains("dessert") || s.contains("ice cream") ||
            s.contains("pudding") || s.contains("brownie") || s.contains("cheesecake") { return .desserts }

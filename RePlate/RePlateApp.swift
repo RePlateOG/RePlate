@@ -7,6 +7,8 @@
 
 import SwiftUI
 import UIKit
+import Supabase
+import StripePaymentSheet
 
 // MARK: - App Entry Point
 
@@ -19,6 +21,13 @@ struct RePlateApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(appState)
+                .onOpenURL { url in
+                    Task {
+                        // Handle deep links from Supabase auth emails (email confirmation,
+                        // magic link, password reset) and OAuth redirects (Google).
+                        try? await supabase.auth.session(from: url)
+                    }
+                }
         }
     }
 }
@@ -40,8 +49,7 @@ class RePlateAppDelegate: NSObject, UIApplicationDelegate {
             self?.installStatusBarContainer()
         }
 
-        // TODO: Uncomment after adding Stripe Swift package (StripePaymentSheet) in Xcode:
-        // STPAPIClient.shared.publishableKey = StripeConfig.publishableKey
+        STPAPIClient.shared.publishableKey = StripeConfig.publishableKey
 
         // Global UIKit appearance config
         configureAppearance()

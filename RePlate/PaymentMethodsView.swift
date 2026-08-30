@@ -87,7 +87,7 @@ struct PaymentMethodsView: View {
             ForEach(savedMethods) { method in
                 SavedMethodRow(method: method) {
                     if let idx = appState.savedPaymentMethods.firstIndex(where: { $0.id == method.id }) {
-                        withAnimation { appState.savedPaymentMethods.remove(at: idx) }
+                        withAnimation { _ = appState.savedPaymentMethods.remove(at: idx) }
                         hapticFeedback(.medium)
                     }
                 }

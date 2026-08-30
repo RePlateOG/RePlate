@@ -25,14 +25,15 @@ struct MessagesView: View {
             messagesHeader
 
             // Content
-            Group {
-                if viewModel.isLoading {
-                    loadingView
-                } else if viewModel.conversations.isEmpty {
-                    emptyView
-                } else {
-                    conversationsList
-                }
+            if viewModel.isLoading {
+                loadingView
+                Spacer(minLength: 0)
+            } else if viewModel.conversations.isEmpty {
+                Spacer(minLength: 0)
+                emptyView
+                Spacer(minLength: 0)
+            } else {
+                conversationsList
             }
         }
         .ignoresSafeArea(edges: .top)

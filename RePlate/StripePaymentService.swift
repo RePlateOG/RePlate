@@ -21,11 +21,9 @@ import SwiftUI
 import Foundation
 import Combine
 
-// Uncomment after adding the Stripe Swift package in Xcode (Step 2):
-// import StripePaymentSheet
+import StripePaymentSheet
 
-// Set to true after completing the 5 steps above (Step 4):
-private let stripeSDKInstalled = false
+private let stripeSDKInstalled = true
 
 // MARK: - Payment Result
 enum PaymentResult {

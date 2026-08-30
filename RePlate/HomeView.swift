@@ -15,6 +15,7 @@ struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
     @State private var selectedListing: FoodListing?
     @State private var showNotifications = false
+    @State private var showAIAssistant = false
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -34,6 +35,10 @@ struct HomeView: View {
         }
         .sheet(isPresented: $showNotifications) {
             NotificationsView()
+        }
+        .sheet(isPresented: $showAIAssistant) {
+            AIAssistantView()
+                .environmentObject(appState)
         }
     }
 
@@ -214,7 +219,7 @@ struct HomeView: View {
         ("fork.knife.circle.fill",            "Italian",       Theme.Colors.primaryGradientStart.opacity(0.10)),
         ("leaf.arrow.circlepath",             "Mexican",       Theme.Colors.primaryGradientStart.opacity(0.10)),
         ("fish.fill",                         "Japanese",      Theme.Colors.primaryGradientStart.opacity(0.10)),
-        ("bowl.fill",                         "Asian",         Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("globe.asia.australia.fill",          "Asian",         Theme.Colors.primaryGradientStart.opacity(0.10)),
         ("flame.circle.fill",                 "Korean",        Theme.Colors.primaryGradientStart.opacity(0.10)),
         ("cup.and.saucer.fill",               "Chinese",       Theme.Colors.primaryGradientStart.opacity(0.10)),
         ("leaf.circle.fill",                  "Thai",          Theme.Colors.primaryGradientStart.opacity(0.10)),

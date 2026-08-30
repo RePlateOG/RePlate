@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Combine
+import Supabase
 
 // MARK: - Home View Model
 @MainActor
@@ -21,13 +22,24 @@ class HomeViewModel: ObservableObject {
     func loadListings() async {
         isLoading = true
         defer { isLoading = false }
-        
-        // Simulate API call
-        try? await Task.sleep(nanoseconds: 1_000_000_000)
-        
-        // TODO: backend — fetch real listings from Supabase
-        listings = []
-        featuredListings = []
+
+        do {
+            let rows: [ListingRow] = try await supabase
+                .from("food_listings")
+                .select()
+                .eq("status", value: "active")
+                .gte("pickup_end", value: ISO8601DateFormatter().string(from: Date()))
+                .order("created_at", ascending: false)
+                .limit(50)
+                .execute()
+                .value
+
+            listings = rows.map { $0.toFoodListing() }
+            featuredListings = Array(listings.prefix(3))
+        } catch {
+            listings = []
+            featuredListings = []
+        }
         impactStats = ImpactStats.empty
     }
     
@@ -66,17 +78,29 @@ class RestaurantDashboardViewModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         
-        try? await Task.sleep(nanoseconds: 1_000_000_000)
-        
-        activeListings = MockData.sampleListings.filter { $0.status == .active }
-        pendingOrders = MockData.sampleOrders.filter { $0.status == .pending || $0.status == .confirmed }
-        hasUnreadNotifications = !pendingOrders.isEmpty
+        guard let uid = supabase.auth.currentSession?.user.id.uuidString else { return }
+
+        do {
+            let rows: [ListingRow] = try await supabase
+                .from("food_listings")
+                .select()
+                .eq("restaurant_id", value: uid)
+                .eq("status", value: "active")
+                .execute()
+                .value
+            activeListings = rows.map { $0.toFoodListing() }
+        } catch {
+            activeListings = []
+        }
+
+        pendingOrders = []
+        hasUnreadNotifications = false
         todayStats = DashboardStats(
             activeListings: activeListings.count,
-            pendingOrders: pendingOrders.count,
-            revenueToday: 245.50,
-            mealsSaved: 12,
-            co2Reduced: 15.4
+            pendingOrders: 0,
+            revenueToday: 0,
+            mealsSaved: 0,
+            co2Reduced: 0
         )
     }
     
@@ -170,8 +194,8 @@ class OrdersViewModel: ObservableObject {
 
         try? await Task.sleep(nanoseconds: 1_000_000_000)
 
-        // Read from appState (single source of truth) if available, else fall back to MockData
-        let allOrders = appState?.orders ?? MockData.sampleOrders
+        // TODO: fetch real orders from Supabase
+        let allOrders = appState?.orders ?? []
         pendingOrders = allOrders.filter {
             $0.status == .pending || $0.status == .confirmed || $0.status == .ready
         }
@@ -228,11 +252,8 @@ class SearchViewModel: ObservableObject {
         
         try? await Task.sleep(nanoseconds: 500_000_000)
         
-        // Mock search
-        searchResults = MockData.sampleListings.filter {
-            $0.title.localizedCaseInsensitiveContains(searchQuery) ||
-            $0.description.localizedCaseInsensitiveContains(searchQuery)
-        }
+        // TODO: fetch real search results from Supabase
+        searchResults = []
         
         // Add to recent searches
         if !recentSearches.contains(searchQuery) {
@@ -286,8 +307,7 @@ class ProfileViewModel: ObservableObject {
     }
     
     func deleteAccount() async {
-        // Delete account
-        RePlateAuthService.shared.signOut()
+        _ = await RePlateAuthService.shared.deleteAccount()
     }
 }
 
@@ -311,3 +331,67 @@ class MessagesViewModel: ObservableObject {
 }
 
 // MockData is defined in MockData.swift
+
+// MARK: - Supabase row decodable for food_listings
+
+private struct ListingRow: Decodable {
+    let id: String
+    let restaurantId: String
+    let title: String
+    let description: String
+    let category: String
+    let originalPrice: Double?
+    let discountedPrice: Double?
+    let isFree: Bool
+    let quantity: Int
+    let quantityRemaining: Int
+    let pickupStart: Date
+    let pickupEnd: Date
+    let status: String
+    let dietaryInfo: [String]
+    let imageUrl: String?
+    let address: String?
+    let createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, description, category, quantity, status, address
+        case restaurantId = "restaurant_id"
+        case originalPrice = "original_price"
+        case discountedPrice = "discounted_price"
+        case isFree = "is_free"
+        case quantityRemaining = "quantity_remaining"
+        case pickupStart = "pickup_start"
+        case pickupEnd = "pickup_end"
+        case dietaryInfo = "dietary_info"
+        case imageUrl = "image_url"
+        case createdAt = "created_at"
+    }
+
+    func toFoodListing() -> FoodListing {
+        let cat = FoodListing.FoodCategory(rawValue: category.capitalized)
+            ?? FoodListing.FoodCategory.meals
+        let dietary = dietaryInfo.compactMap { FoodListing.DietaryInfo(rawValue: $0) }
+
+        return FoodListing(
+            id: id,
+            restaurantId: restaurantId,
+            restaurant: nil,
+            title: title,
+            description: description,
+            category: cat,
+            imageURLs: imageUrl.map { [$0] } ?? [],
+            originalPrice: originalPrice ?? 0,
+            discountedPrice: discountedPrice ?? 0,
+            isFree: isFree,
+            quantity: quantity,
+            availableQuantity: quantityRemaining,
+            pickupStartTime: pickupStart,
+            pickupEndTime: pickupEnd,
+            status: FoodListing.ListingStatus(rawValue: status) ?? .active,
+            createdAt: createdAt,
+            expiresAt: pickupEnd,
+            tags: [],
+            dietaryInfo: dietary
+        )
+    }
+}
