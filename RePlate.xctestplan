@@ -1,0 +1,39 @@
+{
+  "configurations" : [
+    {
+      "id" : "F4F5E00B-110D-40FB-AE92-158F80B360DA",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:RePlate.xcodeproj",
+      "identifier" : "D932BC012FC6998100EFF9BC",
+      "name" : "RePlate"
+    }
+  },
+  "testTargets" : [
+    {
+      "enabled" : false,
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:RePlate.xcodeproj",
+        "identifier" : "D932BC102FC6998200EFF9BC",
+        "name" : "RePlateTests"
+      }
+    },
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:RePlate.xcodeproj",
+        "identifier" : "D932BC1A2FC6998200EFF9BC",
+        "name" : "RePlateUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

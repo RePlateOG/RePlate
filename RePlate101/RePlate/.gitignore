@@ -1,0 +1,43 @@
+# Xcode
+*.xcuserstate
+xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+build/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# CocoaPods
+Pods/
+
+# Carthage
+Carthage/Build/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+*.swp
+*.orig
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# SPM resolved file (keep Package.resolved if you use SPM)
+# *.resolved
+
+# OWASP A02: secrets must never be committed
+# Copy Secrets.xcconfig.example → Secrets.xcconfig and fill in real values locally
+Secrets.xcconfig
+.env
+.env.local
+.env.*.local
+*.env
