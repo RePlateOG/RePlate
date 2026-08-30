@@ -61,12 +61,29 @@ struct PostSurplusView: View {
     }
 
     private let categories: [FoodCategory] = [
-        .init(name: "Meals",   icon: "fork.knife"),
-        .init(name: "Bakery",  icon: "birthday.cake"),
-        .init(name: "Veggie",  icon: "leaf.fill"),
-        .init(name: "Drinks",  icon: "cup.and.saucer.fill"),
-        .init(name: "Mixed",   icon: "bag.fill"),
-        .init(name: "Produce", icon: "carrot.fill"),
+        // Cuisines
+        .init(name: "Indian",        icon: "flame.fill"),
+        .init(name: "Italian",       icon: "fork.knife.circle.fill"),
+        .init(name: "Mexican",       icon: "leaf.arrow.circlepath"),
+        .init(name: "Japanese",      icon: "fish.fill"),
+        .init(name: "Asian",         icon: "bowl.fill"),
+        .init(name: "Korean",        icon: "flame.circle.fill"),
+        .init(name: "Chinese",       icon: "cup.and.saucer.fill"),
+        .init(name: "Thai",          icon: "leaf.circle.fill"),
+        .init(name: "Mediterranean", icon: "sun.horizon.fill"),
+        .init(name: "American",      icon: "takeoutbag.and.cup.and.straw.fill"),
+        // Meal times
+        .init(name: "Breakfast",     icon: "sunrise.fill"),
+        .init(name: "Lunch",         icon: "sun.max.fill"),
+        .init(name: "Dinner",        icon: "moon.stars.fill"),
+        .init(name: "Snacks",        icon: "takeoutbag.and.cup.and.straw"),
+        // Food types
+        .init(name: "Desserts",      icon: "birthday.cake.fill"),
+        .init(name: "Bakery",        icon: "birthday.cake"),
+        .init(name: "Produce",       icon: "carrot.fill"),
+        .init(name: "Beverages",     icon: "cup.and.saucer"),
+        .init(name: "Meals",         icon: "fork.knife"),
+        .init(name: "Other",         icon: "bag.fill"),
     ]
 
     private let pickupOptions = [
@@ -184,7 +201,7 @@ struct PostSurplusView: View {
                     ZStack {
                         RoundedRectangle(cornerRadius: 24)
                             .fill(.white)
-                            .shadow(color: Color.black.opacity(0.1), radius: 12, y: 6)
+                            .shadow(color: Color.black.opacity(0.06), radius: 12, y: 4)
                             .frame(width: 80, height: 80)
                         Image(systemName: hasPhoto ? "checkmark.circle.fill" : "photo.on.rectangle.angled")
                             .font(.system(size: 34, weight: .medium))
@@ -267,7 +284,7 @@ struct PostSurplusView: View {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 18)
                                     .fill(.white)
-                                    .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+                                    .shadow(color: Color.black.opacity(0.06), radius: 8, y: 3)
                                     .frame(width: 52, height: 52)
                                 Image(systemName: "minus")
                                     .font(.system(size: 18, weight: .bold))
@@ -285,7 +302,7 @@ struct PostSurplusView: View {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 18)
                                     .fill(.white)
-                                    .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+                                    .shadow(color: Color.black.opacity(0.06), radius: 8, y: 3)
                                     .frame(width: 52, height: 52)
                                 Image(systemName: "plus")
                                     .font(.system(size: 18, weight: .bold))
@@ -300,8 +317,11 @@ struct PostSurplusView: View {
             }
 
             navRow {
+                // OWASP A03: validate and sanitize inputs before advancing to the submit step
                 guard !title.isEmpty else { showValidationError("Please enter a title for your listing."); return }
+                guard title.count <= 200 else { showValidationError("Title cannot exceed 200 characters."); return }
                 guard !foodType.isEmpty else { showValidationError("Please select a food category."); return }
+                guard quantity >= 1 && quantity <= 100 else { showValidationError("Quantity must be between 1 and 100."); return }
                 advance()
             }
         }
@@ -493,8 +513,13 @@ struct PostSurplusView: View {
             }
 
             navRow {
+                // SECURITY: re-validate server-side — price must be > 0 unless free
                 if !isFree && originalCents == 0 {
                     showValidationError("Please enter the original retail price.")
+                    return
+                }
+                if !isFree && suggestedCents == 0 && !manualOverride {
+                    showValidationError("Discounted price must be greater than zero.")
                     return
                 }
                 advance()
@@ -570,8 +595,13 @@ struct PostSurplusView: View {
             }
 
             navRow {
+                // SECURITY: re-validate server-side — pickup window must be in the future and end > start
                 guard !pickupWindow.isEmpty else {
                     showValidationError("Please select a pickup window.")
+                    return
+                }
+                if pickupWindow == "Custom Time" && customDate < Date() {
+                    showValidationError("Custom pickup time must be in the future.")
                     return
                 }
                 advance()
@@ -681,6 +711,7 @@ struct PostSurplusView: View {
                 Button {
                     hapticFeedback(.success)
                     isPosting = true
+                    // TODO: backend — send new listing to server, then append to appState.mockListings
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                         isPosting = false
                         withAnimation { showSuccess = true }

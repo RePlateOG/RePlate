@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct ContentView: View {
     @EnvironmentObject var appState: AppState
@@ -20,12 +21,17 @@ struct ContentView: View {
                 Group {
                     if !appState.hasCompletedOnboarding {
                         OnboardingView()
+                            .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
                     } else if !appState.isAuthenticated {
                         AuthenticationView()
+                            .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
                     } else {
                         MainTabView()
+                            .transition(.opacity.combined(with: .scale(scale: 0.97)))
                     }
                 }
+                .animation(.easeInOut(duration: 0.35), value: appState.isAuthenticated)
+                .animation(.easeInOut(duration: 0.35), value: appState.hasCompletedOnboarding)
             }
         }
         .preferredColorScheme(appState.colorScheme.colorScheme)
@@ -74,9 +80,13 @@ struct SplashScreenView: View {
 // MARK: - Main Tab View
 struct MainTabView: View {
     @EnvironmentObject var appState: AppState
-    
+
     var body: some View {
         ZStack(alignment: .bottom) {
+            // Base background fills entire screen including safe areas, eliminating white bands
+            Theme.Colors.pageBackground
+                .ignoresSafeArea()
+
             TabView(selection: $appState.selectedTab) {
                 // Home
                 if appState.currentUser?.accountType == .restaurant {
@@ -119,7 +129,11 @@ struct MainTabView: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            
+            // Extend TabView edge-to-edge so its frame doesn't leave grey strips
+            // at the top (status bar) or bottom (home indicator) safe-area margins.
+            .ignoresSafeArea()
+            .background(Theme.Colors.pageBackground)
+
             // Custom Tab Bar
             CustomTabBar(selectedTab: $appState.selectedTab)
         }
@@ -135,14 +149,18 @@ struct CustomTabBar: View {
         HStack(spacing: 0) {
             ForEach(AppState.Tab.allCases, id: \.self) { tab in
                 Button {
-                    selectedTab = tab
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        selectedTab = tab
+                    }
                     hapticFeedback(.light)
                 } label: {
                     VStack(spacing: 4) {
                         Image(systemName: selectedTab == tab ? tab.iconFilled : tab.icon)
                             .font(.system(size: 22))
                             .foregroundColor(selectedTab == tab ? Theme.Colors.primaryGradientStart : Theme.Colors.secondaryLabel)
-                        
+                            .scaleEffect(selectedTab == tab ? 1.1 : 1.0)
+                            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: selectedTab)
+
                         Text(tab.rawValue)
                             .font(Theme.Typography.caption2)
                             .foregroundColor(selectedTab == tab ? Theme.Colors.primaryGradientStart : Theme.Colors.secondaryLabel)
@@ -158,7 +176,7 @@ struct CustomTabBar: View {
         .background(
             RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
                 .fill(.ultraThinMaterial)
-                .shadow(color: Color.black.opacity(0.1), radius: 10, y: -5)
+                .shadow(color: Color.black.opacity(0.08), radius: 18, y: -2)
         )
         .padding(.horizontal, Theme.Spacing.md)
         .padding(.bottom, Theme.Spacing.sm)

@@ -9,6 +9,7 @@
 //
 
 import SwiftUI
+import Supabase
 
 // MARK: - Shared: Section label
 private func sectionLabel(_ title: String) -> some View {
@@ -76,15 +77,15 @@ private struct FormCard<Content: View>: View {
 // MARK: - Shared: Save button
 private struct SaveButton: View {
     @Binding var isSaving: Bool
-    let onSave: () -> Void
+    let onSave: () async -> Void
 
     var body: some View {
         Button {
             hapticFeedback(.success)
             isSaving = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            Task {
+                await onSave()
                 isSaving = false
-                onSave()
             }
         } label: {
             HStack(spacing: 8) {
@@ -106,12 +107,12 @@ private struct SaveButton: View {
 // MARK: - Restaurant Settings Hub
 struct RestaurantSettingsView: View {
     @Environment(\.dismiss) var dismiss
-    @State private var showRestaurantDetails = false
-    @State private var showLocationPickup = false
-    @State private var showPaymentSettings = false
-    @State private var showNotifications = false
-    @State private var showHelpCenter = false
-    @State private var showContactSupport = false
+    @State private var showRestaurantDetails  = false
+    @State private var showLocationPickup     = false
+    @State private var showConnectOnboarding  = false
+    @State private var showNotifications      = false
+    @State private var showHelpCenter         = false
+    @State private var showContactSupport     = false
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -149,9 +150,9 @@ struct RestaurantSettingsView: View {
                         FormCard {
                             settingsRow(
                                 icon: "banknote.fill",
-                                title: "Payment Settings",
-                                subtitle: "Bank and payout details"
-                            ) { showPaymentSettings = true }
+                                title: "Payouts & Stripe",
+                                subtitle: "Connect to accept payments"
+                            ) { showConnectOnboarding = true }
                         }
                     }
 
@@ -193,13 +194,13 @@ struct RestaurantSettingsView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
-        .sheet(isPresented: $showRestaurantDetails) { RestaurantDetailsEditView() }
-        .sheet(isPresented: $showLocationPickup)    { LocationPickupEditView() }
-        .sheet(isPresented: $showPaymentSettings)   { PaymentSettingsView() }
-        .sheet(isPresented: $showNotifications)     { NotificationsPreferencesView() }
-        .sheet(isPresented: $showHelpCenter)        { HelpCenterView() }
-        .sheet(isPresented: $showContactSupport)    { ContactSupportView() }
+        .background(Theme.Colors.pageBackground)
+        .sheet(isPresented: $showRestaurantDetails)  { RestaurantDetailsEditView() }
+        .sheet(isPresented: $showLocationPickup)     { LocationPickupEditView() }
+        .sheet(isPresented: $showConnectOnboarding)  { ConnectOnboardingView() }
+        .sheet(isPresented: $showNotifications)      { NotificationsPreferencesView() }
+        .sheet(isPresented: $showHelpCenter)         { HelpCenterView() }
+        .sheet(isPresented: $showContactSupport)     { ContactSupportView() }
     }
 
     private func settingsRow(
@@ -401,7 +402,7 @@ struct EditListingView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Theme.Colors.pageBackground)
     }
 }
 
@@ -596,7 +597,7 @@ struct RestaurantOrderDetailView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Theme.Colors.pageBackground)
         .sheet(isPresented: $showMessage) {
             MessageCustomerView(order: order)
         }
@@ -655,15 +656,162 @@ struct RestaurantOrderDetailView: View {
     }
 }
 
+// MARK: - Day Schedule Model
+struct DaySchedule: Identifiable {
+    let id = UUID()
+    var day: String
+    var isOpen: Bool
+    var openTime: Date
+    var closeTime: Date
+    var isExpanded: Bool = false
+
+    static func defaultSchedule() -> [DaySchedule] {
+        let open  = Calendar.current.date(from: DateComponents(hour: 9,  minute: 0)) ?? Date()
+        let close = Calendar.current.date(from: DateComponents(hour: 22, minute: 0)) ?? Date()
+        let days  = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        return days.map { day in
+            // Weekends closed by default; Mon–Fri open
+            let isWeekend = day == "Saturday" || day == "Sunday"
+            return DaySchedule(day: day, isOpen: !isWeekend, openTime: open, closeTime: close)
+        }
+    }
+}
+
+// MARK: - Hours Row
+private struct HoursRow: View {
+    @Binding var entry: DaySchedule
+    private let timeFormatter: DateFormatter = {
+        let f = DateFormatter(); f.timeStyle = .short; return f
+    }()
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Top row: day name | time/closed | chevron | toggle
+            // Toggle is a SIBLING of the tap area — NOT inside the Button —
+            // so their touch targets don't conflict.
+            HStack(spacing: 0) {
+                // Left: tappable expand area (only active when open)
+                Button {
+                    guard entry.isOpen else { return }
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        entry.isExpanded.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 10) {
+                        Text(entry.day)
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                            .foregroundColor(Theme.Colors.label)
+                            .frame(width: 92, alignment: .leading)
+
+                        Spacer()
+
+                        if entry.isOpen {
+                            Text("\(timeFormatter.string(from: entry.openTime)) – \(timeFormatter.string(from: entry.closeTime))")
+                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                                .foregroundColor(Theme.Colors.primaryGradientStart)
+                                .lineLimit(1)
+
+                            Image(systemName: entry.isExpanded ? "chevron.up" : "chevron.down")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(Theme.Colors.secondaryLabel)
+                                .frame(width: 14)
+                        } else {
+                            Text("Closed")
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .foregroundColor(Theme.Colors.secondaryLabel)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(Color(.systemGray5))
+                                .clipShape(Capsule())
+                        }
+                    }
+                    .padding(.vertical, 14)
+                    .padding(.leading, 16)
+                    .padding(.trailing, 10)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                // Right: toggle lives outside the button to avoid tap-target conflict
+                Toggle("", isOn: $entry.isOpen)
+                    .labelsHidden()
+                    .tint(Theme.Colors.primaryGradientStart)
+                    .padding(.trailing, 16)
+                    .onChange(of: entry.isOpen) { _, open in
+                        if !open {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                entry.isExpanded = false
+                            }
+                        }
+                    }
+            }
+
+            // Dropdown: time pickers, shown when row is open + expanded
+            if entry.isOpen && entry.isExpanded {
+                VStack(spacing: 0) {
+                    Divider().padding(.leading, 16)
+                    VStack(spacing: 0) {
+                        DatePicker(
+                            "Opens",
+                            selection: $entry.openTime,
+                            displayedComponents: .hourAndMinute
+                        )
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+
+                        Divider().padding(.leading, 16)
+
+                        DatePicker(
+                            "Closes",
+                            selection: $entry.closeTime,
+                            in: entry.openTime...,
+                            displayedComponents: .hourAndMinute
+                        )
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                    }
+                    .background(Theme.Colors.primaryGradientStart.opacity(0.04))
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+    }
+}
+
+// MARK: - Operating Hours Table (reusable — used in sign-up and settings)
+struct OperatingHoursTable: View {
+    @Binding var schedule: [DaySchedule]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach($schedule) { $entry in
+                HoursRow(entry: $entry)
+                if entry.day != schedule.last?.day {
+                    Divider().padding(.leading, 16)
+                }
+            }
+        }
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .shadow(color: Color.black.opacity(0.05), radius: 10, y: 3)
+    }
+}
+
 // MARK: - Restaurant Details Edit
 struct RestaurantDetailsEditView: View {
     @Environment(\.dismiss) var dismiss
-    @State private var restaurantName = "Verde Bistro"
-    @State private var cuisine = "Mediterranean"
-    @State private var phone = "+1 (555) 234-5678"
-    @State private var openTime  = Calendar.current.date(from: DateComponents(hour: 9,  minute: 0)) ?? Date()
-    @State private var closeTime = Calendar.current.date(from: DateComponents(hour: 22, minute: 0)) ?? Date()
+    @EnvironmentObject var appState: AppState
+    @State private var restaurantId: String? = nil
+    @State private var restaurantName = ""
+    @State private var cuisine = ""
+    @State private var phone = ""
+    @State private var instagramHandle = ""
+    @State private var websiteURL = ""
+    @State private var schedule: [DaySchedule] = DaySchedule.defaultSchedule()
     @State private var isSaving = false
+    @State private var saveError: String? = nil
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -725,18 +873,64 @@ struct RestaurantDetailsEditView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 12) {
-                        sectionLabel("Operating Hours")
+                        sectionLabel("Social & Web")
                         FormCard {
-                            VStack(spacing: 14) {
-                                DatePicker("Opens", selection: $openTime, displayedComponents: .hourAndMinute)
-                                    .font(.system(size: 15, weight: .medium, design: .rounded))
-                                DatePicker("Closes", selection: $closeTime, in: openTime..., displayedComponents: .hourAndMinute)
-                                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                            VStack(spacing: 16) {
+                                HStack(spacing: 10) {
+                                    Image(systemName: "camera.on.rectangle.fill")
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundColor(Color(hex: "C13584"))
+                                        .frame(width: 22)
+                                    TextField("Instagram handle (e.g. @yourbistro)", text: $instagramHandle)
+                                        .font(.system(size: 15, weight: .medium, design: .rounded))
+                                        .textInputAutocapitalization(.never)
+                                        .autocorrectionDisabled()
+                                }
+                                .padding(Theme.Spacing.md)
+                                .background(Theme.Colors.secondaryBackground)
+                                .cornerRadius(Theme.CornerRadius.md)
+
+                                HStack(spacing: 10) {
+                                    Image(systemName: "globe")
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                                        .frame(width: 22)
+                                    TextField("Website URL (optional)", text: $websiteURL)
+                                        .font(.system(size: 15, weight: .medium, design: .rounded))
+                                        .textInputAutocapitalization(.never)
+                                        .autocorrectionDisabled()
+                                        .keyboardType(.URL)
+                                }
+                                .padding(Theme.Spacing.md)
+                                .background(Theme.Colors.secondaryBackground)
+                                .cornerRadius(Theme.CornerRadius.md)
                             }
                         }
                     }
 
-                    SaveButton(isSaving: $isSaving) { dismiss() }
+                    // Per-day hours table
+                    VStack(alignment: .leading, spacing: 12) {
+                        sectionLabel("Operating Hours")
+                        OperatingHoursTable(schedule: $schedule)
+                        HStack(spacing: 6) {
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 12))
+                                .foregroundColor(Theme.Colors.secondaryLabel)
+                            Text("Tap a day's times to set open and close hours.")
+                                .font(.system(size: 12))
+                                .foregroundColor(Theme.Colors.secondaryLabel)
+                        }
+                        .padding(.horizontal, 4)
+                    }
+
+                    if let error = saveError {
+                        Text(error)
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
+                    }
+
+                    SaveButton(isSaving: $isSaving) { await saveRestaurant() }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 28)
@@ -744,19 +938,96 @@ struct RestaurantDetailsEditView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Theme.Colors.pageBackground)
+        .task { await loadRestaurant() }
+    }
+
+    private func loadRestaurant() async {
+        guard let userId = appState.currentUser?.id else { return }
+        struct Row: Decodable {
+            let id: String; let name: String; let phoneNumber: String?; let cuisine: [String]
+            enum CodingKeys: String, CodingKey {
+                case id, name, cuisine; case phoneNumber = "phone_number"
+            }
+        }
+        do {
+            let row: Row = try await supabase
+                .from("restaurants")
+                .select("id, name, phone_number, cuisine")
+                .eq("owner_id", value: userId)
+                .single()
+                .execute()
+                .value
+            restaurantId = row.id
+            restaurantName = row.name
+            cuisine = row.cuisine.joined(separator: ", ")
+            phone = row.phoneNumber ?? ""
+        } catch {
+            // No restaurant row yet — fields stay empty, created on first save
+        }
+    }
+
+    private func saveRestaurant() async {
+        guard let userId = appState.currentUser?.id else { return }
+        saveError = nil
+        let cuisineList = cuisine.split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+
+        struct UpdatePayload: Encodable {
+            let name: String; let phoneNumber: String; let cuisine: [String]
+            enum CodingKeys: String, CodingKey {
+                case name, cuisine; case phoneNumber = "phone_number"
+            }
+        }
+        struct InsertPayload: Encodable {
+            let ownerId: String; let name: String; let phoneNumber: String
+            let cuisine: [String]; let email: String
+            enum CodingKeys: String, CodingKey {
+                case name, cuisine, email
+                case ownerId = "owner_id"; case phoneNumber = "phone_number"
+            }
+        }
+        struct IDRow: Decodable { let id: String }
+
+        do {
+            if let id = restaurantId {
+                try await supabase.from("restaurants")
+                    .update(UpdatePayload(name: restaurantName, phoneNumber: phone, cuisine: cuisineList))
+                    .eq("id", value: id)
+                    .execute()
+            } else {
+                let idRow: IDRow = try await supabase.from("restaurants")
+                    .insert(InsertPayload(
+                        ownerId: userId, name: restaurantName, phoneNumber: phone,
+                        cuisine: cuisineList, email: appState.currentUser?.email ?? ""
+                    ))
+                    .select("id").single().execute().value
+                restaurantId = idRow.id
+            }
+            RePlateAuthService.shared.updateCurrentUser(
+                name: restaurantName.isEmpty ? (appState.currentUser?.name ?? "") : restaurantName,
+                email: appState.currentUser?.email ?? "",
+                phoneNumber: phone.isEmpty ? nil : phone
+            )
+            dismiss()
+        } catch {
+            saveError = "Save failed. Please try again."
+        }
     }
 }
 
 // MARK: - Location & Pickup Edit
 struct LocationPickupEditView: View {
     @Environment(\.dismiss) var dismiss
-    @State private var street = "742 Evergreen Terrace"
-    @State private var city = "Springfield"
-    @State private var stateName = "CA"
-    @State private var zip = "90210"
-    @State private var pickupInstructions = "Enter through the side door. Ring bell for assistance."
+    @EnvironmentObject var appState: AppState
+    @State private var restaurantId: String? = nil
+    @State private var street = ""
+    @State private var city = ""
+    @State private var stateName = ""
+    @State private var zip = ""
+    @State private var pickupInstructions = ""
     @State private var isSaving = false
+    @State private var saveError: String? = nil
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -811,7 +1082,14 @@ struct LocationPickupEditView: View {
                         }
                     }
 
-                    SaveButton(isSaving: $isSaving) { dismiss() }
+                    if let error = saveError {
+                        Text(error)
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
+                    }
+
+                    SaveButton(isSaving: $isSaving) { await saveAddress() }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 28)
@@ -819,11 +1097,84 @@ struct LocationPickupEditView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Theme.Colors.pageBackground)
+        .task { await loadAddress() }
+    }
+
+    private func loadAddress() async {
+        guard let userId = appState.currentUser?.id else { return }
+        struct Row: Decodable {
+            let id: String; let address: String?
+            enum CodingKeys: String, CodingKey { case id, address }
+        }
+        do {
+            let row: Row = try await supabase
+                .from("restaurants")
+                .select("id, address")
+                .eq("owner_id", value: userId)
+                .single()
+                .execute()
+                .value
+            restaurantId = row.id
+            if let addr = row.address, !addr.isEmpty {
+                let parts = addr.components(separatedBy: ", ")
+                street = parts.count > 0 ? parts[0] : ""
+                city   = parts.count > 1 ? parts[1] : ""
+                if parts.count > 2 {
+                    let stateZip = parts[2].components(separatedBy: " ")
+                    stateName = stateZip.count > 0 ? stateZip[0] : ""
+                    zip       = stateZip.count > 1 ? stateZip[1] : ""
+                }
+            }
+        } catch {
+            // No restaurant row yet
+        }
+    }
+
+    private func saveAddress() async {
+        guard let userId = appState.currentUser?.id else { return }
+        saveError = nil
+        let fullAddress = [street, city, "\(stateName) \(zip)".trimmingCharacters(in: .whitespaces)]
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+            .joined(separator: ", ")
+
+        struct AddressPayload: Encodable { let address: String }
+        struct InsertPayload: Encodable {
+            let ownerId: String; let name: String; let address: String; let email: String
+            enum CodingKeys: String, CodingKey {
+                case name, address, email; case ownerId = "owner_id"
+            }
+        }
+        struct IDRow: Decodable { let id: String }
+
+        do {
+            if let id = restaurantId {
+                try await supabase.from("restaurants")
+                    .update(AddressPayload(address: fullAddress))
+                    .eq("id", value: id)
+                    .execute()
+            } else {
+                let idRow: IDRow = try await supabase.from("restaurants")
+                    .insert(InsertPayload(
+                        ownerId: userId,
+                        name: appState.currentUser?.name ?? "My Restaurant",
+                        address: fullAddress,
+                        email: appState.currentUser?.email ?? ""
+                    ))
+                    .select("id").single().execute().value
+                restaurantId = idRow.id
+            }
+            dismiss()
+        } catch {
+            saveError = "Save failed. Please try again."
+        }
     }
 }
 
 // MARK: - Payment Settings
+// SECURITY: never store raw card data client-side. Use Stripe or similar PCI-compliant SDK server-side.
+// TODO: backend — payment must be processed server-side; client total is untrusted.
 struct PaymentSettingsView: View {
     @Environment(\.dismiss) var dismiss
     @State private var bankName = ""
@@ -843,11 +1194,12 @@ struct PaymentSettingsView: View {
 
                 VStack(spacing: 24) {
                     // Security info banner
+                    // SECURITY: never store raw card data client-side. Use Stripe or similar PCI-compliant SDK server-side.
                     HStack(spacing: 12) {
                         Image(systemName: "lock.shield.fill")
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(Theme.Colors.primaryGradientStart)
-                        Text("Your payment information is encrypted and stored securely.")
+                        Text("Your payment information is encrypted and processed securely via our payment provider. Card data is never stored on-device.")
                             .font(.system(size: 13, weight: .medium, design: .rounded))
                             .foregroundColor(Theme.Colors.secondaryLabel)
                             .fixedSize(horizontal: false, vertical: true)
@@ -886,7 +1238,7 @@ struct PaymentSettingsView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Theme.Colors.pageBackground)
     }
 }
 
@@ -958,7 +1310,7 @@ struct NotificationsPreferencesView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Theme.Colors.pageBackground)
     }
 
     private func notifToggle(icon: String, title: String, subtitle: String, isOn: Binding<Bool>) -> some View {
@@ -1146,7 +1498,7 @@ struct HelpCenterView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Theme.Colors.pageBackground)
         .sheet(isPresented: $showContact) { ContactSupportView() }
     }
 
@@ -1290,7 +1642,7 @@ struct ContactSupportView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Theme.Colors.pageBackground)
         .alert("Message Sent!", isPresented: $showConfirmation) {
             Button("Done") { dismiss() }
         } message: {
@@ -1370,7 +1722,7 @@ struct StaffAccountsView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Theme.Colors.pageBackground)
     }
 
     // MARK: Add button
@@ -1541,7 +1893,7 @@ struct MessageCustomerView: View {
     @State private var messageText = ""
     @State private var messages: [ChatMessage] = [
         ChatMessage(text: "Hi! I just placed an order for pickup.", isFromRestaurant: false, timestamp: Date().addingTimeInterval(-600)),
-        ChatMessage(text: "Great, we're getting it ready for you now! 🌿", isFromRestaurant: true, timestamp: Date().addingTimeInterval(-540)),
+        ChatMessage(text: "Great, we're getting it ready for you now!", isFromRestaurant: true, timestamp: Date().addingTimeInterval(-540)),
         ChatMessage(text: "Should I enter through the main entrance?", isFromRestaurant: false, timestamp: Date().addingTimeInterval(-300)),
     ]
 
@@ -1648,7 +2000,7 @@ struct MessageCustomerView: View {
             )
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Theme.Colors.pageBackground)
     }
 
     @ViewBuilder

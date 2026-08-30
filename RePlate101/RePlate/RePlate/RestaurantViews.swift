@@ -13,9 +13,12 @@ import Combine
 struct RestaurantDashboardView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = RestaurantDashboardViewModel()
-    @State private var showPostListing      = false
-    @State private var showVerificationGate = false
-    @State private var showSettings         = false
+    @State private var showPostListing        = false
+    @State private var showVerificationGate  = false
+    @State private var showSettings          = false
+    @State private var showNotifications     = false
+    @State private var showMenuScanner       = false
+    @State private var showConnectOnboarding = false
     @State private var selectedOrder: Order? = nil
     @State private var selectedListing: FoodListing? = nil
 
@@ -36,13 +39,47 @@ struct RestaurantDashboardView: View {
             .padding(.bottom, 100)
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Theme.Colors.pageBackground)
         .refreshable { await viewModel.refreshDashboard() }
         .task { await viewModel.loadDashboard() }
         .sheet(isPresented: $showPostListing) { PostSurplusView() }
         .sheet(isPresented: $showVerificationGate) { VerificationGateView() }
-        .sheet(isPresented: $showSettings) {
-            RestaurantSettingsView()
+        .sheet(isPresented: $showSettings) { RestaurantSettingsView() }
+        .sheet(isPresented: $showNotifications) { NotificationsView() }
+        .sheet(isPresented: $showConnectOnboarding) { ConnectOnboardingView() }
+        .sheet(isPresented: $showMenuScanner) {
+            MenuScannerView { scannedItems in
+                let now = Date()
+                let pickup5pm = Calendar.current.date(bySettingHour: 17, minute: 0, second: 0, of: now) ?? now.addingTimeInterval(3600)
+                let pickup9pm = Calendar.current.date(bySettingHour: 21, minute: 0, second: 0, of: now) ?? now.addingTimeInterval(7200)
+                let restaurantId = appState.currentUser?.id ?? "restaurant"
+
+                let newListings: [FoodListing] = scannedItems.compactMap { item in
+                    guard let originalPrice = Double(item.price.replacingOccurrences(of: ",", with: ".")) else { return nil }
+                    return FoodListing(
+                        id: UUID().uuidString,
+                        restaurantId: restaurantId,
+                        restaurant: nil,
+                        title: item.name,
+                        description: item.description.isEmpty ? "Freshly rescued from today's menu" : item.description,
+                        category: item.category,
+                        imageURLs: [],
+                        originalPrice: originalPrice,
+                        discountedPrice: round(originalPrice * 0.6 * 100) / 100,
+                        isFree: false,
+                        quantity: 5,
+                        availableQuantity: 5,
+                        pickupStartTime: pickup5pm,
+                        pickupEndTime: pickup9pm,
+                        status: .active,
+                        createdAt: now,
+                        expiresAt: pickup9pm,
+                        tags: [],
+                        dietaryInfo: []
+                    )
+                }
+                withAnimation { viewModel.activeListings.append(contentsOf: newListings) }
+            }
         }
         .sheet(item: $selectedOrder) { order in
             RestaurantOrderDetailView(order: order)
@@ -91,25 +128,30 @@ struct RestaurantDashboardView: View {
                     }
                 }
                 // Bell with badge
-                ZStack(alignment: .topTrailing) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(.white.opacity(0.2))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .stroke(.white.opacity(0.3), lineWidth: 1)
-                            )
-                            .frame(width: 48, height: 48)
-                        Image(systemName: "bell.fill")
-                            .font(.system(size: 20))
-                            .foregroundColor(.white)
-                    }
-                    if viewModel.hasUnreadNotifications {
-                        Circle()
-                            .fill(Color.red.opacity(0.9))
-                            .frame(width: 12, height: 12)
-                            .overlay(Circle().stroke(Theme.Colors.primaryGradientStart, lineWidth: 2))
-                            .offset(x: 2, y: -2)
+                Button {
+                    hapticFeedback(.light)
+                    showNotifications = true
+                } label: {
+                    ZStack(alignment: .topTrailing) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(.white.opacity(0.2))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(.white.opacity(0.3), lineWidth: 1)
+                                )
+                                .frame(width: 48, height: 48)
+                            Image(systemName: "bell.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(.white)
+                        }
+                        if viewModel.hasUnreadNotifications {
+                            Circle()
+                                .fill(Color.red.opacity(0.9))
+                                .frame(width: 12, height: 12)
+                                .overlay(Circle().stroke(Theme.Colors.primaryGradientStart, lineWidth: 2))
+                                .offset(x: 2, y: -2)
+                        }
                     }
                 }
                 } // end HStack (gear + bell)
@@ -162,11 +204,21 @@ struct RestaurantDashboardView: View {
     // MARK: - Main Content
     private var mainContent: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Post button floats up over the header
-            postSurplusButton
-                .padding(.horizontal, 20)
-                .offset(y: -28)
-                .padding(.bottom, 8) // net padding = -28 + 8 = -20 consumed by offset
+            // Quick actions float up over the header
+            HStack(spacing: 12) {
+                postSurplusButton
+                scanMenuButton
+            }
+            .padding(.horizontal, 20)
+            .offset(y: -28)
+            .padding(.bottom, 8)
+
+            // Stripe Connect setup prompt — shown until the restaurant finishes onboarding
+            if appState.currentUser?.stripeAccountId == nil {
+                stripeSetupBanner
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
+            }
 
             // Today's Pickups
             todaysPickupsSection
@@ -178,32 +230,100 @@ struct RestaurantDashboardView: View {
         }
     }
 
-    // MARK: - Post Surplus Food Button
+    // MARK: - Quick Action Buttons
+
     private var postSurplusButton: some View {
         Button {
             hapticFeedback(.medium)
+            // SECURITY: server must check verified flag before accepting listing
             if isVerified { showPostListing = true } else { showVerificationGate = true }
+        } label: {
+            VStack(spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(Theme.Colors.primaryGradient)
+                        .frame(width: 44, height: 44)
+                    Image(systemName: "plus")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.white)
+                }
+                Text("Post Surplus")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundColor(Theme.Colors.primaryGradientStart)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 18)
+            .background(
+                RoundedRectangle(cornerRadius: 22)
+                    .fill(Color(.systemBackground))
+                    .shadow(color: Color.black.opacity(0.06), radius: 14, y: 5)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    private var scanMenuButton: some View {
+        Button {
+            hapticFeedback(.medium)
+            if isVerified { showMenuScanner = true } else { showVerificationGate = true }
+        } label: {
+            VStack(spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(Theme.Colors.primaryGradientStart.opacity(0.12))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: "doc.viewfinder")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                }
+                Text("Scan Menu")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundColor(Theme.Colors.primaryGradientStart)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 18)
+            .background(
+                RoundedRectangle(cornerRadius: 22)
+                    .fill(Color(.systemBackground))
+                    .shadow(color: Color.black.opacity(0.06), radius: 14, y: 5)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    // MARK: - Stripe Connect Setup Banner
+
+    private var stripeSetupBanner: some View {
+        Button {
+            hapticFeedback(.medium)
+            showConnectOnboarding = true
         } label: {
             HStack(spacing: 14) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Theme.Colors.primaryGradient)
-                        .frame(width: 40, height: 40)
-                    Image(systemName: "plus")
-                        .font(.system(size: 17, weight: .bold))
+                        .fill(.white.opacity(0.22))
+                        .frame(width: 46, height: 46)
+                    Image(systemName: "creditcard.and.123")
+                        .font(.system(size: 20, weight: .semibold))
                         .foregroundColor(.white)
                 }
-                Text("Post Surplus Food")
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
-                    .foregroundColor(Theme.Colors.primaryGradientStart)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Set up payments")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                    Text("Connect Stripe to receive payouts")
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundColor(.white.opacity(0.82))
+                }
                 Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.7))
             }
-            .padding(20)
-            .background(
-                RoundedRectangle(cornerRadius: 26)
-                    .fill(Color(.systemBackground))
-                    .shadow(color: Color.black.opacity(0.13), radius: 18, y: 7)
-            )
+            .padding(16)
+            .background(Theme.Colors.primaryGradient)
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+            .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.28), radius: 10, y: 4)
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -277,9 +397,12 @@ struct RestaurantDashboardView: View {
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundColor(Theme.Colors.label)
                 Spacer()
-                Button("See All") {}
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundColor(Theme.Colors.primaryGradientStart)
+                Button("See All") {
+                    hapticFeedback(.light)
+                    appState.selectedTab = .orders
+                }
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundColor(Theme.Colors.primaryGradientStart)
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 16)
@@ -302,6 +425,11 @@ struct RestaurantDashboardView: View {
                     ForEach(viewModel.activeListings.prefix(3)) { listing in
                         FigmaActiveListingCard(listing: listing, onEdit: {
                             selectedListing = listing
+                        }, onCancel: {
+                            withAnimation {
+                                viewModel.activeListings.removeAll { $0.id == listing.id }
+                            }
+                            // TODO: backend — DELETE /listings/{id}
                         })
                     }
                 }
@@ -351,6 +479,7 @@ private struct FigmaStatCard: View {
 private struct FigmaOrderCard: View {
     let order: Order
     var onDetails: () -> Void = {}
+    @State private var isConfirmed = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -407,15 +536,24 @@ private struct FigmaOrderCard: View {
 
                 Button {
                     hapticFeedback(.success)
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                        isConfirmed = true
+                    }
+                    // TODO: backend — mark order as picked up on server
                 } label: {
-                    Text("Confirm Pickup")
+                    Text(isConfirmed ? "Picked Up!" : "Confirm Pickup")
                         .font(.system(size: 14, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Theme.Colors.primaryGradient)
+                        .background(
+                            isConfirmed
+                                ? LinearGradient(colors: [Color(.systemGray4)], startPoint: .leading, endPoint: .trailing)
+                                : Theme.Colors.primaryGradient
+                        )
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
+                .disabled(isConfirmed)
             }
         }
         .padding(20)
@@ -457,7 +595,7 @@ private struct FigmaActiveListingCard: View {
                         .padding(.vertical, 6)
                         .background(Theme.Colors.primaryGradientStart)
                         .clipShape(Capsule())
-                        .shadow(color: Color.black.opacity(0.2), radius: 4, y: 2)
+                        .shadow(color: Color.black.opacity(0.07), radius: 4, y: 2)
 
                     Spacer()
 
@@ -1458,26 +1596,182 @@ struct ImpactMetric: View {
 
 // MARK: - Restaurant Orders View Model
 @MainActor
-private class RestaurantOrdersViewModel: ObservableObject {
+class RestaurantOrdersViewModel: ObservableObject {
     @Published var pendingOrders: [Order] = []
     @Published var completedOrders: [Order] = []
     @Published var isLoading = false
+    @Published var showPickupConfirmed = false  // brief success toast
+    @Published var confirmedOrderId: String? = nil
+
+    weak var appState: AppState?
+
+    init(appState: AppState? = nil) {
+        self.appState = appState
+    }
 
     func loadOrders() async {
         isLoading = true
         defer { isLoading = false }
         try? await Task.sleep(nanoseconds: 600_000_000)
-        let all = MockData.sampleOrders
+        let all = appState?.orders ?? []
         pendingOrders   = all.filter { $0.status == .pending || $0.status == .confirmed || $0.status == .ready }
         completedOrders = all.filter { $0.status == .completed || $0.status == .cancelled || $0.status == .noShow }
     }
 
     /// Move an order from pending → completed (Confirm Pickup).
+    /// TODO: backend — POST /orders/{id}/status { status: "completed" }
+    // SECURITY: server must validate the code, mark it used, and prevent reuse
     func confirmPickup(_ order: Order) {
         guard let idx = pendingOrders.firstIndex(where: { $0.id == order.id }) else { return }
-        var updated = pendingOrders.remove(at: idx)
-        updated.status = .completed
-        completedOrders.insert(updated, at: 0)
+        // Update in appState (single source of truth)
+        if let appState = appState,
+           let appIdx = appState.orders.firstIndex(where: { $0.id == order.id }) {
+            appState.orders[appIdx].status = .completed
+        }
+        withAnimation {
+            var updated = pendingOrders.remove(at: idx)
+            updated.status = .completed
+            completedOrders.insert(updated, at: 0)
+        }
+        // Show 2-second "Picked up!" toast
+        confirmedOrderId = order.id
+        showPickupConfirmed = true
+        Task {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            showPickupConfirmed = false
+            confirmedOrderId = nil
+        }
+    }
+}
+
+// MARK: - Pending Order Card (stateful, owns code-entry state)
+private struct PendingOrderCard: View {
+    let order: Order
+    let viewModel: RestaurantOrdersViewModel
+    @Binding var selectedOrder: Order?
+    @Binding var messageOrder: Order?
+    @State private var enteredCode = ""
+    @FocusState private var codeFocused: Bool
+
+    // SECURITY: server must validate the code, mark it used, and prevent reuse
+    private var codeMatches: Bool { enteredCode == order.pickupCode }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Customer row
+            HStack(alignment: .top, spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Theme.Colors.primaryGradientStart.opacity(0.12))
+                        .frame(width: 48, height: 48)
+                    Text(String(order.pickupCode.prefix(1)).uppercased())
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(order.customer?.name ?? "Customer")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundColor(Theme.Colors.label)
+                    if let listing = order.listing {
+                        Text(listing.title)
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("$\(String(format: "%.2f", order.totalAmount))")
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                    Text("Qty: \(order.quantity)")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundColor(Theme.Colors.secondaryLabel)
+                }
+            }
+            .padding(.bottom, 14)
+
+            // Pickup window banner
+            HStack(spacing: 8) {
+                Image(systemName: "clock.badge.exclamationmark.fill")
+                    .font(.system(size: 13))
+                    .foregroundColor(.orange)
+                Text("Pickup: \(order.pickupWindowStart.formatted(date: .omitted, time: .shortened)) – \(order.pickupWindowEnd.formatted(date: .omitted, time: .shortened))")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundColor(.orange)
+                Spacer()
+            }
+            .padding(12)
+            .background(Color.orange.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .padding(.bottom, 14)
+
+            // 6-digit pickup code entry
+            // SECURITY: server must validate the code, mark it used, and prevent reuse
+            VStack(alignment: .leading, spacing: 6) {
+                Text("ENTER CUSTOMER'S 6-DIGIT CODE")
+                    .font(.system(size: 9, weight: .black, design: .rounded))
+                    .foregroundColor(Theme.Colors.tertiaryLabel)
+                    .tracking(1.0)
+                TextField("e.g. ABC123", text: $enteredCode)
+                    .font(.system(size: 20, weight: .bold, design: .monospaced))
+                    .foregroundColor(codeMatches ? Theme.Colors.primaryGradientStart : Theme.Colors.label)
+                    .multilineTextAlignment(.center)
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
+                    .focused($codeFocused)
+                    .onChange(of: enteredCode) { _, v in
+                        enteredCode = String(v.prefix(6)).uppercased()
+                    }
+                    .padding(12)
+                    .background(codeMatches ? Theme.Colors.primaryGradientStart.opacity(0.08) : Color(.systemGray6))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(codeMatches ? Theme.Colors.primaryGradientStart.opacity(0.5) : Color.clear, lineWidth: 1.5)
+                    )
+            }
+            .padding(.bottom, 14)
+
+            // Action buttons
+            HStack(spacing: 10) {
+                Button("Details") { hapticFeedback(.light); selectedOrder = order }
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundColor(Theme.Colors.secondaryLabel)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color(.systemGray6))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+
+                Button { hapticFeedback(.light); messageOrder = order } label: {
+                    Image(systemName: "bubble.left")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                        .frame(width: 46, height: 42)
+                        .background(Theme.Colors.primaryGradientStart.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+
+                Button {
+                    hapticFeedback(.success)
+                    // SECURITY: server must validate the code, mark it used, and prevent reuse
+                    viewModel.confirmPickup(order)
+                } label: {
+                    Text("Confirm Pickup")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(codeMatches ? Theme.Colors.primaryGradient : LinearGradient(colors: [Color(.systemGray4)], startPoint: .leading, endPoint: .trailing))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+                .disabled(!codeMatches)
+            }
+        }
+        .padding(18)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 26))
+        .shadow(color: Color.black.opacity(0.07), radius: 12, y: 4)
     }
 }
 
@@ -1491,19 +1785,45 @@ struct RestaurantOrdersView: View {
     @State private var showRepostListing  = false
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 0) {
-                gradientHeader
-                mainContent
+        ZStack(alignment: .top) {
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    gradientHeader
+                    mainContent
+                }
+                .padding(.bottom, 100)
             }
-            .padding(.bottom, 100)
+            .ignoresSafeArea(edges: .top)
+            .background(Theme.Colors.pageBackground)
+            .task {
+                viewModel.appState = appState
+                await viewModel.loadOrders()
+            }
+            .sheet(item: $selectedOrder)       { order in RestaurantOrderDetailView(order: order) }
+            .sheet(item: $messageOrder)        { order in MessageCustomerView(order: order) }
+            .sheet(isPresented: $showRepostListing) { PostSurplusView() }
+
+            // Green "Picked up!" toast banner
+            if viewModel.showPickupConfirmed {
+                HStack(spacing: 10) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.white)
+                    Text("Picked up!")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 14)
+                .background(Theme.Colors.primaryGradient)
+                .clipShape(Capsule())
+                .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.35), radius: 12, y: 4)
+                .padding(.top, 60)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.showPickupConfirmed)
+                .zIndex(10)
+            }
         }
-        .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
-        .task { await viewModel.loadOrders() }
-        .sheet(item: $selectedOrder)       { order in RestaurantOrderDetailView(order: order) }
-        .sheet(item: $messageOrder)        { order in MessageCustomerView(order: order) }
-        .sheet(isPresented: $showRepostListing) { PostSurplusView() }
     }
 
     // MARK: Header
@@ -1526,7 +1846,7 @@ struct RestaurantOrdersView: View {
                         .frame(width: 44, height: 44)
                         .background(.white)
                         .clipShape(Circle())
-                        .shadow(color: Color.black.opacity(0.1), radius: 6, y: 3)
+                        .shadow(color: Color.black.opacity(0.06), radius: 6, y: 2)
                 }
             }
             .padding(.top, 60)
@@ -1586,97 +1906,10 @@ struct RestaurantOrdersView: View {
         if viewModel.pendingOrders.isEmpty {
             ordersEmptyState(icon: "tray.fill", title: "No Pending Orders", message: "New orders will appear here")
         } else {
-            ForEach(viewModel.pendingOrders) { order in pendingCard(order) }
-        }
-    }
-
-    private func pendingCard(_ order: Order) -> some View {
-        VStack(spacing: 0) {
-            // Customer row
-            HStack(alignment: .top, spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Theme.Colors.primaryGradientStart.opacity(0.12))
-                        .frame(width: 48, height: 48)
-                    Text(String(order.pickupCode.prefix(1)).uppercased())
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                        .foregroundColor(Theme.Colors.primaryGradientStart)
-                }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(order.customer?.name ?? "Customer")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .foregroundColor(Theme.Colors.label)
-                    if let listing = order.listing {
-                        Text(listing.title)
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
-                            .foregroundColor(Theme.Colors.secondaryLabel)
-                            .lineLimit(1)
-                    }
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text("$\(String(format: "%.2f", order.totalAmount))")
-                        .font(.system(size: 17, weight: .bold, design: .rounded))
-                        .foregroundColor(Theme.Colors.primaryGradientStart)
-                    Text("Qty: \(order.quantity)")
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundColor(Theme.Colors.secondaryLabel)
-                }
-            }
-            .padding(.bottom, 14)
-
-            // Pickup window banner
-            HStack(spacing: 8) {
-                Image(systemName: "clock.badge.exclamationmark.fill")
-                    .font(.system(size: 13))
-                    .foregroundColor(.orange)
-                Text("Pickup: \(order.pickupWindowStart.formatted(date: .omitted, time: .shortened)) – \(order.pickupWindowEnd.formatted(date: .omitted, time: .shortened))")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundColor(.orange)
-                Spacer()
-            }
-            .padding(12)
-            .background(Color.orange.opacity(0.08))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .padding(.bottom, 14)
-
-            // Action buttons
-            HStack(spacing: 10) {
-                Button("Details") { hapticFeedback(.light); selectedOrder = order }
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundColor(Theme.Colors.secondaryLabel)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Color(.systemGray6))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-
-                Button { hapticFeedback(.light); messageOrder = order } label: {
-                    Image(systemName: "bubble.left")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(Theme.Colors.primaryGradientStart)
-                        .frame(width: 46, height: 42)
-                        .background(Theme.Colors.primaryGradientStart.opacity(0.1))
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                }
-
-                Button {
-                    hapticFeedback(.success)
-                    viewModel.confirmPickup(order)
-                } label: {
-                    Text("Confirm Pickup")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Theme.Colors.primaryGradient)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                }
+            ForEach(viewModel.pendingOrders) { order in
+                PendingOrderCard(order: order, viewModel: viewModel, selectedOrder: $selectedOrder, messageOrder: $messageOrder)
             }
         }
-        .padding(18)
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 26))
-        .shadow(color: Color.black.opacity(0.07), radius: 12, y: 4)
     }
 
     // MARK: Completed (Picked Up)
@@ -1834,14 +2067,14 @@ struct RestaurantOrdersView: View {
 // MARK: - Restaurant Profile View
 struct RestaurantProfileView: View {
     @EnvironmentObject var appState: AppState
-    @State private var showRestaurantDetails = false
-    @State private var showLocationPickup    = false
-    @State private var showPaymentSettings   = false
-    @State private var showNotifications     = false
-    @State private var showStaffAccounts     = false
-    @State private var showHelpCenter        = false
-    @State private var showContactSupport    = false
-    @State private var showSignOutConfirm    = false
+    @State private var showRestaurantDetails  = false
+    @State private var showLocationPickup     = false
+    @State private var showConnectOnboarding  = false
+    @State private var showNotifications      = false
+    @State private var showStaffAccounts      = false
+    @State private var showHelpCenter         = false
+    @State private var showContactSupport     = false
+    @State private var showSignOutConfirm     = false
 
     private var restaurantName: String { appState.currentUser?.name ?? "Verde Bistro" }
 
@@ -1854,14 +2087,14 @@ struct RestaurantProfileView: View {
             .padding(.bottom, 100)
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
-        .sheet(isPresented: $showRestaurantDetails) { RestaurantDetailsEditView() }
-        .sheet(isPresented: $showLocationPickup)    { LocationPickupEditView() }
-        .sheet(isPresented: $showPaymentSettings)   { PaymentSettingsView() }
-        .sheet(isPresented: $showNotifications)     { NotificationsPreferencesView() }
-        .sheet(isPresented: $showStaffAccounts)     { StaffAccountsView() }
-        .sheet(isPresented: $showHelpCenter)        { HelpCenterView() }
-        .sheet(isPresented: $showContactSupport)    { ContactSupportView() }
+        .background(Theme.Colors.pageBackground)
+        .sheet(isPresented: $showRestaurantDetails)  { RestaurantDetailsEditView() }
+        .sheet(isPresented: $showLocationPickup)     { LocationPickupEditView() }
+        .sheet(isPresented: $showConnectOnboarding)  { ConnectOnboardingView() }
+        .sheet(isPresented: $showNotifications)      { NotificationsPreferencesView() }
+        .sheet(isPresented: $showStaffAccounts)      { StaffAccountsView() }
+        .sheet(isPresented: $showHelpCenter)         { HelpCenterView() }
+        .sheet(isPresented: $showContactSupport)     { ContactSupportView() }
         .alert("Sign Out?", isPresented: $showSignOutConfirm) {
             Button("Cancel", role: .cancel) {}
             Button("Sign Out", role: .destructive) { appState.signOut() }
@@ -1931,7 +2164,7 @@ struct RestaurantProfileView: View {
                 rows: [
                     ("storefront.fill",  "Restaurant Details", "Name, cuisine & hours",      { showRestaurantDetails = true }),
                     ("location.fill",    "Location & Pickup",  "Address and instructions",   { showLocationPickup = true }),
-                    ("banknote.fill",    "Payment Settings",   "Bank and payout details",    { showPaymentSettings = true }),
+                    ("banknote.fill",    "Payouts & Stripe",   "Connect to accept payments",  { showConnectOnboarding = true }),
                 ]
             )
             .padding(.horizontal, 20)
@@ -1988,6 +2221,16 @@ struct RestaurantProfileView: View {
             profileInfoRow(icon: "clock.fill",         value: "Open: 9:00 AM – 10:00 PM")
             Divider().padding(.leading, 54)
             profileInfoRow(icon: "phone.fill",         value: "+1 (555) 234-5678")
+            Divider().padding(.leading, 54)
+            Button {
+                if let url = URL(string: "https://instagram.com/yourbistro") {
+                    UIApplication.shared.open(url)
+                }
+            } label: {
+                profileInfoRow(icon: "camera.on.rectangle.fill", value: "@yourbistro on Instagram")
+                    .foregroundColor(Color(hex: "C13584"))
+            }
+            .buttonStyle(PlainButtonStyle())
         }
         .padding(18)
         .background(Color(.systemBackground))

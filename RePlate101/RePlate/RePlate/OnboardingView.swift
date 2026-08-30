@@ -20,19 +20,16 @@ struct RePlateIconView: View {
     var size: CGFloat = 80
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: size * 0.22)
-                .fill(Theme.Colors.primaryGradient)
-                .frame(width: size, height: size)
-                .shadow(
-                    color: Theme.Colors.primaryGradientStart.opacity(0.35),
-                    radius: size * 0.15,
-                    y: size * 0.07
-                )
-            Image(systemName: "fork.knife")
-                .font(.system(size: size * 0.42, weight: .medium))
-                .foregroundColor(.white)
-        }
+        Image("RePlateLogo")
+            .resizable()
+            .scaledToFill()
+            .frame(width: size, height: size)
+            .clipShape(RoundedRectangle(cornerRadius: size * 0.22))
+            .shadow(
+                color: Theme.Colors.primaryGradientStart.opacity(0.4),
+                radius: size * 0.18,
+                y: size * 0.08
+            )
     }
 }
 
@@ -84,7 +81,7 @@ struct OnboardingView: View {
         .init(
             icon: "heart.fill",
             iconColors: [Color(hex: "118b50"), Color(hex: "5db996")],
-            badge: "Community ❤️",
+            badge: "Community",
             badgeIcon: "heart.fill",
             title: "Be Part of the Change",
             subtitle: "A growing community of food-lovers and local restaurants making a real difference.",
@@ -261,7 +258,7 @@ private struct OnboardingPageView: View {
                 .padding(.vertical, 6)
                 .background(Theme.Colors.accent)
                 .clipShape(Capsule())
-                .shadow(color: Color.black.opacity(0.1), radius: 6, y: 3)
+                .shadow(color: Color.black.opacity(0.06), radius: 8, y: 3)
                 .offset(x: 12, y: -6)
             }
             .padding(.bottom, 26)
@@ -517,7 +514,7 @@ struct SignInView: View {
                     signInFields
                     signInButton
                     orDivider
-                    appleButton
+                    socialSignInButtons
                     demoHint
                 }
                 .padding(.horizontal, 24)
@@ -606,36 +603,91 @@ struct SignInView: View {
         .padding(.vertical, 20)
     }
 
-    private var appleButton: some View {
-        Button {
-            hapticFeedback(.medium)
-            Task {
-                isLoading = true
-                defer { isLoading = false }
-                let auth: RePlateAuthService = RePlateAuthService.shared
-                let ok = await auth.signInWithApple()
-                if ok {
-                    appState.isAuthenticated = true
-                    appState.currentUser = auth.currentUser
-                    appState.completeOnboarding()
-                    dismiss()
+    private var socialSignInButtons: some View {
+        VStack(spacing: 12) {
+            socialButton(
+                label: "Continue with Google",
+                icon: nil, googleLogo: true,
+                background: Color(.systemBackground),
+                border: Color(.systemGray4),
+                foreground: Color.primary
+            ) {
+                Task {
+                    isLoading = true
+                    defer { isLoading = false }
+                    let auth = RePlateAuthService.shared
+                    if await auth.signInWithGoogle() {
+                        appState.isAuthenticated = true
+                        appState.currentUser = auth.currentUser
+                        appState.completeOnboarding()
+                        dismiss()
+                    }
                 }
             }
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: "apple.logo").font(.system(size: 18, weight: .medium))
-                Text("Sign in with Apple").font(.system(size: 16, weight: .semibold, design: .rounded))
+
+            socialButton(
+                label: "Continue with Apple",
+                icon: "apple.logo",
+                googleLogo: false,
+                background: Color.black,
+                border: Color.clear,
+                foreground: .white
+            ) {
+                Task {
+                    isLoading = true
+                    defer { isLoading = false }
+                    let auth = RePlateAuthService.shared
+                    if await auth.signInWithApple() {
+                        appState.isAuthenticated = true
+                        appState.currentUser = auth.currentUser
+                        appState.completeOnboarding()
+                        dismiss()
+                    }
+                }
             }
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity).frame(height: 56)
-            .background(Color.black)
-            .clipShape(RoundedRectangle(cornerRadius: 20))
         }
         .disabled(isLoading)
     }
 
+    @ViewBuilder
+    private func socialButton(
+        label: String,
+        icon: String?,
+        googleLogo: Bool,
+        background: Color,
+        border: Color,
+        foreground: Color,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: { hapticFeedback(.medium); action() }) {
+            HStack(spacing: 10) {
+                if googleLogo {
+                    // Google "G" rendered with brand colours using two half-circles
+                    GoogleLogoMark()
+                        .frame(width: 20, height: 20)
+                } else if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(foreground)
+                }
+                Text(label)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundColor(foreground)
+            }
+            .frame(maxWidth: .infinity).frame(height: 56)
+            .background(background)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(border, lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(background == Color(.systemBackground) ? 0.06 : 0),
+                    radius: 6, y: 2)
+        }
+    }
+
     private var demoHint: some View {
-        Text("Demo: use any email/password\n(use \"restaurant@…\" for a restaurant account)")
+        Text("Don't have an account? Go back and sign up.")
             .font(.system(size: 12, weight: .medium))
             .foregroundColor(Theme.Colors.tertiaryLabel)
             .multilineTextAlignment(.center)
@@ -644,11 +696,15 @@ struct SignInView: View {
     }
 
     func signIn() async {
-        guard !email.isEmpty && !password.isEmpty else {
-            errorMessage = "Please fill in all fields"
+        // OWASP A03: validate email format and password length before hitting the network
+        do {
+            let _ = try Validators.email(email)
+            let _ = try Validators.password(password)
+        } catch let e as InputValidationError {
+            errorMessage = e.errorDescription ?? "Invalid input."
             showError = true
             return
-        }
+        } catch {}
         isLoading = true
         defer { isLoading = false }
 
@@ -678,6 +734,11 @@ struct SignUpView: View {
     @State private var isLoading     = false
     @State private var showError     = false
     @State private var errorMessage  = ""
+    @State private var agreedToTerms = false
+    @State private var showLegalPage: LegalPageView.LegalPage? = nil
+    @State private var avatarPhoto: PhotosPickerItem?
+    @State private var avatarImage: Image?
+    @State private var locationGranted = false
 
     var body: some View {
         NavigationView {
@@ -717,7 +778,38 @@ struct SignUpView: View {
                         .foregroundColor(Theme.Colors.tertiaryLabel)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
-                        .padding(.bottom, 28)
+                        .padding(.bottom, 20)
+
+                    // Terms consent checkbox
+                    HStack(alignment: .top, spacing: 12) {
+                        Button {
+                            hapticFeedback(.light)
+                            agreedToTerms.toggle()
+                        } label: {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(agreedToTerms ? Theme.Colors.primaryGradientStart : Color(.systemGray6))
+                                    .frame(width: 22, height: 22)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .stroke(agreedToTerms ? Color.clear : Color(.systemGray4), lineWidth: 1.5)
+                                    )
+                                if agreedToTerms {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 12, weight: .black))
+                                        .foregroundColor(.white)
+                                }
+                            }
+                        }
+                        .buttonStyle(PlainButtonStyle())
+
+                        Text("I have read and agree to the \(Text("Terms of Service").bold().foregroundColor(Theme.Colors.primaryGradientStart)) and \(Text("Privacy Policy").bold().foregroundColor(Theme.Colors.primaryGradientStart))")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                        .onTapGesture { showLegalPage = .termsOfService }
+                        .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.bottom, 20)
 
                     Button {
                         Task { await signUp() }
@@ -734,11 +826,11 @@ struct SignUpView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
-                        .background(Theme.Colors.primaryGradient)
+                        .background(agreedToTerms ? Theme.Colors.primaryGradient : LinearGradient(colors: [Color(.systemGray4)], startPoint: .leading, endPoint: .trailing))
                         .clipShape(RoundedRectangle(cornerRadius: 20))
-                        .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.30), radius: 12, y: 5)
+                        .shadow(color: Theme.Colors.primaryGradientStart.opacity(agreedToTerms ? 0.30 : 0), radius: 12, y: 5)
                     }
-                    .disabled(isLoading)
+                    .disabled(isLoading || !agreedToTerms)
                     .padding(.bottom, 40)
                 }
                 .padding(.horizontal, 24)
@@ -763,57 +855,104 @@ struct SignUpView: View {
             } message: {
                 Text(errorMessage)
             }
+            .sheet(item: $showLegalPage) { page in
+                NavigationView { LegalPageView(page: page) }
+            }
         }
     }
 
     private var customerPhotoUpload: some View {
-        VStack(spacing: 8) {
-            ZStack {
-                Circle().fill(Color(.systemGray6)).frame(width: 96, height: 96)
-                Circle()
-                    .strokeBorder(Color(.systemGray4), style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
-                    .frame(width: 96, height: 96)
-                Image(systemName: "camera.fill")
-                    .font(.system(size: 28, weight: .medium))
-                    .foregroundColor(Theme.Colors.tertiaryLabel)
+        PhotosPicker(selection: $avatarPhoto, matching: .images) {
+            VStack(spacing: 8) {
+                ZStack {
+                    Circle()
+                        .fill(Color(.systemGray6))
+                        .frame(width: 96, height: 96)
+                    if let avatarImage {
+                        avatarImage
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 96, height: 96)
+                            .clipShape(Circle())
+                    } else {
+                        Circle()
+                            .strokeBorder(Color(.systemGray4),
+                                          style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
+                            .frame(width: 96, height: 96)
+                        Image(systemName: "camera.fill")
+                            .font(.system(size: 28, weight: .medium))
+                            .foregroundColor(Theme.Colors.tertiaryLabel)
+                    }
+                    // Camera badge overlay
+                    ZStack {
+                        Circle()
+                            .fill(Theme.Colors.primaryGradientStart)
+                            .frame(width: 28, height: 28)
+                        Image(systemName: "camera.fill")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                    .offset(x: 32, y: 32)
+                }
+                Text(avatarImage == nil ? "Add Photo" : "Change Photo")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(Theme.Colors.secondaryLabel)
             }
-            Text("Add Photo")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(Theme.Colors.secondaryLabel)
         }
         .frame(maxWidth: .infinity)
+        .onChange(of: avatarPhoto) { _, item in
+            Task {
+                if let data = try? await item?.loadTransferable(type: Data.self),
+                   let ui = UIImage(data: data) {
+                    avatarImage = Image(uiImage: ui)
+                }
+            }
+        }
     }
 
     private var locationPermissionButton: some View {
         Button {
             hapticFeedback(.light)
-            CLLocationManager().requestWhenInUseAuthorization()
+            LocationService.shared.requestPermission()
+            locationGranted = true
         } label: {
             HStack(spacing: 10) {
-                Image(systemName: "location.fill")
+                Image(systemName: locationGranted ? "location.fill" : "location")
                     .font(.system(size: 15, weight: .semibold))
-                Text("Allow Location Access")
+                Text(locationGranted ? "Location Access Enabled" : "Allow Location Access")
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
             }
-            .foregroundColor(Theme.Colors.label)
+            .foregroundColor(locationGranted ? Theme.Colors.primaryGradientStart : Theme.Colors.label)
             .frame(maxWidth: .infinity)
             .frame(height: 52)
-            .background(Color(.systemGray6))
+            .background(
+                locationGranted
+                    ? Theme.Colors.primaryGradientStart.opacity(0.12)
+                    : Color(.systemGray6)
+            )
             .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(
+                        locationGranted ? Theme.Colors.primaryGradientStart.opacity(0.4) : Color.clear,
+                        lineWidth: 1.5
+                    )
+            )
         }
+        .disabled(locationGranted)
     }
 
     func signUp() async {
-        guard !name.isEmpty, !email.isEmpty, !password.isEmpty else {
-            errorMessage = "Please fill in all fields"
+        // OWASP A03: validate and sanitize all fields before sending to Supabase
+        do {
+            let _ = try Validators.name(name, field: "Name")
+            let _ = try Validators.email(email)
+            let _ = try Validators.password(password)
+        } catch let e as InputValidationError {
+            errorMessage = e.errorDescription ?? "Invalid input."
             showError = true
             return
-        }
-        guard password.count >= 8 else {
-            errorMessage = "Password must be at least 8 characters"
-            showError = true
-            return
-        }
+        } catch {}
         isLoading = true
         defer { isLoading = false }
 
@@ -822,6 +961,9 @@ struct SignUpView: View {
             name: name, email: email, password: password, accountType: accountType
         )
         if success {
+            UserDefaults.standard.set(true, forKey: "acceptedTerms")
+            UserDefaults.standard.set(Date(), forKey: "acceptedTermsAt")
+            // TODO: backend — send acceptance timestamp to server
             appState.isAuthenticated = true
             appState.currentUser = auth.currentUser
             appState.completeOnboarding()
@@ -846,21 +988,28 @@ struct RestaurantSignUpView: View {
     @State private var logoPhoto: PhotosPickerItem?
     @State private var logoImage: Image?
 
-    // Step 2 — Location & contact
-    @State private var address       = ""
-    @State private var rawPhone      = ""
-    @State private var businessHours = ""
+    // Step 2 — Location & contact (split address fields)
+    @State private var streetLine1     = ""
+    @State private var streetLine2     = ""
+    @State private var city            = ""
+    @State private var addressState    = ""
+    @State private var zipCode         = ""
+    @State private var rawPhone        = ""
+    @State private var schedule        = DaySchedule.defaultSchedule()
     @State private var locationGranted = false
 
     // Step 3 — Account credentials
     @State private var email    = ""
     @State private var password = ""
     @State private var showVerification = false
+    @State private var agreedToTerms = false
+    @State private var showLegalPage: LegalPageView.LegalPage? = nil
 
     // UI state
     @State private var isLoading    = false
     @State private var showError    = false
     @State private var errorMessage = ""
+    @State private var showSignIn   = false
 
     private var formattedPhone: String {
         let d = rawPhone.filter { $0.isNumber }
@@ -875,8 +1024,10 @@ struct RestaurantSignUpView: View {
     }
 
     private let cuisineTypes = [
-        "Italian", "Asian", "Mexican", "American",
-        "Mediterranean", "Bakery", "Cafe", "Other",
+        "Italian", "Indian", "Mexican", "American",
+        "Mediterranean", "Chinese", "Japanese", "Korean",
+        "Thai", "Asian Fusion", "Bakery & Café", "Desserts",
+        "Breakfast", "Lunch", "Dinner", "Snacks", "Other",
     ]
 
     var body: some View {
@@ -894,7 +1045,18 @@ struct RestaurantSignUpView: View {
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 28)
-                    .padding(.bottom, 60)
+                    .padding(.bottom, 20)
+
+                    // Already have an account
+                    Button {
+                        hapticFeedback(.light)
+                        showSignIn = true
+                    } label: {
+                        Text("Already have an account?  \(Text("Sign In").foregroundColor(Theme.Colors.primaryGradientStart).bold())")
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                    }
+                    .padding(.bottom, 40)
                 }
                 .animation(.spring(response: 0.35, dampingFraction: 0.85), value: step)
             }
@@ -918,6 +1080,12 @@ struct RestaurantSignUpView: View {
                 Text(errorMessage)
             }
             .sheet(isPresented: $showVerification) { RestaurantVerificationView() }
+            .sheet(item: $showLegalPage) { page in
+                NavigationView { LegalPageView(page: page) }
+            }
+            .sheet(isPresented: $showSignIn) {
+                SignInView().environmentObject(appState)
+            }
         }
         .onChange(of: logoPhoto) { _, item in
             Task {
@@ -964,7 +1132,7 @@ struct RestaurantSignUpView: View {
     // MARK: Step 1 — Business Info
     private var step1BusinessInfo: some View {
         VStack(alignment: .leading, spacing: 28) {
-            stepHeading(title: "Tell us about your restaurant 🍽️",
+            stepHeading(title: "Tell us about your restaurant",
                         subtitle: "This appears on your public profile.")
 
             // Logo upload zone — PhotosPicker
@@ -1007,7 +1175,7 @@ struct RestaurantSignUpView: View {
                     .tracking(1.2)
 
                 LazyVGrid(
-                    columns: Array(repeating: GridItem(.flexible()), count: 4),
+                    columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 2),
                     spacing: 10
                 ) {
                     ForEach(cuisineTypes, id: \.self) { type in
@@ -1016,10 +1184,12 @@ struct RestaurantSignUpView: View {
                             cuisineType = type
                         } label: {
                             Text(type)
-                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
                                 .foregroundColor(cuisineType == type ? .white : Theme.Colors.label)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 10)
+                                .multilineTextAlignment(.center)
+                                .lineLimit(2)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 12)
                                 .frame(maxWidth: .infinity)
                                 .background(
                                     cuisineType == type
@@ -1045,16 +1215,55 @@ struct RestaurantSignUpView: View {
         }
     }
 
+    // Computed full address used for storage / validation
+    private var address: String {
+        var parts = [streetLine1]
+        if !streetLine2.isEmpty { parts.append(streetLine2) }
+        if !city.isEmpty { parts.append(city) }
+        let stateZip = [addressState, zipCode].filter { !$0.isEmpty }.joined(separator: " ")
+        if !stateZip.isEmpty { parts.append(stateZip) }
+        return parts.joined(separator: ", ")
+    }
+
     // MARK: Step 2 — Location & Contact
     private var step2LocationContact: some View {
         VStack(alignment: .leading, spacing: 28) {
-            stepHeading(title: "Where are you located? 📍",
+            stepHeading(title: "Where are you located?",
                         subtitle: "Customers use this to find you.")
 
             VStack(spacing: 18) {
-                AuthLabeledField(label: "Address",
-                                 placeholder: "123 Main St, City, State",
-                                 text: $address)
+                // Multi-box address section
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("ADDRESS")
+                        .font(.system(size: 10, weight: .black, design: .rounded))
+                        .foregroundColor(Theme.Colors.tertiaryLabel)
+                        .tracking(1.2)
+
+                    VStack(spacing: 2) {
+                        // Street line 1
+                        addressBox(placeholder: "Street address", text: $streetLine1)
+                        Divider().background(Color(.systemGray4))
+                        // Street line 2
+                        addressBox(placeholder: "Apt, suite, floor (optional)", text: $streetLine2)
+                        Divider().background(Color(.systemGray4))
+                        // City / State / ZIP row
+                        HStack(spacing: 0) {
+                            addressBox(placeholder: "City", text: $city)
+                                .frame(maxWidth: .infinity)
+                            Divider().background(Color(.systemGray4)).frame(height: 48)
+                            addressBox(placeholder: "State", text: $addressState)
+                                .frame(width: 72)
+                            Divider().background(Color(.systemGray4)).frame(height: 48)
+                            addressBox(placeholder: "ZIP", text: $zipCode, keyboard: .numberPad)
+                                .frame(width: 80)
+                        }
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color(.systemGray4), lineWidth: 1)
+                    )
+                }
                 // Auto-formatted phone
                 VStack(alignment: .leading, spacing: 6) {
                     Text("PHONE NUMBER")
@@ -1077,17 +1286,36 @@ struct RestaurantSignUpView: View {
                     .background(Color(.systemGray6))
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
-                AuthLabeledField(label: "Business Hours",
-                                 placeholder: "e.g., Mon–Fri 9AM–9PM",
-                                 text: $businessHours)
+                // Per-day hours table
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("BUSINESS HOURS")
+                        .font(.system(size: 10, weight: .black, design: .rounded))
+                        .foregroundColor(Theme.Colors.tertiaryLabel)
+                        .tracking(1.2)
+                    OperatingHoursTable(schedule: $schedule)
+                    HStack(spacing: 6) {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 11))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                        Text("Tap a day's times to set open and close hours.")
+                            .font(.system(size: 11))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                    }
+                }
             }
 
             // Use current location — requests CoreLocation permission
             Button {
                 hapticFeedback(.light)
                 locationGranted = true
-                address = "123 Main St, San Francisco, CA 94105"
-                CLLocationManager().requestWhenInUseAuthorization()
+                LocationService.shared.requestPermission()
+                // Pre-fill from device location string when available
+                let locStr = LocationService.shared.locationString
+                if !locStr.isEmpty && locStr != "San Francisco, CA" {
+                    let parts = locStr.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+                    city = parts.first ?? ""
+                    addressState = parts.dropFirst().first ?? ""
+                }
             } label: {
                 HStack(spacing: 14) {
                     ZStack {
@@ -1117,8 +1345,8 @@ struct RestaurantSignUpView: View {
             }
 
             backNextRow {
-                guard !address.isEmpty else {
-                    errorMessage = "Please enter your address"
+                guard !streetLine1.isEmpty, !city.isEmpty else {
+                    errorMessage = "Please enter your street address and city"
                     showError = true
                     return
                 }
@@ -1130,7 +1358,7 @@ struct RestaurantSignUpView: View {
     // MARK: Step 3 — Account Credentials
     private var step3Account: some View {
         VStack(alignment: .leading, spacing: 28) {
-            stepHeading(title: "Create your account 🔐",
+            stepHeading(title: "Create your account",
                         subtitle: "You'll use these to log in to RePlate.")
 
             VStack(spacing: 18) {
@@ -1195,6 +1423,36 @@ struct RestaurantSignUpView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 18))
             }
 
+            // Terms consent checkbox
+            HStack(alignment: .top, spacing: 12) {
+                Button {
+                    hapticFeedback(.light)
+                    agreedToTerms.toggle()
+                } label: {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(agreedToTerms ? Theme.Colors.primaryGradientStart : Color(.systemGray6))
+                            .frame(width: 22, height: 22)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(agreedToTerms ? Color.clear : Color(.systemGray4), lineWidth: 1.5)
+                            )
+                        if agreedToTerms {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 12, weight: .black))
+                                .foregroundColor(.white)
+                        }
+                    }
+                }
+                .buttonStyle(PlainButtonStyle())
+
+                Text("I have read and agree to the \(Text("Terms of Service").bold().foregroundColor(Theme.Colors.primaryGradientStart)) and \(Text("Privacy Policy").bold().foregroundColor(Theme.Colors.primaryGradientStart))")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(Theme.Colors.secondaryLabel)
+                .onTapGesture { showLegalPage = .termsOfService }
+                .fixedSize(horizontal: false, vertical: true)
+            }
+
             // Back + Create Account
             HStack(spacing: 12) {
                 backButton
@@ -1217,17 +1475,30 @@ struct RestaurantSignUpView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(Theme.Colors.primaryGradient)
+                    .background(agreedToTerms ? Theme.Colors.primaryGradient : LinearGradient(colors: [Color(.systemGray4)], startPoint: .leading, endPoint: .trailing))
                     .clipShape(RoundedRectangle(cornerRadius: 20))
-                    .shadow(color: Theme.Colors.primaryGradientStart.opacity(0.3), radius: 10, y: 5)
+                    .shadow(color: Theme.Colors.primaryGradientStart.opacity(agreedToTerms ? 0.3 : 0), radius: 10, y: 5)
                 }
-                .disabled(isLoading)
+                .disabled(isLoading || !agreedToTerms)
                 .buttonStyle(PlainButtonStyle())
             }
         }
     }
 
     // MARK: Reusable sub-views
+    // Reusable single cell inside the grouped address block
+    @ViewBuilder
+    private func addressBox(placeholder: String,
+                            text: Binding<String>,
+                            keyboard: UIKeyboardType = .default) -> some View {
+        TextField(placeholder, text: text)
+            .keyboardType(keyboard)
+            .font(.system(size: 15, design: .rounded))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 14)
+            .background(Color(.systemGray6))
+    }
+
     private func stepHeading(title: String, subtitle: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
@@ -1310,16 +1581,16 @@ struct RestaurantSignUpView: View {
     }
 
     private func createAccount() async {
-        guard !email.isEmpty, !password.isEmpty else {
-            errorMessage = "Please fill in all fields"
+        // OWASP A03: validate restaurant name, email, and password before network call
+        do {
+            let _ = try Validators.name(restaurantName, field: "Restaurant name")
+            let _ = try Validators.email(email)
+            let _ = try Validators.password(password)
+        } catch let e as InputValidationError {
+            errorMessage = e.errorDescription ?? "Invalid input."
             showError = true
             return
-        }
-        guard password.count >= 8 else {
-            errorMessage = "Password must be at least 8 characters"
-            showError = true
-            return
-        }
+        } catch {}
         isLoading = true
         defer { isLoading = false }
 
@@ -1331,6 +1602,9 @@ struct RestaurantSignUpView: View {
             accountType: .restaurant
         )
         if success {
+            UserDefaults.standard.set(true, forKey: "acceptedTerms")
+            UserDefaults.standard.set(Date(), forKey: "acceptedTermsAt")
+            // TODO: backend — send acceptance timestamp to server
             appState.isAuthenticated = true
             appState.currentUser = auth.currentUser
             appState.completeOnboarding()
@@ -1418,6 +1692,36 @@ struct AccountTypeButton: View {
                     )
             )
         }
+    }
+}
+
+// Renders the Google "G" logo using brand colours without requiring an asset.
+struct GoogleLogoMark: View {
+    var body: some View {
+        ZStack {
+            // Blue arc (right side)
+            Circle()
+                .trim(from: 0.08, to: 0.5)
+                .stroke(Color(hex: "4285F4"), lineWidth: 4)
+            // Red arc (top)
+            Circle()
+                .trim(from: 0.5, to: 0.75)
+                .stroke(Color(hex: "EA4335"), lineWidth: 4)
+            // Yellow arc (bottom-left)
+            Circle()
+                .trim(from: 0.75, to: 1.0)
+                .stroke(Color(hex: "FBBC04"), lineWidth: 4)
+            // Green arc (bottom-right)
+            Circle()
+                .trim(from: 0.0, to: 0.08)
+                .stroke(Color(hex: "34A853"), lineWidth: 4)
+            // Horizontal bar for the G cutout
+            Rectangle()
+                .fill(Color(hex: "4285F4"))
+                .frame(width: 7, height: 4)
+                .offset(x: 3, y: 0)
+        }
+        .rotationEffect(.degrees(-45))
     }
 }
 

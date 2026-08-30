@@ -20,7 +20,23 @@ class AppState: ObservableObject {
     @Published var showError = false
     @Published var selectedTab: Tab = .home
     @Published var colorScheme: ColorSchemePreference = .system
-    
+
+    // Profile image (stored in memory; TODO: backend — sync with server)
+    @Published var profileImageData: Data?
+
+    // Saved payment methods (display-only: brand + last4 from Stripe — no raw card data)
+    // SECURITY: never store raw card data; this is populated from the Supabase payment_methods table
+    @Published var savedPaymentMethods: [PaymentMethod] = []
+
+    // Single source of truth for orders shared between customer and restaurant views
+    // TODO: backend — replace with real-time order subscription (WebSocket / push)
+    @Published var orders: [Order] = []
+
+    // Legal consent
+    var hasAcceptedTerms: Bool {
+        UserDefaults.standard.bool(forKey: "acceptedTerms")
+    }
+
     // Onboarding
     @Published var hasCompletedOnboarding = false
     @Published var isOnboarding = false
@@ -78,14 +94,24 @@ class AppState: ObservableObject {
     }
     
     // MARK: - Services
-    private let authService = RePlateAuthService.shared
+    let authService = RePlateAuthService.shared
     private let locationService = LocationService.shared
-    
+    private var authCancellable: AnyCancellable?
+
     // MARK: - Initialization
     init() {
         loadUserPreferences()
         checkAuthenticationStatus()
         setupLocationService()
+
+        // Keep AppState in sync whenever the auth service updates.
+        authCancellable = authService.objectWillChange.sink { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.isAuthenticated = self.authService.isAuthenticated
+                self.currentUser = self.authService.currentUser
+            }
+        }
     }
     
     // MARK: - Methods
@@ -104,11 +130,12 @@ class AppState: ObservableObject {
     }
     
     func checkAuthenticationStatus() {
-        // This would check with your auth service
-        // For now, we'll simulate it
         isAuthenticated = authService.isAuthenticated
         currentUser = authService.currentUser
     }
+
+    // The Supabase JWT for the signed-in user — passed as Authorization header to Edge Functions.
+    var accessToken: String? { authService.accessToken }
     
     func setupLocationService() {
         // Setup location tracking

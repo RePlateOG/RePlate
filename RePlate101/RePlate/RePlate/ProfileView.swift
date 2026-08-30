@@ -12,11 +12,15 @@ import PhotosUI
 struct ProfileView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = ProfileViewModel()
-    @State private var showSettings     = false
-    @State private var showEditProfile  = false
+    @State private var showSettings        = false
+    @State private var showNotifications   = false
+    @State private var showEditProfile     = false
+    @State private var showPaymentMethods  = false
     @State private var showLegalPage: LegalPageView.LegalPage? = nil
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var profileImage: Image?
+    @State private var showExportShare     = false
+    @State private var exportURL: URL?
 
     private var displayName: String {
         viewModel.user?.name ?? appState.currentUser?.name ?? "User"
@@ -37,18 +41,27 @@ struct ProfileView: View {
             .padding(.bottom, 100)
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Theme.Colors.pageBackground)
         .task { await viewModel.loadProfile() }
         .sheet(isPresented: $showEditProfile) { EditProfileView() }
+        .sheet(isPresented: $showNotifications) { NotificationsView() }
         .sheet(isPresented: $showSettings) { SettingsView() }
+        .sheet(isPresented: $showPaymentMethods) { PaymentMethodsView().environmentObject(appState) }
         .sheet(item: $showLegalPage) { page in
             NavigationView { LegalPageView(page: page) }
+        }
+        .sheet(isPresented: $showExportShare, onDismiss: { exportURL = nil }) {
+            if let url = exportURL {
+                ShareSheet(items: [url])
+            }
         }
         .onChange(of: selectedPhoto) { _, newItem in
             Task {
                 if let data = try? await newItem?.loadTransferable(type: Data.self),
                    let ui = UIImage(data: data) {
                     profileImage = Image(uiImage: ui)
+                    appState.profileImageData = data  // persist locally
+                    // TODO: backend — upload profile image to server
                 }
             }
         }
@@ -98,6 +111,7 @@ struct ProfileView: View {
                         Text(displayName.prefix(1).uppercased())
                             .font(.system(size: 42, weight: .black, design: .rounded))
                             .foregroundColor(.white)
+                            .frame(width: 96, height: 96)
                     }
                     // Camera badge
                     Image(systemName: "camera.fill")
@@ -160,6 +174,9 @@ struct ProfileView: View {
             accountMenuSection
                 .padding(.top, 28)
 
+            helpSupportSection
+                .padding(.top, 12)
+
             aboutMenuSection
                 .padding(.top, 12)
 
@@ -196,7 +213,7 @@ struct ProfileView: View {
             .background(
                 RoundedRectangle(cornerRadius: 26)
                     .fill(Color(.systemBackground))
-                    .shadow(color: Color.black.opacity(0.13), radius: 18, y: 7)
+                    .shadow(color: Color.black.opacity(0.06), radius: 18, y: 5)
             )
         }
         .buttonStyle(PlainButtonStyle())
@@ -289,13 +306,54 @@ struct ProfileView: View {
                 }
                 Divider().padding(.leading, 60)
                 MenuButton(icon: "bell", title: "Notifications") {
-                    showSettings = true
+                    showNotifications = true
                 }
                 Divider().padding(.leading, 60)
-                MenuButton(icon: "creditcard", title: "Payment Methods") {}
+                MenuButton(icon: "creditcard", title: "Payment Methods") {
+                    showPaymentMethods = true
+                }
                 Divider().padding(.leading, 60)
                 MenuButton(icon: "gearshape", title: "Settings") {
                     showSettings = true
+                }
+            }
+            .background(Color(.systemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 24))
+            .shadow(color: Color.black.opacity(0.06), radius: 12, y: 4)
+            .padding(.horizontal, 20)
+        }
+    }
+
+    // MARK: - Help & Support (§1.5 — developer must provide easy contact method)
+    private var helpSupportSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Help & Support")
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundColor(Theme.Colors.label)
+                .padding(.horizontal, 20)
+
+            VStack(spacing: 0) {
+                // §1.5: Easy contact method required
+                MenuButton(icon: "envelope", title: "Contact Support") {
+                    if let url = URL(string: "mailto:support@replate.app?subject=RePlate%20Support") {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                Divider().padding(.leading, 60)
+                // §1.2: Report mechanism for user-generated content
+                MenuButton(icon: "exclamationmark.bubble", title: "Report a Problem") {
+                    if let url = URL(string: "mailto:support@replate.app?subject=RePlate%20Problem%20Report") {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                Divider().padding(.leading, 60)
+                MenuButton(icon: "questionmark.circle", title: "FAQs") {
+                    showLegalPage = .faq
+                }
+                Divider().padding(.leading, 60)
+                // §4.5.4: Users can always find the notification opt-out
+                MenuButton(icon: "bell.badge", title: "Notification Preferences") {
+                    showNotifications = true
                 }
             }
             .background(Color(.systemBackground))
@@ -314,7 +372,7 @@ struct ProfileView: View {
                 .padding(.horizontal, 20)
 
             VStack(spacing: 0) {
-                MenuButton(icon: "info.circle", title: "About RePlate") {
+                MenuButton(icon: "person.3.fill", title: "Community Guidelines") {
                     showLegalPage = .communityGuidelines
                 }
                 Divider().padding(.leading, 60)
@@ -330,8 +388,21 @@ struct ProfileView: View {
                     showLegalPage = .foodSafetyPolicy
                 }
                 Divider().padding(.leading, 60)
-                MenuButton(icon: "arrow.down.doc", title: "Export Data") {
-                    Task { await viewModel.exportData() }
+                MenuButton(icon: "arrow.down.doc", title: "Export My Data") {
+                    Task {
+                        let user = viewModel.user ?? appState.currentUser
+                        var csv = "RePlate Data Export\nGenerated,\(Date().formatted(date: .abbreviated, time: .shortened))\n\n"
+                        csv += "ACCOUNT\n"
+                        csv += "Name,\(user?.name ?? "")\n"
+                        csv += "Email,\(user?.email ?? "")\n"
+                        csv += "Account Type,\(user?.accountType.displayName ?? "")\n\n"
+                        let tmp = FileManager.default.temporaryDirectory
+                            .appendingPathComponent("replate_data_export.csv")
+                        try? csv.write(to: tmp, atomically: true, encoding: .utf8)
+                        exportURL = tmp
+                        showExportShare = true
+                        hapticFeedback(.success)
+                    }
                 }
             }
             .background(Color(.systemBackground))
@@ -402,6 +473,15 @@ private struct ProfileStatCard: View {
                 .shadow(color: Color.black.opacity(0.06), radius: 10, y: 4)
         )
     }
+}
+
+// MARK: - Share Sheet
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+    func updateUIViewController(_ vc: UIActivityViewController, context: Context) {}
 }
 
 // MARK: - Menu Button
@@ -704,6 +784,22 @@ struct SettingsView: View {
                 .foregroundColor(Theme.Colors.label)
 
             VStack(spacing: 0) {
+                Button {
+                    showLegalPage = .termsOfService
+                } label: {
+                    HStack {
+                        Text("Terms of Service")
+                            .font(Theme.Typography.body)
+                            .foregroundColor(Theme.Colors.label)
+                        Spacer()
+                        Image(systemName: "arrow.up.right.square")
+                            .foregroundColor(Theme.Colors.tertiaryLabel)
+                    }
+                    .padding(Theme.Spacing.md)
+                }
+
+                Divider()
+
                 Button {
                     showLegalPage = .privacyPolicy
                 } label: {

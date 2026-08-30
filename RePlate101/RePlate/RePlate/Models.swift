@@ -19,7 +19,11 @@ struct User: Identifiable, Codable {
     var accountType: AccountType
     var createdAt: Date
     var verifiedRestaurant: Bool
-    
+
+    // Stripe Connect — set after calling create-connect-account Edge Function.
+    // TODO: Load from your database on sign-in instead of storing only in memory.
+    var stripeAccountId: String?
+
     // Stats
     var mealsSaved: Int
     var co2Reduced: Double // in kg
@@ -128,23 +132,53 @@ struct FoodListing: Identifiable, Codable {
     }
     
     enum FoodCategory: String, Codable, CaseIterable {
-        case meals = "Meals"
-        case bakery = "Bakery"
-        case produce = "Produce"
-        case beverages = "Beverages"
-        case desserts = "Desserts"
-        case snacks = "Snacks"
-        case other = "Other"
-        
+        // Meal times
+        case breakfast   = "Breakfast"
+        case lunch       = "Lunch"
+        case dinner      = "Dinner"
+        case snacks      = "Snacks"
+        // Food types
+        case meals       = "Meals"
+        case bakery      = "Bakery"
+        case desserts    = "Desserts"
+        case produce     = "Produce"
+        case beverages   = "Beverages"
+        // Cuisines
+        case indian      = "Indian"
+        case italian     = "Italian"
+        case mexican     = "Mexican"
+        case chinese     = "Chinese"
+        case japanese    = "Japanese"
+        case korean      = "Korean"
+        case thai        = "Thai"
+        case american    = "American"
+        case mediterranean = "Mediterranean"
+        case asian       = "Asian"
+        // Catch-all
+        case other       = "Other"
+
         var icon: String {
             switch self {
-            case .meals: return "fork.knife"
-            case .bakery: return "birthday.cake"
-            case .produce: return "carrot"
-            case .beverages: return "cup.and.saucer"
-            case .desserts: return "birthday.cake.fill"
-            case .snacks: return "takeoutbag.and.cup.and.straw"
-            case .other: return "bag"
+            case .breakfast:     return "sunrise.fill"
+            case .lunch:         return "sun.max.fill"
+            case .dinner:        return "moon.stars.fill"
+            case .snacks:        return "takeoutbag.and.cup.and.straw"
+            case .meals:         return "fork.knife"
+            case .bakery:        return "birthday.cake"
+            case .desserts:      return "birthday.cake.fill"
+            case .produce:       return "carrot"
+            case .beverages:     return "cup.and.saucer"
+            case .indian:        return "flame.fill"
+            case .italian:       return "fork.knife.circle.fill"
+            case .mexican:       return "leaf.arrow.circlepath"
+            case .chinese:       return "cup.and.saucer.fill"
+            case .japanese:      return "fish.fill"
+            case .korean:        return "flame.circle.fill"
+            case .thai:          return "leaf.circle.fill"
+            case .american:      return "takeoutbag.and.cup.and.straw.fill"
+            case .mediterranean: return "sun.horizon.fill"
+            case .asian:         return "globe.asia.australia.fill"
+            case .other:         return "bag"
             }
         }
     }
@@ -157,7 +191,8 @@ struct FoodListing: Identifiable, Codable {
         case nutFree = "Nut-Free"
         case halal = "Halal"
         case kosher = "Kosher"
-        
+        case jain = "Jain"
+
         var icon: String {
             switch self {
             case .vegetarian: return "leaf"
@@ -167,6 +202,7 @@ struct FoodListing: Identifiable, Codable {
             case .nutFree: return "n.circle"
             case .halal: return "h.circle"
             case .kosher: return "k.circle"
+            case .jain: return "j.circle"
             }
         }
     }
@@ -348,16 +384,26 @@ struct PaymentMethod: Identifiable, Codable {
         case card
         case applePay
         case googlePay
+        case paypal
     }
-    
+
     var displayName: String {
         switch type {
         case .card:
-            return "\(brand ?? "Card") •••• \(last4)"
+            return "\(brand ?? "Card") \u{2022}\u{2022}\u{2022}\u{2022} \(last4)"
         case .applePay:
             return "Apple Pay"
         case .googlePay:
             return "Google Pay"
+        case .paypal:
+            return "PayPal (\(last4))"
         }
+    }
+
+    // Display-only expiry string (MM/YY). Nil when expiry fields are absent.
+    // SECURITY: expiry is display metadata only — raw card data is never stored here.
+    var expiryDisplay: String? {
+        guard let month = expiryMonth, let year = expiryYear else { return nil }
+        return String(format: "%02d/%02d", month, year % 100)
     }
 }

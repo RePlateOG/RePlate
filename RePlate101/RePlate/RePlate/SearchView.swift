@@ -38,7 +38,7 @@ struct SearchView: View {
             .padding(.bottom, 100)
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Theme.Colors.pageBackground)
         .sheet(isPresented: $viewModel.showFilters) {
             FiltersView(filters: $viewModel.filters) {
                 Task { await viewModel.applyFilters() }
@@ -121,7 +121,7 @@ struct SearchView: View {
             .background(
                 RoundedRectangle(cornerRadius: 20)
                     .fill(Color(.systemBackground))
-                    .shadow(color: Color.black.opacity(0.12), radius: 14, y: 5)
+                    .shadow(color: Color.black.opacity(0.06), radius: 14, y: 4)
             )
 
             Spacer().frame(height: 52)
@@ -213,8 +213,9 @@ struct SearchView: View {
                         }
                     } label: {
                         VStack(spacing: 8) {
-                            Text(cat.emoji)
-                                .font(.system(size: 30))
+                            Image(systemName: cat.icon)
+                                .font(.system(size: 26, weight: .semibold))
+                                .foregroundColor(Theme.Colors.primaryGradientStart)
                             Text(cat.label)
                                 .font(.system(size: 12, weight: .bold, design: .rounded))
                                 .foregroundColor(Theme.Colors.label)
@@ -293,13 +294,29 @@ struct SearchView: View {
     }
 
     // MARK: - Category Data
-    private let searchCategories: [(emoji: String, label: String, color: Color)] = [
-        ("🥐", "Bakery",    Color.orange.opacity(0.12)),
-        ("🥗", "Meals",     Color.green.opacity(0.12)),
-        ("🥦", "Produce",   Color.teal.opacity(0.10)),
-        ("🧃", "Beverages", Color.purple.opacity(0.10)),
-        ("🎂", "Desserts",  Color.pink.opacity(0.10)),
-        ("🍿", "Snacks",    Color.yellow.opacity(0.12)),
+    private let searchCategories: [(icon: String, label: String, color: Color)] = [
+        // Cuisines
+        ("flame.fill",                        "Indian",        Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("fork.knife.circle.fill",            "Italian",       Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("leaf.arrow.circlepath",             "Mexican",       Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("fish.fill",                         "Japanese",      Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("bowl.fill",                         "Asian",         Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("flame.circle.fill",                 "Korean",        Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("cup.and.saucer.fill",               "Chinese",       Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("leaf.circle.fill",                  "Thai",          Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("sun.horizon.fill",                  "Mediterranean", Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("takeoutbag.and.cup.and.straw.fill", "American",      Theme.Colors.primaryGradientStart.opacity(0.10)),
+        // Meal times
+        ("sunrise.fill",                      "Breakfast",     Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("sun.max.fill",                      "Lunch",         Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("moon.stars.fill",                   "Dinner",        Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("takeoutbag.and.cup.and.straw",      "Snacks",        Theme.Colors.primaryGradientStart.opacity(0.10)),
+        // Food types
+        ("birthday.cake.fill",                "Desserts",      Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("birthday.cake",                     "Bakery",        Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("carrot",                            "Produce",       Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("cup.and.saucer",                    "Beverages",     Theme.Colors.primaryGradientStart.opacity(0.10)),
+        ("fork.knife",                        "Meals",         Theme.Colors.primaryGradientStart.opacity(0.10)),
     ]
 }
 

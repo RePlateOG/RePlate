@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 // MARK: - Verification Status (extend User model usage)
 enum RestaurantVerificationStatus: String, Codable {
@@ -126,8 +127,8 @@ struct VerificationGateView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 48)
         }
-        .background(Color(.systemBackground))
-        .sheet(isPresented: $showVerification) { RestaurantVerificationView() }
+        .background(Theme.Colors.pageBackground)
+        .fullScreenCover(isPresented: $showVerification) { RestaurantVerificationView() }
     }
 }
 
@@ -202,16 +203,7 @@ struct RestaurantVerificationView: View {
                         }
                     }
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        if canSubmit {
-                            Button {
-                                hapticFeedback(.medium)
-                                showSubmitConfirm = true
-                            } label: {
-                                Text("Submit")
-                                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                                    .foregroundColor(Color(hex: "118b50"))
-                            }
-                        }
+                        EmptyView()
                     }
                 }
                 .alert("Submit Verification", isPresented: $showSubmitConfirm) {
@@ -261,54 +253,17 @@ struct RestaurantVerificationView: View {
                 subtitle: "Upload all required documents. Accepted formats: PDF, JPG, PNG."
             )
 
-            uploadRow("Business License",           "doc.text.fill",   $uploadedLicense)
-            uploadRow("Food Service Permit",        "cross.fill",      $uploadedFoodPermit)
-            uploadRow("Health Inspection Report",   "heart.text.square.fill", $uploadedHealth)
-            uploadRow("Tax Documentation (EIN)",    "building.columns.fill",  $uploadedTax)
-            uploadRow("Government-Issued ID",       "person.text.rectangle.fill", $uploadedID)
+            UploadRow(label: "Business License",         icon: "doc.text.fill",            uploaded: $uploadedLicense)
+            UploadRow(label: "Food Service Permit",      icon: "cross.fill",               uploaded: $uploadedFoodPermit)
+            UploadRow(label: "Health Inspection Report", icon: "heart.text.square.fill",   uploaded: $uploadedHealth)
+            UploadRow(label: "Tax Documentation (EIN)",  icon: "building.columns.fill",    uploaded: $uploadedTax)
+            UploadRow(label: "Government-Issued ID",     icon: "person.text.rectangle.fill", uploaded: $uploadedID)
 
             legalNote("All documents are encrypted and stored securely. They are only used for verification purposes and are not shared with customers.")
         }
     }
 
-    private func uploadRow(_ label: String, _ icon: String, _ uploaded: Binding<Bool>) -> some View {
-        HStack(spacing: 16) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(uploaded.wrappedValue ? Color(hex: "118b50").opacity(0.12) : Color(.systemGray6))
-                    .frame(width: 44, height: 44)
-                Image(systemName: icon)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(uploaded.wrappedValue ? Color(hex: "118b50") : Theme.Colors.secondaryLabel)
-            }
-            VStack(alignment: .leading, spacing: 3) {
-                Text(label)
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .foregroundColor(Theme.Colors.label)
-                Text(uploaded.wrappedValue ? "Uploaded" : "Required")
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .foregroundColor(uploaded.wrappedValue ? Color(hex: "118b50") : .orange)
-            }
-            Spacer()
-            Button {
-                hapticFeedback(.light)
-                uploaded.wrappedValue = true
-            } label: {
-                Text(uploaded.wrappedValue ? "Replace" : "Upload")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundColor(uploaded.wrappedValue ? Theme.Colors.secondaryLabel : .white)
-                    .padding(.horizontal, 16).padding(.vertical, 8)
-                    .background(uploaded.wrappedValue
-                        ? AnyShapeStyle(Color(.systemGray5))
-                        : AnyShapeStyle(Theme.Colors.primaryGradient))
-                    .clipShape(Capsule())
-            }
-        }
-        .padding(16)
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 18))
-        .shadow(color: Color.black.opacity(0.05), radius: 8, y: 3)
-    }
+    // uploadRow replaced by UploadRow struct below
 
     // MARK: Section 1 — Business Info
     private var businessInfoSection: some View {
@@ -351,7 +306,7 @@ struct RestaurantVerificationView: View {
         VStack(alignment: .leading, spacing: 20) {
             sectionHeader(
                 title: "Compliance Agreements",
-                subtitle: "You must acknowledge all agreements to complete verification."
+                subtitle: "Acknowledge all agreements, then submit for official verification."
             )
 
             agreementRow(
@@ -385,26 +340,64 @@ struct RestaurantVerificationView: View {
                 binding: $agreeAccurate
             )
 
-            if canSubmit {
-                Button {
-                    hapticFeedback(.medium)
-                    showSubmitConfirm = true
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: "checkmark.seal.fill")
-                        Text("Submit for Review")
-                            .font(.system(size: 17, weight: .bold, design: .rounded))
-                    }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity).frame(height: 56)
-                    .background(Theme.Colors.primaryGradient)
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
-                    .shadow(color: Color(hex: "118b50").opacity(0.35), radius: 12, y: 5)
-                }
-                .padding(.top, 8)
+            // Requirements checklist — shows remaining blockers when not ready
+            if !canSubmit {
+                submissionRequirementsCard
             }
 
-            legalNote("Submitting false information may result in permanent account termination and legal action. All agreements are legally binding.")
+            // Submit button — always visible; disabled until all requirements met
+            Button {
+                guard canSubmit else { return }
+                hapticFeedback(.medium)
+                showSubmitConfirm = true
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: canSubmit ? "checkmark.seal.fill" : "lock.fill")
+                        .font(.system(size: 16, weight: .bold))
+                    Text(canSubmit ? "Submit for Official Verification" : "Complete All Requirements to Submit")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity).frame(height: 58)
+                .background(
+                    canSubmit
+                        ? AnyShapeStyle(Theme.Colors.primaryGradient)
+                        : AnyShapeStyle(Color(.systemGray4))
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+                .shadow(color: canSubmit ? Color(hex: "118b50").opacity(0.35) : Color.clear, radius: 12, y: 5)
+            }
+            .padding(.top, 8)
+
+            legalNote("Submitting false information may result in permanent account termination and legal action. All submitted documents are reviewed by the RePlate team within 1–2 business days.")
+        }
+    }
+
+    private var submissionRequirementsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("REQUIRED TO SUBMIT")
+                .font(.system(size: 10, weight: .black, design: .rounded))
+                .foregroundColor(Theme.Colors.tertiaryLabel)
+                .tracking(1.0)
+
+            requirementRow(met: allDocsUploaded,   label: "All 5 documents uploaded")
+            requirementRow(met: infoComplete,       label: "Business information complete")
+            requirementRow(met: allAgreements,      label: "All 6 agreements acknowledged")
+        }
+        .padding(16)
+        .background(Color(.systemGray6))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func requirementRow(met: Bool, label: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: met ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(met ? Color(hex: "118b50") : Color(.systemGray3))
+            Text(label)
+                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .foregroundColor(met ? Theme.Colors.label : Theme.Colors.secondaryLabel)
+            Spacer()
         }
     }
 
@@ -534,5 +527,72 @@ struct RestaurantVerificationView: View {
         .padding(14)
         .background(Color(.systemGray6))
         .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+}
+
+// MARK: - Upload Row
+private struct UploadRow: View {
+    let label: String
+    let icon: String
+    @Binding var uploaded: Bool
+    @State private var showPicker = false
+    @State private var fileName: String?
+
+    private static let allowedTypes: [UTType] = [.pdf, .jpeg, .png, .image]
+
+    var body: some View {
+        HStack(spacing: 16) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(uploaded ? Color(hex: "118b50").opacity(0.12) : Color(.systemGray6))
+                    .frame(width: 44, height: 44)
+                Image(systemName: icon)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(uploaded ? Color(hex: "118b50") : Theme.Colors.secondaryLabel)
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                Text(label)
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundColor(Theme.Colors.label)
+                Text(uploaded ? (fileName ?? "Uploaded") : "Required")
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundColor(uploaded ? Color(hex: "118b50") : .orange)
+                    .lineLimit(1)
+            }
+            Spacer()
+            Button {
+                hapticFeedback(.light)
+                showPicker = true
+            } label: {
+                Text(uploaded ? "Replace" : "Upload")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundColor(uploaded ? Theme.Colors.secondaryLabel : .white)
+                    .padding(.horizontal, 16).padding(.vertical, 8)
+                    .background(uploaded
+                        ? AnyShapeStyle(Color(.systemGray5))
+                        : AnyShapeStyle(Theme.Colors.primaryGradient))
+                    .clipShape(Capsule())
+            }
+        }
+        .padding(16)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .shadow(color: Color.black.opacity(0.05), radius: 8, y: 3)
+        .fileImporter(
+            isPresented: $showPicker,
+            allowedContentTypes: Self.allowedTypes,
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                _ = url.startAccessingSecurityScopedResource()
+                fileName = url.lastPathComponent
+                uploaded = true
+                hapticFeedback(.success)
+            case .failure:
+                break
+            }
+        }
     }
 }

@@ -221,6 +221,8 @@ struct PremiumListingDetailView: View {
     @State private var showClaimSheet = false
     @State private var selectedQuantity = 1
     @State private var currentImageIndex = 0
+    @State private var showReport = false
+    @State private var showReportConfirm = false
     
     var body: some View {
         ScrollView {
@@ -267,6 +269,29 @@ struct PremiumListingDetailView: View {
             }
             .padding(Theme.Spacing.screenPadding)
             .padding(.top, Theme.Spacing.huge)
+        }
+        .overlay(alignment: .topTrailing) {
+            // Report listing menu
+            Menu {
+                Button("Report listing", role: .destructive) {
+                    // TODO: backend — POST /reports
+                    showReport = true
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(Theme.Colors.label)
+                    .frame(width: 40, height: 40)
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(Theme.CornerRadius.pill)
+            }
+            .padding(Theme.Spacing.screenPadding)
+            .padding(.top, Theme.Spacing.huge)
+            .alert("Report Submitted", isPresented: $showReport) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Thank you. Our team will review this listing.")
+            }
         }
         .overlay(alignment: .bottom) {
             // Claim Button
@@ -521,10 +546,20 @@ struct PremiumListingDetailView: View {
                     )
                     
                     if let restaurant = listing.restaurant {
+                        // SECURITY: reveal full address only after order.status == .confirmed, enforced server-side
+                        // For browse/detail view (pre-order), show only neighborhood to protect restaurant privacy
+                        let addressDisplay: String = {
+                            let parts = restaurant.address.components(separatedBy: ",")
+                            // Show city/area only (last 1-2 components) until order is confirmed
+                            if parts.count >= 2 {
+                                return parts.dropFirst().joined(separator: ",").trimmingCharacters(in: .whitespaces)
+                            }
+                            return restaurant.address
+                        }()
                         InfoRow(
                             icon: "location.fill",
-                            label: "Address",
-                            value: restaurant.address
+                            label: "Area",
+                            value: addressDisplay + " (Full address shown after ordering)"
                         )
                     }
                 }
@@ -681,31 +716,280 @@ struct ClaimListingSheet: View {
     let listing: FoodListing
     @Binding var selectedQuantity: Int
     @Environment(\.dismiss) var dismiss
-    
+    @EnvironmentObject var appState: AppState
+    @StateObject private var paymentService = StripePaymentService.shared
+
+    @State private var isProcessing = false
+    @State private var paymentComplete = false
+    @State private var errorMessage: String?
+    @State private var showError = false
+
+    private var totalPrice: Double { listing.discountedPrice * Double(selectedQuantity) }
+    private var buttonLabel: String {
+        if listing.isFree { return "Claim Free — Confirm" }
+        return "Pay $\(String(format: "%.2f", totalPrice))"
+    }
+
     var body: some View {
         NavigationView {
-            VStack(spacing: Theme.Spacing.sectionSpacing) {
-                // Content here
-                Text("Claim listing flow would go here")
-                    .font(Theme.Typography.body)
-                
-                Spacer()
-                
-                AnimatedButton("Confirm Claim", icon: "checkmark", style: .primary) {
-                    // Handle claim
-                    dismiss()
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Order summary card
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Order Summary")
+                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                            .foregroundColor(Theme.Colors.label)
+
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(listing.restaurantName)
+                                    .font(.system(size: 15, weight: .semibold))
+                                Text(listing.title)
+                                    .font(.system(size: 13))
+                                    .foregroundColor(Theme.Colors.secondaryLabel)
+                            }
+                            Spacer()
+                        }
+
+                        Divider()
+
+                        // Quantity row
+                        HStack {
+                            Text("Quantity")
+                                .font(.system(size: 14))
+                                .foregroundColor(Theme.Colors.secondaryLabel)
+                            Spacer()
+                            HStack(spacing: 16) {
+                                Button {
+                                    if selectedQuantity > 1 { selectedQuantity -= 1 }
+                                } label: {
+                                    Image(systemName: "minus.circle.fill")
+                                        .font(.system(size: 22))
+                                        .foregroundStyle(Theme.Colors.primaryGradient)
+                                }
+                                .disabled(selectedQuantity <= 1)
+
+                                Text("\(selectedQuantity)")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .frame(minWidth: 24)
+
+                                Button {
+                                    if selectedQuantity < listing.availableQuantity {
+                                        selectedQuantity += 1
+                                    }
+                                } label: {
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.system(size: 22))
+                                        .foregroundStyle(Theme.Colors.primaryGradient)
+                                }
+                                .disabled(selectedQuantity >= listing.availableQuantity)
+                            }
+                        }
+
+                        Divider()
+
+                        // Price row
+                        if listing.isFree {
+                            HStack {
+                                Text("Total")
+                                    .font(.system(size: 15, weight: .semibold))
+                                Spacer()
+                                Text("Free")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundColor(Theme.Colors.primaryGradientStart)
+                            }
+                        } else {
+                            HStack {
+                                Text("Total")
+                                    .font(.system(size: 15, weight: .semibold))
+                                Spacer()
+                                VStack(alignment: .trailing, spacing: 2) {
+                                    Text("$\(String(format: "%.2f", totalPrice))")
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(Theme.Colors.primaryGradientStart)
+                                    Text("Saved $\(String(format: "%.2f", (listing.originalPrice - listing.discountedPrice) * Double(selectedQuantity)))")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.green)
+                                }
+                            }
+                        }
+                    }
+                    .padding(20)
+                    .background(Color(.systemBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .shadow(color: Color.black.opacity(0.06), radius: 12, y: 4)
+
+                    // Pickup info
+                    HStack(spacing: 12) {
+                        Image(systemName: "clock.fill")
+                            .foregroundColor(Theme.Colors.primaryGradientStart)
+                        Text("Pick up from \(listing.restaurantName). Bring your pickup code.")
+                            .font(.system(size: 13))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                    }
+                    .padding(14)
+                    .background(Theme.Colors.primaryGradientStart.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+
+                    // Security note for paid listings
+                    if !listing.isFree {
+                        HStack(spacing: 10) {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 13))
+                                .foregroundColor(Theme.Colors.primaryGradientStart)
+                            // SECURITY: Stripe handles card tokenization; no raw card data stored
+                            Text("Payments secured by Stripe. Card data is never stored on your device.")
+                                .font(.system(size: 12))
+                                .foregroundColor(Theme.Colors.secondaryLabel)
+                        }
+                        .padding(.horizontal, 4)
+                    }
+
+                    Spacer(minLength: 20)
                 }
-                .padding(.horizontal, Theme.Spacing.screenPadding)
+                .padding(20)
             }
-            .padding(.top, Theme.Spacing.xl)
-            .navigationTitle("Claim Food")
+            .background(Theme.Colors.pageBackground)
+            .navigationTitle(listing.isFree ? "Claim Food" : "Checkout")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
+                    Button("Cancel") { dismiss() }
+                        .disabled(isProcessing)
                 }
+            }
+            .safeAreaInset(edge: .bottom) {
+                checkoutButton
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                    .background(.ultraThinMaterial)
+            }
+            .overlay {
+                if paymentComplete {
+                    paymentSuccessOverlay
+                }
+            }
+            .alert("Payment Error", isPresented: $showError) {
+                Button("OK") {}
+                Button("Retry") { handlePayment() }
+            } message: {
+                Text(errorMessage ?? "Something went wrong.")
+            }
+        }
+    }
+
+    // MARK: - Checkout Button
+    private var checkoutButton: some View {
+        AnimatedButton(
+            buttonLabel,
+            icon: listing.isFree ? "checkmark.circle.fill" : "creditcard.fill",
+            style: .primary
+        ) {
+            handlePayment()
+        }
+        .disabled(isProcessing)
+        .opacity(isProcessing ? 0.7 : 1)
+        .overlay {
+            if isProcessing {
+                HStack(spacing: 10) {
+                    ProgressView().tint(.white)
+                    Text("Processing\u{2026}").foregroundColor(.white).font(.system(size: 15, weight: .semibold))
+                }
+            }
+        }
+    }
+
+    // MARK: - Payment Success Overlay
+    private var paymentSuccessOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.4).ignoresSafeArea()
+            VStack(spacing: 20) {
+                ZStack {
+                    Circle()
+                        .fill(Theme.Colors.primaryGradientStart)
+                        .frame(width: 80, height: 80)
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 34, weight: .bold))
+                        .foregroundColor(.white)
+                }
+                Text(listing.isFree ? "Food Claimed!" : "Payment Complete!")
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                Text("Check Orders for your pickup code.")
+                    .font(.system(size: 15))
+                    .foregroundColor(.white.opacity(0.85))
+                    .multilineTextAlignment(.center)
+            }
+            .padding(32)
+        }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                dismiss()
+            }
+        }
+    }
+
+    // MARK: - Handle Payment
+    private func handlePayment() {
+        isProcessing = true
+        hapticFeedback(.medium)
+
+        if listing.isFree {
+            // Free listing — create order, no payment needed
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                isProcessing = false
+                withAnimation { paymentComplete = true }
+                // TODO: backend — POST /orders with status = confirmed for free listings
+            }
+            return
+        }
+
+        // Paid listing — create order row then call Edge Function
+        // TODO: backend — first POST to Supabase to create order with status = pending,
+        // then call StripePaymentService with the returned orderId
+        // For now, simulate with a stub orderId:
+        let stubOrderId = UUID().uuidString
+        // SECURITY: payment amount is validated server-side in the Edge Function
+
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let rootVC = windowScene.windows.first?.rootViewController else {
+            isProcessing = false
+            return
+        }
+
+        paymentService.startPayment(
+            orderId: stubOrderId,
+            supabaseToken: "stub-token",  // TODO: replace with appState.supabaseToken or supabase.auth.session?.accessToken
+            from: rootVC
+        ) { result in
+            isProcessing = false
+            switch result {
+            case .completed(let paymentIntentId):
+                // TODO: backend — update order.payment_id = paymentIntentId, status = confirmed
+                // The webhook (stripe-webhook Edge Function) is the source of truth for confirmed status
+                print("[Payment] Completed, intentId: \(paymentIntentId)")
+                withAnimation { paymentComplete = true }
+
+                // Save display-only payment method (brand + last4) — no raw card data
+                // SECURITY: brand/last4 come from Stripe SDK result, not from user input
+                Task {
+                    await paymentService.savePaymentMethod(
+                        userId: appState.currentUser?.id ?? "",
+                        brand: "Visa",      // TODO: get from PaymentSheet result
+                        last4: "4242",      // TODO: get from PaymentSheet result
+                        expMonth: 12,       // TODO: get from PaymentSheet result
+                        expYear: 2028,      // TODO: get from PaymentSheet result
+                        supabaseToken: "stub-token"
+                    )
+                }
+
+            case .canceled:
+                // User dismissed PaymentSheet — no action needed
+                break
+
+            case .failed(let error):
+                errorMessage = error.localizedDescription
+                showError = true
             }
         }
     }

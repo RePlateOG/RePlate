@@ -544,7 +544,7 @@ struct BottomSheet<Content: View>: View {
                     }
                     .background(Theme.Colors.background)
                     .cornerRadius(Theme.CornerRadius.sheet, corners: [.topLeft, .topRight])
-                    .shadow(color: Color.black.opacity(0.2), radius: 24, y: -8)
+                    .shadow(color: Color.black.opacity(0.07), radius: 24, y: -4)
                     .transition(.move(edge: .bottom))
                 }
                 .ignoresSafeArea(edges: .bottom)

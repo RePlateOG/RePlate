@@ -21,6 +21,7 @@ struct LegalPageView: View {
         case foodSafetyPolicy   = "Food Safety Policy"
         case refundPolicy       = "Refund Policy"
         case dataPolicy         = "Data Policy"
+        case faq                = "FAQs"
 
         var icon: String {
             switch self {
@@ -30,10 +31,12 @@ struct LegalPageView: View {
             case .foodSafetyPolicy:    return "cross.fill"
             case .refundPolicy:        return "arrow.uturn.left.circle.fill"
             case .dataPolicy:          return "externaldrive.fill"
+            case .faq:                 return "questionmark.circle.fill"
             }
         }
     }
 
+    // NON-BINDING TEMPLATE — must be reviewed by a qualified legal professional before real-world use.
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
@@ -57,6 +60,23 @@ struct LegalPageView: View {
                                 .foregroundColor(Theme.Colors.secondaryLabel)
                         }
                     }
+
+                    // Non-binding disclaimer banner
+                    HStack(spacing: 10) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(Color(hex: "92400e"))
+                        Text("Non-binding template — must be reviewed by a qualified legal professional before real-world use.")
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .italic()
+                            .foregroundColor(Color(hex: "92400e"))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Color(hex: "fef3c7"))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(hex: "fde68a"), lineWidth: 1))
                 }
                 .padding(.horizontal, 24).padding(.top, 24).padding(.bottom, 20)
 
@@ -71,12 +91,13 @@ struct LegalPageView: View {
                     case .foodSafetyPolicy:    FoodSafetyPolicyContent()
                     case .refundPolicy:        RefundPolicyContent()
                     case .dataPolicy:          DataPolicyContent()
+                    case .faq:                 FAQContent()
                     }
                 }
                 .padding(.horizontal, 24).padding(.top, 20).padding(.bottom, 60)
             }
         }
-        .background(Color(.systemBackground))
+        .background(Theme.Colors.pageBackground)
         .navigationTitle(page.rawValue)
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -422,6 +443,93 @@ private struct DataPolicyContent: View {
 
             Section(title: "Contact",
                     content: "For data-related questions: privacy@replate.app\nData Protection Officer: dpo@replate.app")
+        }
+    }
+}
+
+// MARK: - FAQ
+private struct FAQContent: View {
+    private struct FAQItem: Identifiable {
+        let id = UUID()
+        let question: String
+        let answer: String
+    }
+    @State private var expanded: UUID?
+
+    private let items: [FAQItem] = [
+        FAQItem(
+            question: "What is RePlate?",
+            answer: "RePlate is a food waste reduction platform that connects restaurants with surplus food to nearby customers at a discounted price. Restaurants reduce waste, customers save money, and the community wins."
+        ),
+        FAQItem(
+            question: "How do I place an order?",
+            answer: "Browse listings on the Home tab, tap a listing you like, choose a quantity, and check out. You'll receive a pickup code to show the restaurant when you arrive during the pickup window."
+        ),
+        FAQItem(
+            question: "How do discounts work?",
+            answer: "Restaurants set a discounted price on surplus food — typically 50–70% off the original price. You pay that price at checkout and pick up the food directly from the restaurant."
+        ),
+        FAQItem(
+            question: "What happens if I can't pick up my order?",
+            answer: "Please cancel as early as possible so the restaurant can relist the food. See our Refund Policy for full details on cancellations and refunds."
+        ),
+        FAQItem(
+            question: "How do restaurants get verified?",
+            answer: "Restaurants must submit a business license, food service permit, health inspection report, tax documentation, and government-issued ID. Our team reviews each submission, typically within 2–3 business days."
+        ),
+        FAQItem(
+            question: "Is my payment information secure?",
+            answer: "Yes. Payments are processed by Stripe, a PCI DSS Level 1 certified provider. RePlate never stores your card number — only a tokenised reference from Stripe."
+        ),
+        FAQItem(
+            question: "How do I report a problem with a restaurant or user?",
+            answer: "Tap the ⋯ button in any conversation to report or block a user. You can also email support@replate.app or use Help & Support > Report a Problem in your Profile tab."
+        ),
+        FAQItem(
+            question: "How do I delete my account?",
+            answer: "Go to Profile > Settings > Delete Account. Your profile data is deleted within 30 days. Transaction records are retained for 7 years for legal compliance."
+        ),
+        FAQItem(
+            question: "How can I contact support?",
+            answer: "Email us at support@replate.app. You can also reach us via Profile > Help & Support > Contact Support."
+        ),
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(items) { item in
+                VStack(alignment: .leading, spacing: 0) {
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            expanded = expanded == item.id ? nil : item.id
+                        }
+                    } label: {
+                        HStack(spacing: 12) {
+                            Text(item.question)
+                                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                .foregroundColor(Theme.Colors.label)
+                                .multilineTextAlignment(.leading)
+                            Spacer()
+                            Image(systemName: expanded == item.id ? "chevron.up" : "chevron.down")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(Theme.Colors.secondaryLabel)
+                        }
+                        .padding(.vertical, 14)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+
+                    if expanded == item.id {
+                        Text(item.answer)
+                            .font(.system(size: 14, weight: .regular, design: .rounded))
+                            .foregroundColor(Theme.Colors.secondaryLabel)
+                            .lineSpacing(4)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.bottom, 14)
+                    }
+
+                    Divider()
+                }
+            }
         }
     }
 }

@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AA0STRIPE000000000000AA03 /* StripePaymentSheet in Frameworks */ = {isa = PBXBuildFile; productRef = AA0STRIPE000000000000AA02 /* StripePaymentSheet */; };
+		AA1SUPA000000000000AA03 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = AA1SUPA000000000000AA02 /* Supabase */; };
 		D90F53B72FC7683600C41324 /* MockData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D90F53B62FC7683600C41324 /* MockData.swift */; };
 /* End PBXBuildFile section */
 
@@ -28,6 +30,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA0STRIPE000000000000AA03 /* StripePaymentSheet in Frameworks */,
+				AA1SUPA000000000000AA03 /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -71,6 +75,8 @@
 			);
 			name = RePlate;
 			packageProductDependencies = (
+				AA0STRIPE000000000000AA02 /* StripePaymentSheet */,
+				AA1SUPA000000000000AA02 /* Supabase */,
 			);
 			productName = RePlate;
 			productReference = D90F53562FC6AF8A00C41324 /* RePlate.app */;
@@ -84,10 +90,15 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2620;
-				LastUpgradeCheck = 2620;
+				LastUpgradeCheck = 2650;
 				TargetAttributes = {
 					D90F53552FC6AF8A00C41324 = {
 						CreatedOnToolsVersion = 26.2;
+						SystemCapabilities = {
+							com.apple.SystemCapabilities.SignInWithApple = {
+								enabled = 1;
+							};
+						};
 					};
 				};
 			};
@@ -100,6 +111,10 @@
 			);
 			mainGroup = D90F534D2FC6AF8A00C41324;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				AA0STRIPE000000000000AA01 /* XCRemoteSwiftPackageReference "stripe-ios" */,
+				AA1SUPA000000000000AA01 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D90F53572FC6AF8A00C41324 /* Products */;
 			projectDirPath = "";
@@ -185,12 +200,13 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -243,11 +259,12 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -263,11 +280,15 @@
 				DEVELOPMENT_TEAM = UBP8JR5HB5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "RePlate uses your camera to scan restaurant menus and automatically import food items into your listings.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "RePlate uses your location to show surplus food and restaurants near you.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "RePlate accesses your photo library so you can select menu images to scan and import food items.";
+				INFOPLIST_KEY_NSUserNotificationsUsageDescription = "RePlate sends you order updates, pickup reminders, and alerts when new surplus food is available near you.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -294,11 +315,15 @@
 				DEVELOPMENT_TEAM = UBP8JR5HB5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "RePlate uses your camera to scan restaurant menus and automatically import food items into your listings.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "RePlate uses your location to show surplus food and restaurants near you.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "RePlate accesses your photo library so you can select menu images to scan and import food items.";
+				INFOPLIST_KEY_NSUserNotificationsUsageDescription = "RePlate sends you order updates, pickup reminders, and alerts when new surplus food is available near you.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -337,6 +362,38 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		AA0STRIPE000000000000AA01 /* XCRemoteSwiftPackageReference "stripe-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/stripe/stripe-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 23.0.0;
+			};
+		};
+		AA1SUPA000000000000AA01 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AA0STRIPE000000000000AA02 /* StripePaymentSheet */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA0STRIPE000000000000AA01 /* XCRemoteSwiftPackageReference "stripe-ios" */;
+			productName = StripePaymentSheet;
+		};
+		AA1SUPA000000000000AA02 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA1SUPA000000000000AA01 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = D90F534E2FC6AF8A00C41324 /* Project object */;
 }
